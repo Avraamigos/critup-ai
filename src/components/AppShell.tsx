@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
-  LayoutGrid, Folder, CircleDot, Mic, Sparkles,
+  LayoutGrid, Folder, CircleDot, Mic,
   Settings, HelpCircle, ChevronLeft, ChevronRight,
   Sun, Moon, LogOut, Star, TrendingUp, User,
 } from 'lucide-react'
@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { to: '/projects', icon: Folder, label: 'Projects' },
   { to: '/analysis/riverside-pavilion', icon: CircleDot, label: 'Analysis' },
   { to: '/jury', icon: Mic, label: 'Jury' },
-  { to: '/assistant', icon: Sparkles, label: 'AI' },
 ]
 const BOTTOM_ITEMS = [
   { to: '/settings', icon: Settings, label: 'Settings' },
