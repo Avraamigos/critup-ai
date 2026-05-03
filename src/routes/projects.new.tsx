@@ -75,42 +75,44 @@ export function NewProjectPage() {
 
     try {
       // 1. Create project row
+      const projectInsert = {
+        user_id:     user.id,
+        name:        form.name.trim(),
+        stage:       form.stage as import('@/lib/database.types').ProjectStage,
+        focus_areas: form.focuses,
+      }
       const { data: project, error: projErr } = await supabase
         .from('projects')
-        .insert({
-          user_id:     user.id,
-          name:        form.name.trim(),
-          stage:       form.stage as 'pre-design' | 'initial-concept' | 'finalized-design' | 'jury-prep',
-          focus_areas: form.focuses,
-        })
-        .select()
+        .insert(projectInsert)
+        .select('id, name')
         .single()
 
       if (projErr || !project) throw new Error(projErr?.message ?? 'Failed to create project')
 
       // 2. Upload PDF to Storage
-      const pdfPath = `${user.id}/${project.id}/${Date.now()}_${form.file.name}`
+      const pdfPath = `${user.id}/${project.id}/${Date.now()}_${form.file!.name}`
       const { error: uploadErr } = await supabase.storage
         .from('project-pdfs')
-        .upload(pdfPath, form.file, { cacheControl: '3600', upsert: false })
+        .upload(pdfPath, form.file!, { cacheControl: '3600', upsert: false })
 
       if (uploadErr) throw new Error(uploadErr.message)
 
       // 3. Create analysis row (status: pending — AI will fill it)
+      const analysisInsert = {
+        project_id: project.id,
+        user_id:    user.id,
+        status:     'pending' as import('@/lib/database.types').AnalysisStatus,
+        pdf_path:   pdfPath,
+      }
       const { data: analysis, error: analysisErr } = await supabase
         .from('analyses')
-        .insert({
-          project_id: project.id,
-          user_id:    user.id,
-          status:     'pending',
-          pdf_path:   pdfPath,
-        })
-        .select()
+        .insert(analysisInsert)
+        .select('id')
         .single()
 
       if (analysisErr || !analysis) throw new Error(analysisErr?.message ?? 'Failed to create analysis')
 
-      navigate({ to: '/analysis/loading', search: { projectId: project.id, analysisId: analysis.id } })
+      navigate({ to: '/analysis/loading' })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
