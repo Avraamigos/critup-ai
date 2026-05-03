@@ -109,7 +109,8 @@ export default async function handler(
     const pdfBase64 = pdfBuffer.toString('base64')
 
     // 4. Build context from project info
-    const project = (analysis as { projects: { name: string; stage: string; focus_areas: string[] } | null }).projects
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const project = (analysis as any).projects as { name: string; stage: string; focus_areas: string[] } | null
     const contextNote = project
       ? `\n\nProject context: "${project.name}" — Stage: ${project.stage}${project.focus_areas?.length ? `. Focus areas: ${project.focus_areas.join(', ')}` : ''}.`
       : ''
