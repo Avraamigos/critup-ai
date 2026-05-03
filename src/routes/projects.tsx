@@ -74,7 +74,7 @@ export function ProjectsPage() {
         .select(`id, name, stage, created_at, analyses(id, status, concept_score, spatial_score, presentation_score, created_at)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-      setProjects((data as Project[]) || [])
+      setProjects((data as unknown as Project[]) || [])
       setLoading(false)
     }
     fetch()
