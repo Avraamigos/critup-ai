@@ -112,7 +112,14 @@ export function NewProjectPage() {
 
       if (analysisErr || !analysis) throw new Error(analysisErr?.message ?? 'Failed to create analysis')
 
-      navigate({ to: '/analysis/loading' })
+      // 4. Trigger AI analysis (fire and forget — loading page polls for completion)
+      fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: (analysis as unknown as { id: string }).id }),
+      }).catch(console.error)
+
+      navigate({ to: '/analysis/$projectId', params: { projectId: project.id } })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
