@@ -1,6 +1,7 @@
 interface Props {
   onClick: () => void
   active?: boolean
+  size?: number
 }
 
 export function BlobButton({ onClick, active = false }: Props) {

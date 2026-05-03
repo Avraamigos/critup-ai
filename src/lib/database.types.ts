@@ -1,5 +1,4 @@
-// Auto-generated types from Supabase schema
-// Run: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts
+// Types matching Supabase JS v2 (PostgREST v12) — Relationships required or insert/update resolve to never
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -51,6 +50,7 @@ export interface Database {
           onboarding_complete?: boolean
           updated_at?: string
         }
+        Relationships: []
       }
       projects: {
         Row: {
@@ -80,6 +80,7 @@ export interface Database {
           brief_text?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       analyses: {
         Row: {
@@ -119,6 +120,7 @@ export interface Database {
           jury_questions?: Json | null
           updated_at?: string
         }
+        Relationships: []
       }
       jury_sessions: {
         Row: {
@@ -155,14 +157,21 @@ export interface Database {
           ai_feedback?: string | null
           duration_seconds?: number | null
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      increment_analyses_used: {
+        Args: { uid: string }
+        Returns: undefined
+      }
+    }
     Enums: {
       project_stage: ProjectStage
       analysis_status: AnalysisStatus
       user_plan: UserPlan
     }
+    CompositeTypes: Record<string, never>
   }
 }
