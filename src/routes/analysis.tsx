@@ -290,8 +290,6 @@ export function AnalysisPage() {
               position: 'relative',
               background: c.isDark ? 'oklch(0.12 0.004 270)' : '#e8edf2',
               border: `1.5px solid ${isSummary ? 'oklch(0.72 0.17 145/0.6)' : 'oklch(0.72 0.18 45/0.5)'}`,
-              // INSET glow — appears inside the box on the edges
-              animation: isSummary ? 'inset-green 3s ease-in-out infinite' : 'inset-glow-flash 3s ease-in-out infinite',
               minHeight: 0,
             }}
           >
@@ -308,6 +306,17 @@ export function AnalysisPage() {
                 Loading PDF…
               </div>
             )}
+
+            {/* INSET GLOW OVERLAY — sits on top of the PDF canvas so it's visible */}
+            <div
+              key={`glow-${slideIdx}`}
+              style={{
+                position: 'absolute', inset: 0,
+                borderRadius: 18,
+                pointerEvents: 'none',
+                animation: isSummary ? 'inset-green 3s ease-in-out infinite' : 'inset-glow-flash 3s ease-in-out infinite',
+              }}
+            />
 
             {/* Slide badge */}
             {!isSummary && (
