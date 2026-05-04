@@ -70,7 +70,10 @@ export function PDFViewer({
     canvas.style.height = `${viewport.height / 2}px`
 
     const ctx = canvas.getContext('2d')!
-    renderTaskRef.current = page.render({ canvasContext: ctx, viewport })
+    // pdfjs-dist v5 changed RenderParameters to require `canvas` (the element);
+    // cast to any so this compiles regardless of which minor type version Vercel installs
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderTaskRef.current = page.render({ canvasContext: ctx, viewport } as any)
     await renderTaskRef.current.promise
     setReady(true)
   }, [])
