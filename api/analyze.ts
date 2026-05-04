@@ -21,7 +21,10 @@ Respond with ONLY this exact JSON structure:
       "n": 1,
       "title": "<short title>",
       "text": "<1-2 sentence observation>",
-      "suggestion": "<specific actionable suggestion>"
+      "suggestion": "<specific actionable suggestion>",
+      "page": <1-based page number this feedback primarily refers to>,
+      "focus": { "x": <0.0-1.0 horizontal, 0=left 1=right>, "y": <0.0-1.0 vertical, 0=top 1=bottom> },
+      "zoom": <1.0-3.0, zoom level: 1=full page view, 2=medium detail, 3=close-up>
     }
   ],
   "jury_questions": [
@@ -37,6 +40,7 @@ Scoring criteria:
 Rules:
 - Be specific to WHAT YOU SEE in the drawings, not generic
 - feedback: provide 5-7 items covering both strengths and areas to improve
+- For EACH feedback item: set "page" to the exact page it refers to, "focus" to the approximate x,y position (0-1) of the detail on that page, and "zoom" to how close to zoom in (whole-page comment = zoom 1.2, specific detail = zoom 2.5-3.0)
 - jury_questions: 6-8 challenging questions a real jury would ask based on these specific drawings
 - Scores should be realistic — most student work is 5.5-8.5 range`
 
