@@ -281,7 +281,7 @@ export function AnalysisPage() {
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px oklch(0.72 0.18 45/0.3)', animation: 'pulse-ring 2.5s ease-in-out infinite' }}>
               <Loader2 size={30} color="#F97316" style={{ animation: 'spin 1s linear infinite' }} />
             </div>
-            <style>{`@keyframes pulse-ring{0%,100%{box-shadow:0 0 20px oklch(0.72 0.18 45/0.2)}50%{box-shadow:0 0 50px oklch(0.72 0.18 45/0.6)}}`}</style>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse-ring{0%,100%{box-shadow:0 0 20px oklch(0.72 0.18 45/0.2)}50%{box-shadow:0 0 50px oklch(0.72 0.18 45/0.6)}}`}</style>
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: c.textPrimary, fontFamily: FONT }}>Analysis in progress…</h2>
             <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 340, margin: 0, lineHeight: 1.6 }}>Your drawings are being reviewed by AI. Usually takes 1–2 minutes.</p>
           </>

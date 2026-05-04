@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Plus, Search, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Trash2, ExternalLink } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -62,6 +62,18 @@ export function ProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [menuOpen, setMenuOpen] = useState<string | null>(null) // project id with open menu
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(null)
+    }
+    if (menuOpen) document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [menuOpen])
 
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
@@ -87,6 +99,33 @@ export function ProjectsPage() {
     return () => { supabase.removeChannel(sub) }
   }, [user])
 
+  const deleteProject = async (projectId: string) => {
+    setDeleting(projectId)
+    setMenuOpen(null)
+    try {
+      // Delete storage files for all analyses
+      const project = projects.find(p => p.id === projectId)
+      if (project?.analyses?.length) {
+        const { data: analysisRows } = await supabase
+          .from('analyses')
+          .select('pdf_path')
+          .eq('project_id', projectId)
+        if (analysisRows) {
+          const paths = analysisRows.map(a => a.pdf_path).filter(Boolean) as string[]
+          if (paths.length) await supabase.storage.from('project-pdfs').remove(paths)
+        }
+      }
+      // Delete analyses rows (project delete won't cascade without a DB trigger)
+      await supabase.from('analyses').delete().eq('project_id', projectId)
+      // Delete project row
+      await supabase.from('projects').delete().eq('id', projectId)
+      setProjects(prev => prev.filter(p => p.id !== projectId))
+    } catch (e) {
+      console.error('Delete failed', e)
+    }
+    setDeleting(null)
+  }
+
   const filters = ['all', 'pre-design', 'initial-concept', 'finalized-design', 'jury-prep']
 
   const filtered = projects.filter(p => {
@@ -97,6 +136,7 @@ export function ProjectsPage() {
 
   return (
     <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif" }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
@@ -190,9 +230,38 @@ export function ProjectsPage() {
                   <span style={{ fontSize: 11, fontWeight: 700, color: stage.color, background: `${stage.color}20`, padding: '3px 10px', borderRadius: 100 }}>
                     {stage.label}
                   </span>
-                  <button onClick={e => e.stopPropagation()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 2, borderRadius: 6, display: 'flex' }}>
-                    <MoreHorizontal size={16} />
-                  </button>
+                  {/* Context menu */}
+                  <div style={{ position: 'relative' }} ref={menuOpen === p.id ? menuRef : undefined}>
+                    <button
+                      onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === p.id ? null : p.id) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: '2px 4px', borderRadius: 6, display: 'flex', opacity: deleting === p.id ? 0.4 : 1 }}
+                    >
+                      {deleting === p.id
+                        ? <div style={{ width: 14, height: 14, border: '2px solid #F97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                        : <MoreHorizontal size={16} />}
+                    </button>
+                    {menuOpen === p.id && (
+                      <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 10, padding: '4px', minWidth: 160, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); navigate({ to: '/analysis/$projectId', params: { projectId: p.id } }) }}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'none', border: 'none', borderRadius: 7, cursor: 'pointer', color: c.textPrimary, fontSize: 13 }}
+                          onMouseEnter={e => (e.currentTarget.style.background = c.isDark ? 'oklch(0.22 0.004 270)' : '#f3f4f6')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                          <ExternalLink size={13} /> Open analysis
+                        </button>
+                        <div style={{ height: 1, background: c.border, margin: '2px 4px' }} />
+                        <button
+                          onClick={e => { e.stopPropagation(); if (window.confirm(`Delete "${p.name}"? This cannot be undone.`)) deleteProject(p.id) }}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'none', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'oklch(0.65 0.18 25)', fontSize: 13 }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.65 0.18 25/0.08)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                          <Trash2 size={13} /> Delete project
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Title */}

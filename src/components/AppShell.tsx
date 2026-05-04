@@ -63,15 +63,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', handle)
   }, [accountOpen])
 
+  // ── Auth guard: redirect to landing if not logged in ──
+  const { loading: authLoading } = useAuth()
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate({ to: '/landing' })
+    }
+  }, [authLoading, user, navigate])
+
   const signOut = async () => {
     setAccountOpen(false)
     await authSignOut()
-    navigate({ to: '/login' })
+    navigate({ to: '/landing' })
   }
 
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()
   const isPro = profile?.plan !== 'free'
+
+  // While auth is loading, render nothing to prevent flash of wrong content
+  if (authLoading) return null
 
   const sidebarW = sidebarOpen ? 240 : 72
 
