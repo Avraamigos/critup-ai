@@ -83,8 +83,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const displayInitial = displayName[0].toUpperCase()
   const isPro = profile?.plan !== 'free'
 
-  // While auth is loading, render nothing to prevent flash of wrong content
-  if (authLoading) return null
+  // While auth is loading, show a minimal centered spinner instead of blank screen
+  if (authLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: c.bg }}>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid oklch(0.72 0.18 45/0.2)', borderTopColor: '#F97316', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
 
   const sidebarW = sidebarOpen ? 240 : 72
 
