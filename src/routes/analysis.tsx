@@ -57,20 +57,23 @@ export function AnalysisPage() {
   const [project,    setProject]   = useState<ProjectData | null>(null)
   const [loading,    setLoading]   = useState(true)
   const [error,      setError]     = useState<string | null>(null)
-  const [slideIdx,   setSlideIdx]  = useState(0)
-  const [isPlaying,  setIsPlaying] = useState(false)
-  const [voiceOn,    setVoiceOn]   = useState(false)
-  const [pdfUrl,     setPdfUrl]    = useState<string | null>(null)
-  const [speaking,   setSpeaking]  = useState(false)
+  const [slideIdx,      setSlideIdx]     = useState(0)
+  const [isPlaying,     setIsPlaying]    = useState(false)
+  const [voiceOn,       setVoiceOn]      = useState(true)   // ON by default
+  const [pdfUrl,        setPdfUrl]       = useState<string | null>(null)
+  const [speaking,      setSpeaking]     = useState(false)
+  const [captionWords,  setCaptionWords] = useState<string[]>([]) // rolling caption
 
   // Refs so callbacks always see current values without stale closures
   const abortRef      = useRef<AbortController | null>(null)
   const audioRef      = useRef<HTMLAudioElement | null>(null)
   const playTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wordTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null)
   const isPlayingRef  = useRef(false)
-  const voiceOnRef    = useRef(false)
+  const voiceOnRef    = useRef(true)
   const feedbackRef   = useRef<FeedbackItem[]>([])
   const totalRef      = useRef(1)
+  const audioCacheRef = useRef<Map<number, Blob>>(new Map()) // cache blobs to avoid re-billing
 
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
   useEffect(() => { voiceOnRef.current = voiceOn }, [voiceOn])
@@ -123,9 +126,10 @@ export function AnalysisPage() {
   useEffect(() => { feedbackRef.current = feedbackItems }, [feedbackItems])
   useEffect(() => { totalRef.current = feedbackItems.length + 1 }, [feedbackItems.length])
 
-  // ── Kill all audio & pending requests immediately ──
+  // ── Kill all audio, pending fetch, word timer ──
   const killAudio = useCallback(() => {
     if (playTimerRef.current) { clearTimeout(playTimerRef.current); playTimerRef.current = null }
+    if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null }
     abortRef.current?.abort()
     abortRef.current = null
     if (audioRef.current) {
@@ -137,12 +141,56 @@ export function AnalysisPage() {
     setSpeaking(false)
   }, [])
 
-  // ── Speak text via ElevenLabs, call onDone when finished ──
-  const speakText = useCallback((text: string, onDone?: () => void) => {
+  // ── Rolling caption: reveal ~2.5 words/sec (like live subtitles) ──
+  const startCaption = useCallback((text: string) => {
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current)
+    const words = text.split(/\s+/).filter(Boolean)
+    let idx = 0
+    setCaptionWords([])
+    wordTimerRef.current = setInterval(() => {
+      idx++
+      // Show a rolling window of the last 10 words so it reads like captions
+      setCaptionWords(words.slice(Math.max(0, idx - 10), idx))
+      if (idx >= words.length) {
+        clearInterval(wordTimerRef.current!)
+        wordTimerRef.current = null
+      }
+    }, 400) // ~150 words/min ≈ ElevenLabs default speed
+  }, [])
+
+  // ── Play a blob (from cache or fresh fetch), start caption in parallel ──
+  const playBlob = useCallback((blob: Blob, text: string, onDone?: () => void) => {
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    audioRef.current = audio
+    setSpeaking(true)
+    startCaption(text)
+    const finish = () => {
+      setSpeaking(false)
+      URL.revokeObjectURL(url)
+      if (audioRef.current === audio) audioRef.current = null
+      if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null }
+      onDone?.()
+    }
+    audio.onended = finish
+    audio.onerror = finish
+    audio.play().catch(finish)
+  }, [startCaption])
+
+  // ── Speak a slide by index — uses cache so ElevenLabs is only billed once per slide ──
+  const speakSlide = useCallback((idx: number, onDone?: () => void) => {
     killAudio()
+    const fb = feedbackRef.current[idx]
+    if (!fb) { onDone?.(); return }
+    const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+
+    // Serve from cache (no API call, no credit cost)
+    const cached = audioCacheRef.current.get(idx)
+    if (cached) { playBlob(cached, text, onDone); return }
+
+    // First time: fetch from ElevenLabs, cache the blob
     const ctrl = new AbortController()
     abortRef.current = ctrl
-    setSpeaking(true)
 
     fetch('/api/tts', {
       method: 'POST',
@@ -156,18 +204,8 @@ export function AnalysisPage() {
       })
       .then(blob => {
         if (ctrl.signal.aborted) return
-        const url = URL.createObjectURL(blob)
-        const audio = new Audio(url)
-        audioRef.current = audio
-        const finish = () => {
-          setSpeaking(false)
-          URL.revokeObjectURL(url)
-          if (audioRef.current === audio) audioRef.current = null
-          onDone?.()
-        }
-        audio.onended = finish
-        audio.onerror = finish
-        audio.play().catch(finish)
+        audioCacheRef.current.set(idx, blob) // cache for future plays
+        playBlob(blob, text, onDone)
       })
       .catch(e => {
         if ((e as DOMException).name !== 'AbortError') {
@@ -175,13 +213,12 @@ export function AnalysisPage() {
           onDone?.()
         }
       })
-  }, [killAudio])
+  }, [killAudio, playBlob])
 
-  // ── Single effect drives everything: slide changes, play/voice state ──
-  // Rule: whenever slideIdx, isPlaying, or voiceOn changes → kill old audio,
-  // then either speak (+ auto-advance when done) or set a timer (no voice).
+  // ── Single effect owns all play/voice logic ──
   useEffect(() => {
     killAudio()
+    setCaptionWords([])
 
     const fb     = feedbackRef.current[slideIdx]
     const isLast = slideIdx >= totalRef.current - 1
@@ -195,17 +232,13 @@ export function AnalysisPage() {
     }
 
     if (voiceOn && fb) {
-      const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
       if (isPlaying) {
-        // Speak slide, then advance when audio finishes
-        speakText(text, advance)
+        speakSlide(slideIdx, advance)      // speak → then auto-advance
       } else {
-        // Manual nav with voice on: just speak, don't auto-advance
-        speakText(text)
+        speakSlide(slideIdx)               // manual nav: just speak
       }
     } else if (isPlaying && !isLast) {
-      // No voice, auto-playing: advance on timer
-      playTimerRef.current = setTimeout(advance, 5000)
+      playTimerRef.current = setTimeout(advance, 5000)   // no voice: timer
     } else if (isPlaying && isLast) {
       setIsPlaying(false)
     }
@@ -494,15 +527,31 @@ export function AnalysisPage() {
 
       {/* ── Footer ── */}
       <div style={{ padding: '10px 22px 14px', flexShrink: 0 }}>
-        {/* Subtitle bar */}
-        <div style={{ background: c.isDark ? 'oklch(0.15 0.004 270)' : '#f8fafc', border: `1px solid ${c.border}`, borderRadius: 12, padding: '10px 16px', marginBottom: 10, minHeight: 46, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Volume2 size={13} color={speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0 }} />
-          <p key={`sub-${slideIdx}`} style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.5, animation: 'slide-up 0.3s ease-out', flex: 1 }}>
-            {isSummary
-              ? `Analysis complete — ${feedbackItems.length} critiques reviewed. Overall score: ${avg.toFixed(1)} / 10`
-              : current
-                ? <>{current.text}{current.suggestion && <span style={{ color: c.textMuted }}> — {current.suggestion}</span>}</>
-                : 'Navigate through your AI critique below.'}
+        {/* Caption bar — rolling words synced to voice */}
+        <div style={{ background: c.isDark ? 'oklch(0.15 0.004 270)' : '#f8fafc', border: `1px solid ${speaking ? 'oklch(0.72 0.18 45/0.5)' : c.border}`, borderRadius: 12, padding: '10px 16px', marginBottom: 10, minHeight: 46, display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.3s' }}>
+          <Volume2 size={13} color={speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0, transition: 'color 0.3s' }} />
+          <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5, flex: 1, minHeight: '1.5em' }}>
+            {speaking && captionWords.length > 0
+              // Live captions while speaking
+              ? captionWords.map((word, i) => (
+                  <span
+                    key={`${slideIdx}-${i}`}
+                    style={{
+                      color: i === captionWords.length - 1 ? '#F97316' : c.textPrimary,
+                      fontWeight: i === captionWords.length - 1 ? 600 : 400,
+                      transition: 'color 0.15s',
+                    }}
+                  >
+                    {word}{' '}
+                  </span>
+                ))
+              // Idle: show a brief prompt
+              : isSummary
+                ? <span style={{ color: c.textMuted }}>Analysis complete — {feedbackItems.length} critiques · {avg.toFixed(1)} / 10</span>
+                : current
+                  ? <span style={{ color: c.textMuted }}>{current.title}</span>
+                  : <span style={{ color: c.textMuted }}>Press play or turn on Voice to begin</span>
+            }
           </p>
         </div>
 
