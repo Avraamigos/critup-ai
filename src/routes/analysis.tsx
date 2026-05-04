@@ -62,8 +62,18 @@ export function AnalysisPage() {
   const [voiceOn,    setVoiceOn]   = useState(false)
   const [pdfUrl,     setPdfUrl]    = useState<string | null>(null)
   const [speaking,   setSpeaking]  = useState(false)
-  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const audioRef     = useRef<HTMLAudioElement | null>(null)
+
+  // Refs so callbacks always see current values without stale closures
+  const abortRef      = useRef<AbortController | null>(null)
+  const audioRef      = useRef<HTMLAudioElement | null>(null)
+  const playTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isPlayingRef  = useRef(false)
+  const voiceOnRef    = useRef(false)
+  const feedbackRef   = useRef<FeedbackItem[]>([])
+  const totalRef      = useRef(1)
+
+  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
+  useEffect(() => { voiceOnRef.current = voiceOn }, [voiceOn])
 
   // ── Load data with polling ──
   useEffect(() => {
@@ -109,53 +119,103 @@ export function AnalysisPage() {
     ? latestAnalysis.jury_questions as unknown as string[]
     : []
 
-  // ── Voice (ElevenLabs) ──
-  const speak = useCallback(async (text: string) => {
-    if (!voiceOn) return
-    try {
-      setSpeaking(true)
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      })
-      if (!res.ok) { setSpeaking(false); return }
-      const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      audioRef.current = audio
-      audio.onended = () => setSpeaking(false)
-      audio.onerror = () => setSpeaking(false)
-      await audio.play()
-    } catch { setSpeaking(false) }
-  }, [voiceOn])
+  // Keep refs up to date so audio callbacks always see fresh values
+  useEffect(() => { feedbackRef.current = feedbackItems }, [feedbackItems])
+  useEffect(() => { totalRef.current = feedbackItems.length + 1 }, [feedbackItems.length])
 
-  // ── Auto-play slides ──
+  // ── Kill all audio & pending requests immediately ──
+  const killAudio = useCallback(() => {
+    if (playTimerRef.current) { clearTimeout(playTimerRef.current); playTimerRef.current = null }
+    abortRef.current?.abort()
+    abortRef.current = null
+    if (audioRef.current) {
+      audioRef.current.onended = null
+      audioRef.current.onerror = null
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    setSpeaking(false)
+  }, [])
+
+  // ── Speak text via ElevenLabs, call onDone when finished ──
+  const speakText = useCallback((text: string, onDone?: () => void) => {
+    killAudio()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    setSpeaking(true)
+
+    fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: ctrl.signal,
+    })
+      .then(res => {
+        if (!res.ok || ctrl.signal.aborted) throw new Error('tts-fail')
+        return res.blob()
+      })
+      .then(blob => {
+        if (ctrl.signal.aborted) return
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audioRef.current = audio
+        const finish = () => {
+          setSpeaking(false)
+          URL.revokeObjectURL(url)
+          if (audioRef.current === audio) audioRef.current = null
+          onDone?.()
+        }
+        audio.onended = finish
+        audio.onerror = finish
+        audio.play().catch(finish)
+      })
+      .catch(e => {
+        if ((e as DOMException).name !== 'AbortError') {
+          setSpeaking(false)
+          onDone?.()
+        }
+      })
+  }, [killAudio])
+
+  // ── Single effect drives everything: slide changes, play/voice state ──
+  // Rule: whenever slideIdx, isPlaying, or voiceOn changes → kill old audio,
+  // then either speak (+ auto-advance when done) or set a timer (no voice).
   useEffect(() => {
-    if (!isPlaying) return
-    const total = feedbackItems.length + 1
-    playTimerRef.current = setTimeout(() => {
+    killAudio()
+
+    const fb     = feedbackRef.current[slideIdx]
+    const isLast = slideIdx >= totalRef.current - 1
+
+    const advance = () => {
+      if (!isPlayingRef.current) return
       setSlideIdx(s => {
-        if (s < total - 1) return s + 1
-        setIsPlaying(false)
-        return s
+        if (s >= totalRef.current - 1) { setIsPlaying(false); return s }
+        return s + 1
       })
-    }, voiceOn ? 12000 : 6000) // longer gap when voice is on
-    return () => { if (playTimerRef.current) clearTimeout(playTimerRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, slideIdx])
+    }
 
-  // ── Speak current slide ──
-  useEffect(() => {
-    if (!voiceOn || !feedbackItems.length) return
-    const fb = feedbackItems[slideIdx]
-    if (fb) speak(`${fb.title}. ${fb.text} ${fb.suggestion}`)
+    if (voiceOn && fb) {
+      const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+      if (isPlaying) {
+        // Speak slide, then advance when audio finishes
+        speakText(text, advance)
+      } else {
+        // Manual nav with voice on: just speak, don't auto-advance
+        speakText(text)
+      }
+    } else if (isPlaying && !isLast) {
+      // No voice, auto-playing: advance on timer
+      playTimerRef.current = setTimeout(advance, 5000)
+    } else if (isPlaying && isLast) {
+      setIsPlaying(false)
+    }
+
+    return killAudio
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideIdx, voiceOn])
+  }, [slideIdx, isPlaying, voiceOn])
 
   // Stop audio on unmount
-  useEffect(() => () => { audioRef.current?.pause() }, [])
+  useEffect(() => killAudio, [killAudio])
 
   // ── Loading ──
   if (loading) return (
@@ -342,7 +402,7 @@ export function AnalysisPage() {
             {Array.from({ length: totalSlides }).map((_, i) => (
               <button
                 key={i}
-                onClick={() => setSlideIdx(i)}
+                onClick={() => { killAudio(); setSlideIdx(i) }}
                 style={{
                   width: i === slideIdx ? 20 : 6, height: 6, borderRadius: 100,
                   border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s',
@@ -449,7 +509,7 @@ export function AnalysisPage() {
         {/* Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <button
-            onClick={() => setSlideIdx(s => Math.max(s - 1, 0))}
+            onClick={() => { killAudio(); setSlideIdx(s => Math.max(s - 1, 0)) }}
             disabled={slideIdx === 0}
             style={{ padding: '8px 18px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, cursor: slideIdx === 0 ? 'not-allowed' : 'pointer', opacity: slideIdx === 0 ? 0.35 : 1, transition: 'all 0.15s' }}
           >
@@ -462,7 +522,7 @@ export function AnalysisPage() {
             {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
           </button>
           <button
-            onClick={() => setSlideIdx(s => Math.min(s + 1, totalSlides - 1))}
+            onClick={() => { killAudio(); setSlideIdx(s => Math.min(s + 1, totalSlides - 1)) }}
             disabled={slideIdx >= totalSlides - 1}
             style={{ padding: '8px 18px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, cursor: slideIdx >= totalSlides - 1 ? 'not-allowed' : 'pointer', opacity: slideIdx >= totalSlides - 1 ? 0.35 : 1, transition: 'all 0.15s' }}
           >
