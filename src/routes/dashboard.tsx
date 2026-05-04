@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Eye, Plus, ArrowRight, Mic, Sparkles, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import { Eye, Plus, ArrowRight, Mic, TrendingUp, Calendar, Loader2 } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -238,14 +238,13 @@ export function DashboardPage() {
           {/* Quick actions */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr',
             gap: isMobile ? 10 : 14,
             marginBottom: isMobile ? 20 : 28,
             position: 'relative', zIndex: 1,
           }}>
             {[
               { icon: Mic, label: 'Jury Practice', sub: 'Practise your answers', to: '/jury' },
-              { icon: Sparkles, label: 'AI Assistant', sub: 'Ask anything', to: '/assistant' },
               { icon: TrendingUp, label: 'All Projects', sub: `${projects.length} project${projects.length !== 1 ? 's' : ''}`, to: '/projects' },
             ].map(({ icon: Icon, label, sub, to }) => (
               <Link key={label} to={to} style={{

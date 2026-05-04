@@ -45,6 +45,11 @@ const STAGE_META: Record<string, { label: string; color: string }> = {
   'jury-prep':        { label: 'Jury Prep',         color: 'oklch(0.65 0.18 25)' },
 }
 
+// ─── Module-level audio cache ─────────────────────────────────────────────────
+// Keyed by `${projectId}-${slideIdx}`. Persists across component unmounts within
+// the same browser session — so navigating to dashboard and back won't re-bill ElevenLabs.
+const globalAudioCache = new Map<string, Blob>()
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function AnalysisPage() {
@@ -62,9 +67,9 @@ export function AnalysisPage() {
   const [voiceOn,       setVoiceOn]      = useState(true)   // ON by default
   const [pdfUrl,        setPdfUrl]       = useState<string | null>(null)
   const [speaking,      setSpeaking]     = useState(false)
-  const [captionWords,  setCaptionWords] = useState<string[]>([]) // rolling caption
+  const [captionWords,  setCaptionWords] = useState<string[]>([])
 
-  // Refs so callbacks always see current values without stale closures
+  // ── Refs so callbacks always see current values ──
   const abortRef      = useRef<AbortController | null>(null)
   const audioRef      = useRef<HTMLAudioElement | null>(null)
   const playTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -73,10 +78,12 @@ export function AnalysisPage() {
   const voiceOnRef    = useRef(true)
   const feedbackRef   = useRef<FeedbackItem[]>([])
   const totalRef      = useRef(1)
-  const audioCacheRef = useRef<Map<number, Blob>>(new Map()) // cache blobs to avoid re-billing
+  // Tracks whether audio is mid-playback but paused (not stopped)
+  const pausedRef     = useRef(false)
 
+  // Keep refs in sync with state (order matters — these run before the main effect)
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
-  useEffect(() => { voiceOnRef.current = voiceOn }, [voiceOn])
+  useEffect(() => { voiceOnRef.current   = voiceOn   }, [voiceOn])
 
   // ── Load data with polling ──
   useEffect(() => {
@@ -101,6 +108,11 @@ export function AnalysisPage() {
     return () => { if (pollTimer) clearTimeout(pollTimer); supabase.removeChannel(sub) }
   }, [params.projectId])
 
+  // ── Remember last-visited project so the sidebar nav can link to it ──
+  useEffect(() => {
+    localStorage.setItem('critup_last_analysis_id', params.projectId)
+  }, [params.projectId])
+
   const latestAnalysis = project?.analyses
     ?.filter(a => a.status === 'complete')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
@@ -122,12 +134,12 @@ export function AnalysisPage() {
     ? latestAnalysis.jury_questions as unknown as string[]
     : []
 
-  // Keep refs up to date so audio callbacks always see fresh values
   useEffect(() => { feedbackRef.current = feedbackItems }, [feedbackItems])
   useEffect(() => { totalRef.current = feedbackItems.length + 1 }, [feedbackItems.length])
 
-  // ── Kill all audio, pending fetch, word timer ──
+  // ── Kill all audio, pending fetch, timers ──
   const killAudio = useCallback(() => {
+    pausedRef.current = false
     if (playTimerRef.current) { clearTimeout(playTimerRef.current); playTimerRef.current = null }
     if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null }
     abortRef.current?.abort()
@@ -141,7 +153,7 @@ export function AnalysisPage() {
     setSpeaking(false)
   }, [])
 
-  // ── Rolling caption: reveal ~2.5 words/sec (like live subtitles) ──
+  // ── Rolling caption ──
   const startCaption = useCallback((text: string) => {
     if (wordTimerRef.current) clearInterval(wordTimerRef.current)
     const words = text.split(/\s+/).filter(Boolean)
@@ -149,16 +161,15 @@ export function AnalysisPage() {
     setCaptionWords([])
     wordTimerRef.current = setInterval(() => {
       idx++
-      // Show a rolling window of the last 10 words so it reads like captions
       setCaptionWords(words.slice(Math.max(0, idx - 10), idx))
       if (idx >= words.length) {
         clearInterval(wordTimerRef.current!)
         wordTimerRef.current = null
       }
-    }, 400) // ~150 words/min ≈ ElevenLabs default speed
+    }, 400)
   }, [])
 
-  // ── Play a blob (from cache or fresh fetch), start caption in parallel ──
+  // ── Play a blob with caption ──
   const playBlob = useCallback((blob: Blob, text: string, onDone?: () => void) => {
     const url = URL.createObjectURL(blob)
     const audio = new Audio(url)
@@ -177,18 +188,17 @@ export function AnalysisPage() {
     audio.play().catch(finish)
   }, [startCaption])
 
-  // ── Speak a slide by index — uses cache so ElevenLabs is only billed once per slide ──
+  // ── Speak a slide — uses module-level cache so ElevenLabs is only billed once ──
   const speakSlide = useCallback((idx: number, onDone?: () => void) => {
     killAudio()
     const fb = feedbackRef.current[idx]
     if (!fb) { onDone?.(); return }
     const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+    const cacheKey = `${params.projectId}-${idx}`
 
-    // Serve from cache (no API call, no credit cost)
-    const cached = audioCacheRef.current.get(idx)
+    const cached = globalAudioCache.get(cacheKey)
     if (cached) { playBlob(cached, text, onDone); return }
 
-    // First time: fetch from ElevenLabs, cache the blob
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
@@ -204,7 +214,7 @@ export function AnalysisPage() {
       })
       .then(blob => {
         if (ctrl.signal.aborted) return
-        audioCacheRef.current.set(idx, blob) // cache for future plays
+        globalAudioCache.set(cacheKey, blob)
         playBlob(blob, text, onDone)
       })
       .catch(e => {
@@ -213,16 +223,12 @@ export function AnalysisPage() {
           onDone?.()
         }
       })
-  }, [killAudio, playBlob])
+  }, [killAudio, playBlob, params.projectId])
 
-  // ── Single effect owns all play/voice logic ──
-  useEffect(() => {
-    killAudio()
-    setCaptionWords([])
-
-    const fb     = feedbackRef.current[slideIdx]
-    const isLast = slideIdx >= totalRef.current - 1
-
+  // ── Start audio for a slide (call when fresh playback begins for idx) ──
+  const startSlideAudio = useCallback((idx: number) => {
+    const fb = feedbackRef.current[idx]
+    const isLast = idx >= totalRef.current - 1
     const advance = () => {
       if (!isPlayingRef.current) return
       setSlideIdx(s => {
@@ -230,25 +236,65 @@ export function AnalysisPage() {
         return s + 1
       })
     }
-
-    if (voiceOn && fb) {
-      if (isPlaying) {
-        speakSlide(slideIdx, advance)      // speak → then auto-advance
-      } else {
-        speakSlide(slideIdx)               // manual nav: just speak
-      }
-    } else if (isPlaying && !isLast) {
-      playTimerRef.current = setTimeout(advance, 5000)   // no voice: timer
-    } else if (isPlaying && isLast) {
+    if (voiceOnRef.current && fb) {
+      speakSlide(idx, advance)
+    } else if (!isLast) {
+      playTimerRef.current = setTimeout(advance, 5000)
+    } else {
       setIsPlaying(false)
     }
+  }, [speakSlide])
 
+  // ── Effect: runs when slide or voice changes (NOT isPlaying) ──
+  // isPlaying is intentionally excluded from deps — we manage play/pause imperatively.
+  useEffect(() => {
+    killAudio()
+    setCaptionWords([])
+    // If already playing (e.g., slide changed mid-playback), restart audio for new slide
+    if (isPlayingRef.current) {
+      startSlideAudio(slideIdx)
+    }
     return killAudio
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideIdx, isPlaying, voiceOn])
+  }, [slideIdx, voiceOn])
 
-  // Stop audio on unmount
+  // ── Stop audio on unmount ──
   useEffect(() => killAudio, [killAudio])
+
+  // ── Play / Pause handler ──
+  // • First press  → fresh start (audio begins from word 1)
+  // • While playing → pauses mid-audio, keeps seek position
+  // • While paused  → resumes from exact pause point
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) {
+      // Pause: suspend audio, keep position
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause()
+        pausedRef.current = true
+      }
+      if (playTimerRef.current) { clearTimeout(playTimerRef.current); playTimerRef.current = null }
+      if (wordTimerRef.current) { clearInterval(wordTimerRef.current); wordTimerRef.current = null }
+      isPlayingRef.current = false
+      setIsPlaying(false)
+    } else if (pausedRef.current && audioRef.current) {
+      // Resume: continue from paused position
+      pausedRef.current = false
+      isPlayingRef.current = true
+      setIsPlaying(true)
+      setSpeaking(true)
+      const fb = feedbackRef.current[slideIdx]
+      if (fb) startCaption(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
+      audioRef.current.play().catch(() => {
+        // If browser can't resume (e.g., blob expired), restart fresh
+        startSlideAudio(slideIdx)
+      })
+    } else {
+      // Fresh start
+      isPlayingRef.current = true
+      setIsPlaying(true)
+      startSlideAudio(slideIdx)
+    }
+  }, [isPlaying, slideIdx, startSlideAudio, startCaption])
 
   // ── Loading ──
   if (loading) return (
@@ -304,7 +350,6 @@ export function AnalysisPage() {
   const isSummary   = slideIdx >= feedbackItems.length
   const current     = !isSummary ? feedbackItems[slideIdx] : null
 
-  // PDF viewer props for current slide
   const pdfPage   = current?.page  ?? 1
   const focusX    = current?.focus?.x ?? 0.5
   const focusY    = current?.focus?.y ?? 0.5
@@ -400,7 +445,7 @@ export function AnalysisPage() {
               </div>
             )}
 
-            {/* INSET GLOW OVERLAY — sits on top of the PDF canvas so it's visible */}
+            {/* INSET GLOW OVERLAY */}
             <div
               key={`glow-${slideIdx}`}
               style={{
@@ -422,7 +467,6 @@ export function AnalysisPage() {
                 SUMMARY
               </div>
             )}
-            {/* Page indicator */}
             {!isSummary && current?.page && (
               <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', borderRadius: 100, padding: '3px 10px', fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.04em' }}>
                 p.{current.page}
@@ -452,7 +496,6 @@ export function AnalysisPage() {
         <div style={{ flex: '0 0 42%', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', paddingBottom: 4 }}>
           {!isSummary ? (
             <div key={`panel-${slideIdx}`} style={{ animation: 'slide-up 0.3s ease-out', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Current feedback card */}
               <div style={{ background: c.cardBg, borderRadius: 16, padding: '16px', border: `1.5px solid #F97316`, boxShadow: '0 0 20px oklch(0.72 0.18 45/0.1)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 6 }}>
                   FEEDBACK {slideIdx + 1} OF {feedbackItems.length}
@@ -471,7 +514,6 @@ export function AnalysisPage() {
                 )}
               </div>
 
-              {/* 3 score rings */}
               {scoreRings.map((ring, i) => (
                 <div key={ring.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: c.cardBg, border: `1px solid ${c.border}` }}>
                   <ScoreRing score={ring.score} label="" size={54} theme={theme} />
@@ -527,12 +569,11 @@ export function AnalysisPage() {
 
       {/* ── Footer ── */}
       <div style={{ padding: '10px 22px 14px', flexShrink: 0 }}>
-        {/* Caption bar — rolling words synced to voice */}
+        {/* Caption bar */}
         <div style={{ background: c.isDark ? 'oklch(0.15 0.004 270)' : '#f8fafc', border: `1px solid ${speaking ? 'oklch(0.72 0.18 45/0.5)' : c.border}`, borderRadius: 12, padding: '10px 16px', marginBottom: 10, minHeight: 46, display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.3s' }}>
           <Volume2 size={13} color={speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0, transition: 'color 0.3s' }} />
           <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5, flex: 1, minHeight: '1.5em' }}>
             {speaking && captionWords.length > 0
-              // Live captions while speaking
               ? captionWords.map((word, i) => (
                   <span
                     key={`${slideIdx}-${i}`}
@@ -545,12 +586,11 @@ export function AnalysisPage() {
                     {word}{' '}
                   </span>
                 ))
-              // Idle: show a brief prompt
               : isSummary
                 ? <span style={{ color: c.textMuted }}>Analysis complete — {feedbackItems.length} critiques · {avg.toFixed(1)} / 10</span>
                 : current
                   ? <span style={{ color: c.textMuted }}>{current.title}</span>
-                  : <span style={{ color: c.textMuted }}>Press play or turn on Voice to begin</span>
+                  : <span style={{ color: c.textMuted }}>Press play to begin</span>
             }
           </p>
         </div>
@@ -565,7 +605,7 @@ export function AnalysisPage() {
             ← Previous
           </button>
           <button
-            onClick={() => setIsPlaying(p => !p)}
+            onClick={handlePlayPause}
             style={{ width: 48, height: 48, borderRadius: '50%', background: isPlaying ? 'oklch(0.65 0.18 25)' : '#F97316', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${isPlaying ? 'oklch(0.65 0.18 25/0.5)' : 'oklch(0.72 0.18 45/0.5)'}`, transition: 'all 0.2s', flexShrink: 0 }}
           >
             {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}

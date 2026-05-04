@@ -11,10 +11,12 @@ import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 
-const NAV_ITEMS = [
+// Nav items are built dynamically inside the component so Analysis can point
+// to the user's last visited project (stored in localStorage by AnalysisPage).
+const STATIC_NAV: Array<{ to: string; icon: React.ElementType; label: string }> = [
   { to: '/', icon: LayoutGrid, label: 'Dashboard' },
   { to: '/projects', icon: Folder, label: 'Projects' },
-  { to: '/analysis/riverside-pavilion', icon: CircleDot, label: 'Analysis' },
+  // Analysis slot filled in component body
   { to: '/jury', icon: Mic, label: 'Jury' },
 ]
 const BOTTOM_ITEMS = [
@@ -86,8 +88,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const sidebarW = sidebarOpen ? 240 : 72
 
+  // Build nav dynamically: insert Analysis item pointing to last visited project
+  const lastAnalysisId = typeof localStorage !== 'undefined'
+    ? localStorage.getItem('critup_last_analysis_id')
+    : null
+  const analysisTo = lastAnalysisId ? `/analysis/${lastAnalysisId}` : '/projects'
+  const NAV_ITEMS = [
+    STATIC_NAV[0],
+    STATIC_NAV[1],
+    { to: analysisTo, icon: CircleDot, label: 'Analysis' },
+    STATIC_NAV[2],
+  ]
+
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
+    // All /analysis/* paths activate the Analysis nav item
+    if (to.startsWith('/analysis/')) return currentPath.startsWith('/analysis/')
     return currentPath.startsWith(to)
   }
 
