@@ -105,9 +105,9 @@ export function AnalysisPage() {
 
   // Load project + analyses
   useEffect(() => {
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+
     const load = async () => {
-      setLoading(true)
-      setError(null)
       const { data, error: err } = await supabase
         .from('projects')
         .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, created_at)')
@@ -119,17 +119,32 @@ export function AnalysisPage() {
         setLoading(false)
         return
       }
-      setProject(data as unknown as ProjectData)
+
+      const proj = data as unknown as ProjectData
+      setProject(proj)
       setLoading(false)
+
+      // If still pending/processing, poll every 4 seconds
+      const stillPending = proj.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
+      if (stillPending) {
+        pollTimer = setTimeout(load, 4000)
+      }
     }
+
+    setLoading(true)
+    setError(null)
     load()
 
-    // Realtime: update when analysis completes
+    // Realtime subscription as primary trigger
     const sub = supabase
       .channel(`analysis-${params.projectId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analyses', filter: `project_id=eq.${params.projectId}` }, load)
       .subscribe()
-    return () => { supabase.removeChannel(sub) }
+
+    return () => {
+      if (pollTimer) clearTimeout(pollTimer)
+      supabase.removeChannel(sub)
+    }
   }, [params.projectId])
 
   // Get latest complete analysis
