@@ -16,13 +16,31 @@ interface Message {
 
 const CHIPS = ['Explain my critique', 'Jury prep help', 'Weakest point?', 'Improve concept']
 
+// Read the last project name from localStorage (set by AnalysisPage)
+function getLastProjectName() {
+  try { return localStorage.getItem('critup_last_project_name') ?? null } catch { return null }
+}
+
+function makeGreeting() {
+  const name = getLastProjectName()
+  if (name) return `Hi! I'm ready to help with **${name}**. Ask me anything about your critique, scores, or how to prep for jury.`
+  return "Hi! Upload a project to get started. I'll analyse your drawings and give you targeted critique, score breakdowns, and jury prep."
+}
+
 export function AIChatPanel({ open, onClose, theme }: Props) {
   const c = useColors(theme)
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: "Hi! I've reviewed your latest project. Your spatial score is strong. Would you like me to walk you through the key critique points or help you prep for jury questions?" },
-  ])
+  // Reset messages each time the panel opens (fresh conversation every session)
+  const [messages, setMessages] = useState<Message[]>(() => [{ role: 'ai', text: makeGreeting() }])
   const [loading, setLoading] = useState(false)
+
+  // Re-initialise greeting when panel is opened
+  useEffect(() => {
+    if (open) {
+      setMessages([{ role: 'ai', text: makeGreeting() }])
+      setInput('')
+    }
+  }, [open])
   const endRef  = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
 

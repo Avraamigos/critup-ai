@@ -44,10 +44,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    // Safety net: if getSession hangs (slow network / Supabase cold-start),
+    // force loading=false after 7 s so the spinner never shows indefinitely.
+    const loadingTimeout = setTimeout(() => {
+      setState(s => s.loading ? { ...s, loading: false } : s)
+    }, 7000)
+
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(loadingTimeout)
       const profile = session?.user ? await fetchProfile(session.user.id) : null
       setState({ user: session?.user ?? null, session, profile, loading: false })
+    }).catch(() => {
+      clearTimeout(loadingTimeout)
+      setState(s => ({ ...s, loading: false }))
     })
 
     // Listen for auth changes

@@ -62,15 +62,22 @@ export function SettingsPage() {
     if (!user) return
     setSaving(true)
     setSaveError(null)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ full_name: form.name, university: form.university, language })
-      .eq('id', user.id)
-    setSaving(false)
-    if (error) { setSaveError(error.message); return }
-    await refreshProfile()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      // Timeout guard: Supabase on free tier can occasionally hang
+      const result = await Promise.race([
+        supabase.from('profiles').update({ full_name: form.name, university: form.university, language }).eq('id', user.id),
+        new Promise<{ error: Error }>(resolve => setTimeout(() => resolve({ error: new Error('Request timed out') }), 8000)),
+      ]) as { error: Error | null }
+      setSaving(false)
+      if (result.error) { setSaveError(result.error.message); return }
+      // Don't await refreshProfile — let it update in the background
+      refreshProfile().catch(() => {})
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setSaving(false)
+      setSaveError('Save failed. Please try again.')
+    }
   }
 
   const Toggle = ({ val, onChange }: { val: boolean; onChange: () => void }) => (

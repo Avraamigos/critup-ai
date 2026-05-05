@@ -108,10 +108,11 @@ export function AnalysisPage() {
     return () => { if (pollTimer) clearTimeout(pollTimer); supabase.removeChannel(sub) }
   }, [params.projectId])
 
-  // ── Remember last-visited project so the sidebar nav can link to it ──
+  // ── Remember last-visited project so the sidebar nav and AI chat can reference it ──
   useEffect(() => {
     localStorage.setItem('critup_last_analysis_id', params.projectId)
-  }, [params.projectId])
+    if (project?.name) localStorage.setItem('critup_last_project_name', project.name)
+  }, [params.projectId, project?.name])
 
   const latestAnalysis = project?.analyses
     ?.filter(a => a.status === 'complete')

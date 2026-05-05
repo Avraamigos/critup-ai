@@ -6,22 +6,18 @@ import {
   Sun, Moon, LogOut, Star, TrendingUp, User,
 } from 'lucide-react'
 import { CritupLogo } from './CritupLogo'
-import { BlobButton } from './BlobButton'
+import { OrbButton } from './OrbButton'
 import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 
-// Nav items are built dynamically inside the component so Analysis can point
-// to the user's last visited project (stored in localStorage by AnalysisPage).
-const STATIC_NAV: Array<{ to: string; icon: React.ElementType; label: string }> = [
-  { to: '/', icon: LayoutGrid, label: 'Dashboard' },
-  { to: '/projects', icon: Folder, label: 'Projects' },
-  // Analysis slot filled in component body
-  { to: '/jury', icon: Mic, label: 'Jury' },
-]
-const BOTTOM_ITEMS = [
-  { to: '/settings', icon: Settings, label: 'Settings' },
-  { to: '/help', icon: HelpCircle, label: 'Help' },
+// `activePath` is what determines the highlighted state — separate from `to`
+// so the Analysis item can always highlight on /analysis/* regardless of its `to`.
+type NavDef = { to: string; activePath: string; icon: React.ElementType; label: string }
+
+const BOTTOM_ITEMS: NavDef[] = [
+  { to: '/settings', activePath: '/settings', icon: Settings,   label: 'Settings' },
+  { to: '/help',     activePath: '/help',     icon: HelpCircle, label: 'Help'     },
 ]
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif"
@@ -93,29 +89,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const sidebarW = sidebarOpen ? 240 : 72
 
-  // Build nav dynamically: insert Analysis item pointing to last visited project
+  // Analysis nav points to last visited project; activePath always stays /analysis/
+  // so it ONLY highlights on analysis pages (not on /projects fallback).
   const lastAnalysisId = typeof localStorage !== 'undefined'
     ? localStorage.getItem('critup_last_analysis_id')
     : null
   const analysisTo = lastAnalysisId ? `/analysis/${lastAnalysisId}` : '/projects'
-  const NAV_ITEMS = [
-    STATIC_NAV[0],
-    STATIC_NAV[1],
-    { to: analysisTo, icon: CircleDot, label: 'Analysis' },
-    STATIC_NAV[2],
+  const NAV_ITEMS: NavDef[] = [
+    { to: '/',          activePath: '/',          icon: LayoutGrid, label: 'Dashboard' },
+    { to: '/projects',  activePath: '/projects',  icon: Folder,     label: 'Projects'  },
+    { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,  label: 'Analysis'  },
+    { to: '/jury',      activePath: '/jury',      icon: Mic,        label: 'Jury'      },
   ]
 
-  const isActive = (to: string) => {
-    if (to === '/') return currentPath === '/'
-    // All /analysis/* paths activate the Analysis nav item
-    if (to.startsWith('/analysis/')) return currentPath.startsWith('/analysis/')
-    return currentPath.startsWith(to)
+  // Use activePath (not `to`) for highlight detection
+  const isActive = (activePath: string) => {
+    if (activePath === '/') return currentPath === '/'
+    return currentPath.startsWith(activePath)
   }
 
-  const pageLabel = [...NAV_ITEMS, ...BOTTOM_ITEMS].find(n => isActive(n.to))?.label || 'Critup'
+  const pageLabel = [...NAV_ITEMS, ...BOTTOM_ITEMS].find(n => isActive(n.activePath))?.label || 'Critup'
 
-  const NavItem = ({ to, icon: Icon, label }: { to: string; icon: React.ElementType; label: string }) => {
-    const active = isActive(to)
+  const NavItem = ({ to, activePath, icon: Icon, label }: NavDef) => {
+    const active = isActive(activePath)
     return (
       <Link to={to} style={{
         display: 'flex', alignItems: 'center', gap: 11, width: '100%',
@@ -226,8 +222,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {theme === 'dark' ? <Sun size={15} color={c.textMuted} /> : <Moon size={15} color={c.textMuted} />}
             </button>
 
-            {/* Blob AI button */}
-            {!isMobile && <BlobButton onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
+            {/* Animated orb AI button */}
+            {!isMobile && <OrbButton onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
 
             {/* Account dropdown */}
             <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -308,8 +304,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           display: 'flex', alignItems: 'center',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
-            const active = isActive(to)
+          {NAV_ITEMS.map(({ to, activePath, icon: Icon, label }) => {
+            const active = isActive(activePath)
             return (
               <Link key={to} to={to} style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
