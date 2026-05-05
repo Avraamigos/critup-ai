@@ -1,6 +1,66 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 
+// Pre-generate ElevenLabs audio for every feedback slide and store in
+// project-audio/{analysisId}/{slideIdx}.mp3 so playback is always instant.
+async function generateAllAudio(
+  analysisId: string,
+  feedback: Array<{ title: string; text: string; suggestion: string }>,
+  elevenLabsKey: string,
+  supabase: ReturnType<typeof createClient>
+) {
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || 'oXxZrNLpn6nWkEBAMSJs'
+
+  await Promise.allSettled(
+    feedback.map(async (fb, idx) => {
+      const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+      const storagePath = `${analysisId}/${idx}.mp3`
+
+      // Skip if already stored (handles retries / re-runs)
+      const { error: checkErr } = await supabase.storage
+        .from('project-audio')
+        .download(storagePath)
+      if (!checkErr) return  // already exists
+
+      const ttsRes = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+        {
+          method: 'POST',
+          headers: {
+            'xi-api-key': elevenLabsKey,
+            'Content-Type': 'application/json',
+            Accept: 'audio/mpeg',
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.45,
+              similarity_boost: 0.75,
+              style: 0.3,
+              use_speaker_boost: true,
+            },
+          }),
+        }
+      )
+      if (!ttsRes.ok) {
+        console.error(`[analyze] TTS failed for slide ${idx}:`, await ttsRes.text())
+        return
+      }
+
+      const audioBuf = Buffer.from(await ttsRes.arrayBuffer())
+      const { error: uploadErr } = await supabase.storage
+        .from('project-audio')
+        .upload(storagePath, audioBuf, {
+          contentType: 'audio/mpeg',
+          cacheControl: '86400',
+          upsert: false,
+        })
+      if (uploadErr) console.error(`[analyze] Storage upload failed for slide ${idx}:`, uploadErr)
+    })
+  )
+}
+
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are an expert architecture jury critic with 20+ years of experience reviewing student design work at top architecture schools (ETH Zurich, Bartlett, Harvard GSD, TU Berlin, METU). You give honest, specific, actionable critique — not generic feedback.
@@ -159,7 +219,16 @@ export default async function handler(
     const spatial_score = Math.min(10, Math.max(0, Number(result.spatial_score) || 0))
     const presentation_score = Math.min(10, Math.max(0, Number(result.presentation_score) || 0))
 
-    // 8. Write results back to DB
+    // 8. Pre-generate TTS audio for all feedback slides (stored in project-audio bucket).
+    //    We do this BEFORE marking status='complete' so the client always finds
+    //    audio ready the moment the analysis page loads. allSettled = TTS failures
+    //    never block the analysis from completing.
+    const elevenLabsKey = process.env.ELEVENLABS_API_KEY || ''
+    if (elevenLabsKey && result.feedback?.length) {
+      await generateAllAudio(analysisId, result.feedback, elevenLabsKey, supabase)
+    }
+
+    // 9. Write results back to DB (status → complete triggers client realtime update)
     const { error: updateErr } = await supabase
       .from('analyses')
       .update({
