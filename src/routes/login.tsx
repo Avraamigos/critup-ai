@@ -40,9 +40,7 @@ export function LoginPage() {
     const { error } = await signIn(email, password)
     setLoading(false)
     if (error) { setErrors({ password: error }); return }
-    // Full page reload ensures auth state is fully hydrated before AppShell renders,
-    // preventing the race-condition redirect back to /landing.
-    window.location.href = '/'
+    navigate({ to: '/' })
   }
 
   const signInWithGoogle = async () => {

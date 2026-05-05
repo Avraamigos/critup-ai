@@ -44,26 +44,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Safety net: if getSession hangs (slow network / Supabase cold-start),
-    // force loading=false after 7 s so the spinner never shows indefinitely.
-    const loadingTimeout = setTimeout(() => {
-      setState(s => s.loading ? { ...s, loading: false } : s)
-    }, 7000)
-
-    // Get initial session
+    // Get initial session — immediately unblock loading once session is known,
+    // then fetch profile silently in background (avoids visible spinner on load).
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      clearTimeout(loadingTimeout)
-      const profile = session?.user ? await fetchProfile(session.user.id) : null
-      setState({ user: session?.user ?? null, session, profile, loading: false })
+      // loading = false immediately so the app renders right away
+      setState({ user: session?.user ?? null, session, profile: null, loading: false })
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id)
+        setState(s => ({ ...s, profile }))
+      }
     }).catch(() => {
-      clearTimeout(loadingTimeout)
       setState(s => ({ ...s, loading: false }))
     })
 
-    // Listen for auth changes
+    // Listen for auth changes — also non-blocking: update user immediately,
+    // then load profile in background. This fixes the sign-in race condition
+    // where navigate({ to: '/' }) ran before setState finished.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const profile = session?.user ? await fetchProfile(session.user.id) : null
-      setState({ user: session?.user ?? null, session, profile, loading: false })
+      setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }))
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id)
+        setState(s => ({ ...s, profile }))
+      } else {
+        setState(s => ({ ...s, profile: null }))
+      }
     })
 
     return () => subscription.unsubscribe()
