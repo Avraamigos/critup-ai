@@ -44,23 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Get initial session — immediately unblock loading once session is known,
-    // then fetch profile silently in background (avoids visible spinner on load).
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      // loading = false immediately so the app renders right away
-      setState({ user: session?.user ?? null, session, profile: null, loading: false })
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        setState(s => ({ ...s, profile }))
-      }
-    }).catch(() => {
-      setState(s => ({ ...s, loading: false }))
-    })
-
-    // Listen for auth changes — also non-blocking: update user immediately,
-    // then load profile in background. This fixes the sign-in race condition
-    // where navigate({ to: '/' }) ran before setState finished.
+    // Use ONLY onAuthStateChange — it fires INITIAL_SESSION immediately on
+    // subscription with the cached session from localStorage. Using getSession()
+    // in parallel caused a double-fire: two different User object references for
+    // the same user, making useEffect([user]) in child components run twice and
+    // briefly clear their state (the "dashboard goes empty" bug).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Update user immediately (non-blocking) so navigation guards see the
+      // correct user as soon as possible, without waiting for fetchProfile.
       setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }))
       if (session?.user) {
         const profile = await fetchProfile(session.user.id)
@@ -100,7 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    // Use local-only scope — clears localStorage immediately without a network
+    // call. This fires SIGNED_OUT via onAuthStateChange instantly and never
+    // hangs on slow / free-tier Supabase connections.
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   const refreshProfile = async () => {

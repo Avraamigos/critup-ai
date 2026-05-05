@@ -72,20 +72,36 @@ export function DashboardPage() {
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
   useEffect(() => {
-    if (!user) return
-    const fetch = async () => {
+    if (!user?.id) return
+    let cancelled = false
+    const loadProjects = async () => {
       setLoading(true)
-      const { data } = await supabase
-        .from('projects')
-        .select('id, name, stage, created_at, analyses(id, status, concept_score, spatial_score, presentation_score, created_at)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-      setProjects((data as unknown as Project[]) || [])
-      setLoading(false)
+      try {
+        const result = await Promise.race([
+          supabase
+            .from('projects')
+            .select('id, name, stage, created_at, analyses(id, status, concept_score, spatial_score, presentation_score, created_at)')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 10_000)
+          ),
+        ])
+        if (!cancelled) {
+          setProjects(((result as { data: unknown }).data as unknown as Project[]) || [])
+        }
+      } catch {
+        // timeout or network error — show empty state, don't hang
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    fetch()
-  }, [user])
+    loadProjects()
+    return () => { cancelled = true }
+    // Use user.id (string) not user (object) — prevents double-fire when
+    // onAuthStateChange emits INITIAL_SESSION with a new User object reference.
+  }, [user?.id])
 
   // Get active project (most recent with a complete analysis, or just most recent)
   const activeProject = projects.find(p =>

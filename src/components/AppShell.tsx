@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const { profile, user, signOut: authSignOut } = useAuth()
+  const { profile, user, loading: authLoading, signOut: authSignOut } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [chatOpen, setChatOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -62,7 +62,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [accountOpen])
 
   // ── Auth guard: redirect to landing if not logged in ──
-  const { loading: authLoading } = useAuth()
   useEffect(() => {
     if (!authLoading && !user) {
       navigate({ to: '/landing' })
@@ -162,7 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {BOTTOM_ITEMS.map(item => <NavItem key={item.to} {...item} />)}
           </div>
 
-          {sidebarOpen && (
+          {sidebarOpen && !isPro && (
             <div style={{ margin: '10px 10px 8px', padding: '14px', borderRadius: 12, background: c.isDark ? 'oklch(0.225 0.004 270)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45 / 0.3)', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.08)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 4, letterSpacing: '0.04em', fontFamily: FONT }}>FREE PLAN</div>
               <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 10, lineHeight: 1.4, fontFamily: FONT }}>Unlock unlimited analyses</div>
