@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Star, TrendingUp, User,
 } from 'lucide-react'
 import { CritupLogo } from './CritupLogo'
-import { OrbButton } from './OrbButton'
+import { OrbButton } from './ui/orb-button'
 import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
