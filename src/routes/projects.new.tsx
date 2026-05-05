@@ -65,10 +65,10 @@ export function NewProjectPage() {
     if (file) setForm(f => ({ ...f, file }))
   }
 
-  // Wrap a promise with a per-step timeout so we never hang forever
-  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  // Wrap a thenable (incl. PostgrestBuilder) with a timeout so we never hang forever
+  function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
     return Promise.race([
-      promise,
+      Promise.resolve(promise),
       new Promise<T>((_, reject) =>
         setTimeout(() => reject(new Error(`${label} timed out. Check your connection and try again.`)), ms)
       ),
