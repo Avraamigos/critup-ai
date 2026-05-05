@@ -15,7 +15,7 @@ interface AuthState {
 interface AuthContext extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
-  signOut: () => Promise<void>
+  signOut: () => void
   refreshProfile: () => Promise<void>
 }
 
@@ -29,13 +29,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: true,
   })
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    return data
+  // IMPORTANT: fetchProfile must NOT be called inside the onAuthStateChange callback
+  // because Supabase holds the auth lock for the entire duration of async callbacks.
+  // Awaiting a network call there deadlocks signOut (which also needs the lock).
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    try {
+      const { data } = await Promise.race([
+        Promise.resolve(supabase.from('profiles').select('*').eq('id', userId).single()),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('profile fetch timeout')), 8_000)
+        ),
+      ])
+      return data ?? null
+    } catch {
+      return null
+    }
   }
 
   useEffect(() => {
@@ -49,13 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // in parallel caused a double-fire: two different User object references for
     // the same user, making useEffect([user]) in child components run twice and
     // briefly clear their state (the "dashboard goes empty" bug).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // Update user immediately (non-blocking) so navigation guards see the
-      // correct user as soon as possible, without waiting for fetchProfile.
+    //
+    // CRITICAL: this callback must be synchronous (no await inside).
+    // Supabase holds the auth lock for the duration of async callbacks — awaiting
+    // fetchProfile() here keeps the lock held, which deadlocks signOut().
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Update user + loading immediately (synchronous) — lock released right away
       setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }))
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        setState(s => ({ ...s, profile }))
+        // Fetch profile OUTSIDE the auth lock via .then() — never blocks lock
+        const userId = session.user.id
+        fetchProfile(userId).then(profile => {
+          setState(s => ({ ...s, profile }))
+        })
       } else {
         setState(s => ({ ...s, profile: null }))
       }
@@ -90,17 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }
 
-  const signOut = async () => {
-    // Use local-only scope — clears localStorage immediately without a network
-    // call. This fires SIGNED_OUT via onAuthStateChange instantly and never
-    // hangs on slow / free-tier Supabase connections.
-    await supabase.auth.signOut({ scope: 'local' })
+  const signOut = () => {
+    // scope:'local' clears localStorage and fires SIGNED_OUT via onAuthStateChange
+    // before the Promise resolves, so awaiting is unnecessary — and dangerous,
+    // because the auth lock might be held by a concurrent operation (e.g. a
+    // slow token-refresh). Fire-and-forget is safe here.
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {})
   }
 
   const refreshProfile = async () => {
     if (state.user) {
       const profile = await fetchProfile(state.user.id)
-      setState(s => ({ ...s, profile }))
+      setState(s => ({ ...s, profile: profile ?? null }))
     }
   }
 

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Upload, FileText, X, Check } from 'lucide-react'
+import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -38,12 +38,13 @@ export function NewProjectPage() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const totalSteps = 4
+  const totalSteps = 5
   const canNext = [
     !!form.name.trim(),
     !!form.stage,
     form.focuses.length > 0,
     !!form.file,
+    true, // confirmation step — always enabled
   ][step]
 
   const toggleFocus = (v: string) => {
@@ -162,7 +163,7 @@ export function NewProjectPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <CritupLogo size={18} showText={false} theme={theme} />
             <button
-              onClick={async () => { await signOut(); navigate({ to: '/landing' }) }}
+              onClick={() => { signOut(); navigate({ to: '/landing' }) }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 12, padding: '4px 8px', borderRadius: 6, opacity: 0.6 }}
             >Sign out</button>
           </div>
@@ -282,6 +283,72 @@ export function NewProjectPage() {
           </>
         )}
 
+        {/* Step 5: Confirm before upload */}
+        {step === 4 && (
+          <>
+            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Ready to analyse?</h1>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 28 }}>Review everything before we start — this can't be undone once uploaded.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Project name */}
+              <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 3 }}>PROJECT NAME</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary }}>{form.name}</div>
+                </div>
+                <button onClick={() => setStep(0)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+              </div>
+
+              {/* Stage */}
+              <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 3 }}>DESIGN STAGE</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary }}>{STAGES.find(s => s.v === form.stage)?.l}</div>
+                </div>
+                <button onClick={() => setStep(1)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+              </div>
+
+              {/* Focus areas */}
+              <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 6 }}>FOCUS AREAS</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {form.focuses.map(f => (
+                      <span key={f} style={{ padding: '3px 10px', borderRadius: 100, fontSize: 12, fontWeight: 600, background: 'oklch(0.72 0.18 45 / 0.1)', color: '#F97316', border: '1px solid oklch(0.72 0.18 45 / 0.3)' }}>
+                        {FOCUSES.find(x => x.v === f)?.l ?? f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => setStep(2)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
+              </div>
+
+              {/* PDF */}
+              <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1.5px solid oklch(0.72 0.17 145 / 0.6)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, marginRight: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 9, background: 'oklch(0.72 0.17 145 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <FileText size={17} color="oklch(0.72 0.17 145)" />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 2 }}>PDF FILE</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.file?.name}</div>
+                    <div style={{ fontSize: 12, color: c.textMuted }}>{form.file ? (form.file.size / 1024 / 1024).toFixed(1) + ' MB' : ''}</div>
+                  </div>
+                </div>
+                <button onClick={() => setStep(3)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Change</button>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div style={{ display: 'flex', gap: 10, background: 'oklch(0.72 0.18 45 / 0.07)', border: '1px solid oklch(0.72 0.18 45 / 0.25)', borderRadius: 12, padding: '12px 14px', marginTop: 16 }}>
+              <AlertTriangle size={15} color="#F97316" style={{ flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 13, color: c.textMuted, margin: 0, lineHeight: 1.5 }}>
+                Make sure your PDF is the correct file. Once you click <strong style={{ color: c.textPrimary }}>Start Analysis</strong>, it will be uploaded and processed — this uses one of your analysis credits.
+              </p>
+            </div>
+          </>
+        )}
+
         {/* Navigation */}
         <div style={{ marginTop: 'auto', paddingTop: 36, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
           {error && (
@@ -311,7 +378,7 @@ export function NewProjectPage() {
               {saving && (
                 <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin-btn 0.7s linear infinite' }} />
               )}
-              {saving ? 'Uploading…' : step === totalSteps - 1 ? 'Analyse project →' : 'Next →'}
+              {saving ? 'Uploading…' : step === totalSteps - 1 ? 'Start Analysis →' : 'Next →'}
             </button>
           </div>
           <style>{`@keyframes spin-btn { to { transform: rotate(360deg); } }`}</style>

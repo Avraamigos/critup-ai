@@ -23,29 +23,47 @@ export function JuryPage() {
   const [timer, setTimer] = useState(0)
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null)
 
-  // Load jury questions from the user's most recent complete analysis
+  // Load jury questions from the user's most recent complete analysis.
+  // Use user?.id (stable string) not user (object ref) to prevent double-fire
+  // when onAuthStateChange emits a new User object for the same session.
   useEffect(() => {
-    if (!user) return
+    if (!user?.id) return
+    let cancelled = false
     const load = async () => {
       setLoading(true)
-      const { data } = await supabase
-        .from('analyses')
-        .select('jury_questions, projects(name)')
-        .eq('user_id', user.id)
-        .eq('status', 'complete')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (data?.jury_questions && Array.isArray(data.jury_questions)) {
-        setQuestions(data.jury_questions as string[])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setProjectName((data as any).projects?.name || '')
+      try {
+        const result = await Promise.race([
+          Promise.resolve(
+            supabase
+              .from('analyses')
+              .select('jury_questions, projects(name)')
+              .eq('user_id', user.id)
+              .eq('status', 'complete')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single()
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 10_000)
+          ),
+        ])
+        if (!cancelled) {
+          const { data } = result
+          if (data?.jury_questions && Array.isArray(data.jury_questions)) {
+            setQuestions(data.jury_questions as string[])
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setProjectName((data as any).projects?.name || '')
+          }
+        }
+      } catch {
+        // timeout or network error — show empty state, don't hang
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     }
     load()
-  }, [user])
+    return () => { cancelled = true }
+  }, [user?.id])
 
   const question = questions[qIdx] || ''
 

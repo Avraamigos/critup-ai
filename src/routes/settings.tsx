@@ -34,7 +34,10 @@ export function SettingsPage() {
     analysis: true, jury: true, tips: false, updates: true,
   })
 
-  // Populate form from real profile
+  // Populate form from real profile.
+  // Use stable primitive deps (id, email, specific fields) instead of object
+  // references — prevents double-fire when onAuthStateChange emits a new User
+  // object for the same session.
   useEffect(() => {
     if (profile || user) {
       setForm({
@@ -44,7 +47,8 @@ export function SettingsPage() {
       })
       if (profile?.language) setLanguage(profile.language)
     }
-  }, [profile, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, profile?.full_name, profile?.university, profile?.language, user?.id, user?.email])
 
   const initials = form.name
     ? form.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)

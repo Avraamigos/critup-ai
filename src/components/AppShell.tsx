@@ -68,9 +68,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, user, navigate])
 
-  const signOut = async () => {
+  const signOut = () => {
     setAccountOpen(false)
-    await authSignOut()
+    authSignOut() // synchronous fire-and-forget — clears localStorage immediately
     navigate({ to: '/landing' })
   }
 
