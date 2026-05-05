@@ -80,6 +80,9 @@ export function AnalysisPage() {
   const totalRef      = useRef(1)
   // Tracks whether audio is mid-playback but paused (not stopped)
   const pausedRef     = useRef(false)
+  // Tracks which word the caption timer was at when audio was paused,
+  // so resume can continue from the same word rather than restarting.
+  const captionIdxRef = useRef(0)
   // Stable ref to the analysis ID — needed inside speakSlide callback without
   // re-creating it every time latestAnalysis changes reference
   const analysisIdRef = useRef<string | null>(null)
@@ -161,13 +164,19 @@ export function AnalysisPage() {
   }, [])
 
   // ── Rolling caption ──
-  const startCaption = useCallback((text: string) => {
+  // startFrom lets resume continue from the paused word index instead of 0.
+  const startCaption = useCallback((text: string, startFrom = 0) => {
     if (wordTimerRef.current) clearInterval(wordTimerRef.current)
     const words = text.split(/\s+/).filter(Boolean)
-    let idx = 0
-    setCaptionWords([])
+    let idx = startFrom
+    // On fresh start clear captions; on resume keep current words visible
+    if (startFrom === 0) {
+      setCaptionWords([])
+      captionIdxRef.current = 0
+    }
     wordTimerRef.current = setInterval(() => {
       idx++
+      captionIdxRef.current = idx
       setCaptionWords(words.slice(Math.max(0, idx - 10), idx))
       if (idx >= words.length) {
         clearInterval(wordTimerRef.current!)
@@ -261,6 +270,7 @@ export function AnalysisPage() {
   useEffect(() => {
     killAudio()
     setCaptionWords([])
+    captionIdxRef.current = 0
     // If already playing (e.g., slide changed mid-playback), restart audio for new slide
     if (isPlayingRef.current) {
       startSlideAudio(slideIdx)
@@ -288,13 +298,14 @@ export function AnalysisPage() {
       isPlayingRef.current = false
       setIsPlaying(false)
     } else if (pausedRef.current && audioRef.current) {
-      // Resume: continue from paused position
+      // Resume: continue audio and captions from exact paused position
       pausedRef.current = false
       isPlayingRef.current = true
       setIsPlaying(true)
       setSpeaking(true)
       const fb = feedbackRef.current[slideIdx]
-      if (fb) startCaption(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
+      // Resume caption from where it was paused (captionIdxRef holds the word index)
+      if (fb) startCaption(`${fb.title}. ${fb.text}. ${fb.suggestion}`, captionIdxRef.current)
       audioRef.current.play().catch(() => {
         // If browser can't resume (e.g., blob expired), restart fresh
         startSlideAudio(slideIdx)

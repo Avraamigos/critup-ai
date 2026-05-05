@@ -9,7 +9,7 @@ async function generateAllAudio(
   elevenLabsKey: string,
   supabase: ReturnType<typeof createClient>
 ) {
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || 'oXxZrNLpn6nWkEBAMSJs'
+  const voiceId = 'oXxZrNLpn6nWkEBAMSJs'
 
   await Promise.allSettled(
     feedback.map(async (fb, idx) => {
