@@ -30,11 +30,12 @@ export function NewProjectPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({ name: '', stage: '', focuses: [] as string[], file: null as File | null })
   const [dragging, setDragging] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const totalSteps = 4
@@ -64,56 +65,67 @@ export function NewProjectPage() {
     if (file) setForm(f => ({ ...f, file }))
   }
 
+  // Wrap a promise with a per-step timeout so we never hang forever
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out. Check your connection and try again.`)), ms)
+      ),
+    ])
+  }
+
   const goNext = async () => {
     if (!canNext || saving) return
     if (step < totalSteps - 1) { setStep(s => s + 1); return }
 
     // Final step — save everything
     setError(null)
+    setUploadStatus(null)
     if (!user) { setError('You must be signed in. Please refresh and log in again.'); return }
     if (!form.file) { setError('Please select a PDF file.'); return }
     setSaving(true)
 
     try {
       // 1. Create project row
+      setUploadStatus('Creating project…')
       const projectInsert = {
         user_id:     user.id,
         name:        form.name.trim(),
         stage:       form.stage as import('@/lib/database.types').ProjectStage,
         focus_areas: form.focuses,
       }
-      const { data: project, error: projErr } = await supabase
-        .from('projects')
-        .insert(projectInsert)
-        .select('id, name')
-        .single()
-
+      const { data: project, error: projErr } = await withTimeout(
+        supabase.from('projects').insert(projectInsert).select('id, name').single(),
+        15_000, 'Creating project'
+      )
       if (projErr || !project) throw new Error(projErr?.message ?? 'Failed to create project')
 
-      // 2. Upload PDF to Storage
+      // 2. Upload PDF to Storage (large file — 60 s)
+      setUploadStatus(`Uploading ${form.file.name}…`)
       const pdfPath = `${user.id}/${project.id}/${Date.now()}_${form.file!.name}`
-      const { error: uploadErr } = await supabase.storage
-        .from('project-pdfs')
-        .upload(pdfPath, form.file!, { cacheControl: '3600', upsert: false })
-
+      const { error: uploadErr } = await withTimeout(
+        supabase.storage.from('project-pdfs').upload(pdfPath, form.file!, { cacheControl: '3600', upsert: false }),
+        60_000, 'Uploading PDF'
+      )
       if (uploadErr) throw new Error(uploadErr.message)
 
       // 3. Create analysis row (status: pending — AI will fill it)
+      setUploadStatus('Saving analysis record…')
       const analysisInsert = {
         project_id: project.id,
         user_id:    user.id,
         status:     'pending' as import('@/lib/database.types').AnalysisStatus,
         pdf_path:   pdfPath,
       }
-      const { data: analysis, error: analysisErr } = await supabase
-        .from('analyses')
-        .insert(analysisInsert)
-        .select('id')
-        .single()
-
+      const { data: analysis, error: analysisErr } = await withTimeout(
+        supabase.from('analyses').insert(analysisInsert).select('id').single(),
+        15_000, 'Saving analysis'
+      )
       if (analysisErr || !analysis) throw new Error(analysisErr?.message ?? 'Failed to create analysis')
 
-      // 4. Trigger AI analysis (fire and forget — loading page polls for completion)
+      // 4. Trigger AI analysis (fire and forget — analysis page polls for completion)
+      setUploadStatus('Starting AI analysis…')
       fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,6 +136,7 @@ export function NewProjectPage() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
+      setUploadStatus(null)
     }
   }
 
@@ -146,7 +159,13 @@ export function NewProjectPage() {
             <ArrowLeft size={16} color={c.textMuted} /> Back
           </button>
           <span style={{ fontSize: 12, color: c.textMuted, fontWeight: 500 }}>Step {step + 1} of {totalSteps}</span>
-          <CritupLogo size={18} showText={false} theme={theme} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <CritupLogo size={18} showText={false} theme={theme} />
+            <button
+              onClick={async () => { await signOut(); navigate({ to: '/landing' }) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 12, padding: '4px 8px', borderRadius: 6, opacity: 0.6 }}
+            >Sign out</button>
+          </div>
         </div>
 
         {/* Step 1: Project name */}
@@ -266,21 +285,35 @@ export function NewProjectPage() {
         {/* Navigation */}
         <div style={{ marginTop: 'auto', paddingTop: 36, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
           {error && (
-            <p style={{ fontSize: 13, color: 'oklch(0.65 0.18 25)', margin: 0, textAlign: 'right', maxWidth: 320 }}>{error}</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'oklch(0.65 0.18 25 / 0.1)', border: '1px solid oklch(0.65 0.18 25 / 0.3)', borderRadius: 10, padding: '10px 14px', maxWidth: 360 }}>
+              <p style={{ fontSize: 13, color: 'oklch(0.65 0.18 25)', margin: 0, flex: 1 }}>{error}</p>
+              <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.65 0.18 25)', padding: 0, flexShrink: 0, lineHeight: 1 }}>✕</button>
+            </div>
           )}
-          <button onClick={goNext} disabled={saving} style={{
-            padding: '12px 32px', borderRadius: 100,
-            background: (canNext && !saving) ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'),
-            border: 'none', color: (canNext && !saving) ? '#fff' : c.textMuted, fontSize: 15, fontWeight: 600,
-            cursor: (canNext && !saving) ? 'pointer' : 'not-allowed', opacity: 1,
-            boxShadow: (canNext && !saving) ? '0 0 18px oklch(0.72 0.18 45 / 0.35)' : 'none', transition: 'all 0.2s',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
+          {saving && uploadStatus && (
+            <p style={{ fontSize: 12, color: c.textMuted, margin: 0, textAlign: 'right' }}>{uploadStatus}</p>
+          )}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {saving && (
-              <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin-btn 0.7s linear infinite' }} />
+              <button
+                onClick={() => { setSaving(false); setUploadStatus(null); setError('Upload cancelled.') }}
+                style={{ padding: '12px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+              >Cancel</button>
             )}
-            {saving ? 'Uploading…' : step === totalSteps - 1 ? 'Analyse project →' : 'Next →'}
-          </button>
+            <button onClick={goNext} disabled={saving} style={{
+              padding: '12px 32px', borderRadius: 100,
+              background: (canNext && !saving) ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'),
+              border: 'none', color: (canNext && !saving) ? '#fff' : c.textMuted, fontSize: 15, fontWeight: 600,
+              cursor: (canNext && !saving) ? 'pointer' : 'not-allowed', opacity: 1,
+              boxShadow: (canNext && !saving) ? '0 0 18px oklch(0.72 0.18 45 / 0.35)' : 'none', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              {saving && (
+                <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin-btn 0.7s linear infinite' }} />
+              )}
+              {saving ? 'Uploading…' : step === totalSteps - 1 ? 'Analyse project →' : 'Next →'}
+            </button>
+          </div>
           <style>{`@keyframes spin-btn { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
