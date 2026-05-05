@@ -80,6 +80,9 @@ export function AnalysisPage() {
   const totalRef      = useRef(1)
   // Tracks whether audio is mid-playback but paused (not stopped)
   const pausedRef     = useRef(false)
+  // Stable ref to the analysis ID — needed inside speakSlide callback without
+  // re-creating it every time latestAnalysis changes reference
+  const analysisIdRef = useRef<string | null>(null)
 
   // Keep refs in sync with state (order matters — these run before the main effect)
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
@@ -117,6 +120,9 @@ export function AnalysisPage() {
   const latestAnalysis = project?.analyses
     ?.filter(a => a.status === 'complete')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+
+  // Keep analysisId ref in sync so speakSlide can read it without re-creating
+  useEffect(() => { analysisIdRef.current = latestAnalysis?.id ?? null }, [latestAnalysis?.id])
 
   // ── Get signed PDF URL ──
   useEffect(() => {
@@ -206,7 +212,11 @@ export function AnalysisPage() {
     fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({
+        text,
+        analysisId: analysisIdRef.current,
+        slideIdx: idx,
+      }),
       signal: ctrl.signal,
     })
       .then(res => {
