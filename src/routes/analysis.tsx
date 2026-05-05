@@ -373,18 +373,16 @@ export function AnalysisPage() {
         @keyframes spin          { to { transform: rotate(360deg); } }
         @keyframes slide-up      { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes inset-glow-pulse {
-          0%,100% { box-shadow: inset 0 0 30px oklch(0.72 0.18 45/0.25), inset 0 0 60px oklch(0.72 0.18 45/0.1); }
-          50%     { box-shadow: inset 0 0 60px oklch(0.72 0.18 45/0.55), inset 0 0 120px oklch(0.72 0.18 45/0.25); }
+          0%,100% { box-shadow: inset 0 0 40px oklch(0.72 0.18 45/0.45), inset 0 0 80px oklch(0.72 0.18 45/0.18); }
+          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.18 45/0.12), inset 0 0 36px oklch(0.72 0.18 45/0.05); }
         }
         @keyframes inset-glow-flash {
-          0%      { box-shadow: inset 0 0 100px oklch(0.72 0.18 45/0.7), inset 0 0 200px oklch(0.72 0.18 45/0.35); }
-          40%     { box-shadow: inset 0 0 30px oklch(0.72 0.18 45/0.2),  inset 0 0 60px oklch(0.72 0.18 45/0.08); }
-          70%     { box-shadow: inset 0 0 60px oklch(0.72 0.18 45/0.5),  inset 0 0 110px oklch(0.72 0.18 45/0.22); }
-          100%    { box-shadow: inset 0 0 30px oklch(0.72 0.18 45/0.2),  inset 0 0 60px oklch(0.72 0.18 45/0.08); }
+          0%,100% { box-shadow: inset 0 0 50px oklch(0.72 0.18 45/0.5),  inset 0 0 100px oklch(0.72 0.18 45/0.2); }
+          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.18 45/0.12), inset 0 0 36px oklch(0.72 0.18 45/0.05); }
         }
         @keyframes inset-green {
-          0%,100% { box-shadow: inset 0 0 40px oklch(0.72 0.17 145/0.3), inset 0 0 80px oklch(0.72 0.17 145/0.12); }
-          50%     { box-shadow: inset 0 0 70px oklch(0.72 0.17 145/0.55),inset 0 0 140px oklch(0.72 0.17 145/0.25); }
+          0%,100% { box-shadow: inset 0 0 50px oklch(0.72 0.17 145/0.5), inset 0 0 100px oklch(0.72 0.17 145/0.2); }
+          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.17 145/0.12),inset 0 0 36px oklch(0.72 0.17 145/0.05); }
         }
       `}</style>
 
@@ -453,7 +451,7 @@ export function AnalysisPage() {
                 position: 'absolute', inset: 0,
                 borderRadius: 18,
                 pointerEvents: 'none',
-                animation: isSummary ? 'inset-green 3s ease-in-out infinite' : 'inset-glow-flash 3s ease-in-out infinite',
+                animation: isSummary ? 'inset-green 4s ease-in-out infinite' : 'inset-glow-flash 4s ease-in-out infinite',
               }}
             />
 

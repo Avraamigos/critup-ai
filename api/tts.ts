@@ -13,7 +13,7 @@ export default async function handler(
   if (req.method !== 'POST') return res.status(405).end()
 
   const apiKey = process.env.ELEVENLABS_API_KEY || ''
-  const defaultVoiceId = process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB' // Adam (default)
+  const defaultVoiceId = process.env.ELEVENLABS_VOICE_ID || 'oXxZrNLpn6nWkEBAMSJs'
   const voiceId = req.body?.voiceId || defaultVoiceId
 
   if (!apiKey) return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set' })
