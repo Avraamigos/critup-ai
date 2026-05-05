@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
@@ -23,11 +23,19 @@ export function LoginPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { user, signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+
+  // Navigate to dashboard once auth state confirms the user is logged in.
+  // Doing navigate() directly after signIn() is a race — onAuthStateChange
+  // fires slightly after signInWithPassword resolves, so user is still null
+  // when AppShell mounts and the auth guard bounces the user back to landing.
+  useEffect(() => {
+    if (user) navigate({ to: '/' })
+  }, [user?.id])
 
   const inp = { width: '100%', padding: '11px 14px', borderRadius: 9, boxSizing: 'border-box' as const, background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f9fafb', border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, outline: 'none', fontFamily: "'Inter',sans-serif", transition: 'border 0.15s' }
 
@@ -40,7 +48,8 @@ export function LoginPage() {
     const { error } = await signIn(email, password)
     setLoading(false)
     if (error) { setErrors({ password: error }); return }
-    navigate({ to: '/' })
+    // Don't navigate here — the useEffect above will navigate once
+    // onAuthStateChange fires and user is confirmed set in auth state.
   }
 
   const signInWithGoogle = async () => {
