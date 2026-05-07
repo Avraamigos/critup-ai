@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // Pre-generate ElevenLabs audio for every feedback slide and store in
 // project-audio/{analysisId}/{slideIdx}.mp3 so playback is always instant.
@@ -7,7 +7,8 @@ async function generateAllAudio(
   analysisId: string,
   feedback: Array<{ title: string; text: string; suggestion: string }>,
   elevenLabsKey: string,
-  supabase: ReturnType<typeof createClient>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>
 ) {
   const voiceId = 'oXxZrNLpn6nWkEBAMSJs'
 
