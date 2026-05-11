@@ -1,10 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" rx="14" fill="#0f0f10"/>
-  <!-- Swoosh curve -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <!-- Swoosh: lower-left start, V-dip, sweeps up to upper-right -->
   <path
-    d="M10 50 C13 40 20 30 28 27 C24 35 25 42 31 43 C37 44.5 42 36 50 26 C55 19 59 13 61 10"
-    stroke="#F97316" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none"
+    d="M 52 265 C 68 315 102 390 182 408 C 248 424 295 336 368 200 C 394 153 416 116 436 88"
+    stroke="#FF6600" stroke-width="62" stroke-linecap="round" stroke-linejoin="round" fill="none"
   />
-  <!-- Arrow corner (top-right) -->
-  <path d="M52 9 L62 9 L62 19" stroke="#F97316" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Arrowhead: L-bracket at top-right corner creates the chevron (same trick as CritupLogo) -->
+  <path
+    d="M 380 58 L 458 58 L 458 136"
+    stroke="#FF6600" stroke-width="60" stroke-linecap="round" stroke-linejoin="round" fill="none"
+  />
 </svg>
