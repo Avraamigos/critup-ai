@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/analyze.ts": { "maxDuration": 300 },
-    "api/tts.ts":     { "maxDuration": 30  }
+    "api/tts.ts":     { "maxDuration": 30  },
+    "api/chat.ts":    { "maxDuration": 30  }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

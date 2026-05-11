@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Send, X, Sparkles, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
-import { AI_REPLIES } from '@/lib/mock-data'
 
 interface Props {
   open: boolean
@@ -16,9 +15,12 @@ interface Message {
 
 const CHIPS = ['Explain my critique', 'Jury prep help', 'Weakest point?', 'Improve concept']
 
-// Read the last project name from localStorage (set by AnalysisPage)
+// Read context stored by AnalysisPage
 function getLastProjectName() {
   try { return localStorage.getItem('critup_last_project_name') ?? null } catch { return null }
+}
+function getLastAnalysisId() {
+  try { return localStorage.getItem('critup_last_analysis_id') ?? null } catch { return null }
 }
 
 function makeGreeting() {
@@ -27,32 +29,70 @@ function makeGreeting() {
   return "Hi! Upload a project to get started. I'll analyse your drawings and give you targeted critique, score breakdowns, and jury prep."
 }
 
+async function callChatAPI(messages: Message[], analysisId: string | null): Promise<string> {
+  const payload = {
+    analysisId: analysisId ?? undefined,
+    messages: messages.map(m => ({
+      role: m.role === 'ai' ? 'assistant' : 'user',
+      content: m.text,
+    })),
+  }
+
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`)
+  }
+
+  const data = await res.json() as { reply?: string }
+  return data.reply ?? ''
+}
+
 export function AIChatPanel({ open, onClose, theme }: Props) {
   const c = useColors(theme)
   const [input, setInput] = useState('')
-  // Reset messages each time the panel opens (fresh conversation every session)
   const [messages, setMessages] = useState<Message[]>(() => [{ role: 'ai', text: makeGreeting() }])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Re-initialise greeting when panel is opened
   useEffect(() => {
     if (open) {
       setMessages([{ role: 'ai', text: makeGreeting() }])
       setInput('')
+      setError(null)
     }
   }, [open])
+
   const endRef  = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
 
-  const send = (text: string) => {
+  const send = async (text: string) => {
     if (!text.trim() || loading) return
-    setMessages(m => [...m, { role: 'user', text }])
+    const userMsg: Message = { role: 'user', text: text.trim() }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
     setInput('')
+    setError(null)
     setLoading(true)
-    setTimeout(() => {
-      setMessages(m => [...m, { role: 'ai', text: AI_REPLIES[Math.floor(Math.random() * AI_REPLIES.length)] }])
+
+    try {
+      const analysisId = getLastAnalysisId()
+      const reply = await callChatAPI(newMessages, analysisId)
+      setMessages(m => [...m, { role: 'ai', text: reply }])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setError(msg)
+      // Remove the user message that failed so they can retry
+      setMessages(newMessages.slice(0, -1))
+    } finally {
       setLoading(false)
-    }, 1100)
+    }
   }
 
   useEffect(() => {
@@ -100,7 +140,6 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
           position: 'relative', overflow: 'hidden',
         }}>
-          {/* Decorative glow */}
           <div style={{
             position: 'absolute', top: -20, right: -20, width: 120, height: 120,
             background: 'radial-gradient(circle, oklch(0.72 0.18 45/0.18) 0%, transparent 70%)',
@@ -108,7 +147,6 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-            {/* AI Avatar */}
             <div style={{
               width: 38, height: 38, borderRadius: 12, flexShrink: 0,
               background: 'linear-gradient(135deg, #F97316 0%, oklch(0.65 0.22 35) 100%)',
@@ -186,6 +224,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
                   : (isDark ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.06)'),
                 fontSize: 13, lineHeight: 1.55,
                 color: m.role === 'user' ? '#fff' : (isDark ? '#e2e8f0' : '#1e293b'),
+                whiteSpace: 'pre-wrap',
               }}>
                 {m.text}
               </div>
@@ -219,6 +258,20 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
               </div>
             </div>
           )}
+
+          {/* Error message */}
+          {error && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 10,
+              background: isDark ? 'oklch(0.18 0.06 25)' : '#fef2f2',
+              border: `1px solid ${isDark ? 'oklch(0.35 0.1 25)' : '#fecaca'}`,
+              color: isDark ? '#fca5a5' : '#dc2626',
+              fontSize: 12, lineHeight: 1.5,
+            }}>
+              ⚠️ {error} — please try again
+            </div>
+          )}
+
           <div ref={endRef} />
         </div>
 
@@ -228,14 +281,16 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
             <button
               key={ch}
               onClick={() => send(ch)}
+              disabled={loading}
               style={{
                 padding: '5px 11px', borderRadius: 100,
                 background: isDark ? 'oklch(0.21 0.006 270)' : '#f8fafc',
                 border: `1px solid ${isDark ? 'oklch(0.28 0.006 270)' : '#e2e8f0'}`,
-                color: c.textMuted, fontSize: 11, cursor: 'pointer',
-                fontFamily: FONT, transition: 'all 0.15s',
+                color: c.textMuted, fontSize: 11, cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily: FONT, transition: 'all 0.15s', opacity: loading ? 0.5 : 1,
               }}
               onMouseEnter={e => {
+                if (loading) return
                 e.currentTarget.style.borderColor = '#F97316'
                 e.currentTarget.style.color = '#F97316'
                 e.currentTarget.style.background = isDark ? 'oklch(0.72 0.18 45/0.1)' : '#fff7ed'
