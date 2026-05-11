@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Send, X, Sparkles, ChevronDown } from 'lucide-react'
+import { Send, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
+import { AIOrb } from '@/components/AIOrb'
 
 interface Props {
   open: boolean
@@ -117,7 +118,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
         @keyframes ai-slide-in  { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
         @keyframes msg-pop      { from { opacity:0; transform:translateY(6px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
         @keyframes dot-bounce   { 0%,80%,100% { transform:translateY(0); } 40% { transform:translateY(-5px); } }
-        @keyframes glow-pulse   { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+        @keyframes glow-pulse   { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
       `}</style>
 
       <div style={{
@@ -147,14 +148,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-              background: 'linear-gradient(135deg, #F97316 0%, oklch(0.65 0.22 35) 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px oklch(0.72 0.18 45 / 0.4)',
-            }}>
-              <Sparkles size={18} color="#fff" />
-            </div>
+            <AIOrb size={38} float={true} />
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.01em' }}>
                 AI Critic
@@ -198,16 +192,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
                 animation: 'msg-pop 0.22s cubic-bezier(0.16,1,0.3,1)',
               }}
             >
-              {m.role === 'ai' && (
-                <div style={{
-                  width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-                  background: 'linear-gradient(135deg, #F97316, oklch(0.65 0.22 35))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px oklch(0.72 0.18 45 / 0.3)',
-                }}>
-                  <Sparkles size={12} color="#fff" />
-                </div>
-              )}
+              {m.role === 'ai' && <AIOrb size={26} />}
 
               <div style={{
                 maxWidth: '78%',
@@ -234,13 +219,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           {/* Loading indicator */}
           {loading && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', animation: 'msg-pop 0.22s ease' }}>
-              <div style={{
-                width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-                background: 'linear-gradient(135deg, #F97316, oklch(0.65 0.22 35))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Sparkles size={12} color="#fff" />
-              </div>
+              <AIOrb size={26} />
               <div style={{
                 padding: '13px 16px',
                 background: isDark ? 'oklch(0.21 0.006 270)' : '#f8fafc',
