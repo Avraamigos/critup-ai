@@ -379,7 +379,7 @@ export function LandingPage() {
             onMouseLeave={e => (e.currentTarget.style.color = c.textMuted)}
           >{l}</a>)}
         </div>
-        <div style={{ fontSize:12, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai</div>
+        <div style={{ fontSize:12, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai · Avraam Valikhan, Founder & CEO · Adil Kamal Batcha, Co-founder</div>
       </footer>
 
       <style>{`
