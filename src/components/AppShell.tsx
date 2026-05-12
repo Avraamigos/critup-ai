@@ -214,7 +214,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Animated orb AI button */}
-            {!isMobile && <AIOrb size={40} float onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
+            {!isMobile && <AIOrb size={32} float onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
 
             {/* Account dropdown */}
             <div ref={dropdownRef} style={{ position: 'relative' }}>
