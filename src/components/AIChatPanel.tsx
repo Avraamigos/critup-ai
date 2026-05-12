@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Send, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
 import { AIOrb } from '@/components/AIOrb'
+import { CritAvatar } from '@/components/CritAvatar'
 
 interface Props {
   open: boolean
@@ -148,17 +149,17 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-            <AIOrb size={38} float={true} />
+            <AIOrb size={34} float={true} />
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.01em' }}>
-                AI Critic
+                Crit
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <div style={{
-                  width: 6, height: 6, borderRadius: '50%', background: 'oklch(0.72 0.17 145)',
+                  width: 6, height: 6, borderRadius: '50%', background: '#4ade80',
                   animation: 'glow-pulse 2s ease-in-out infinite',
                 }} />
-                <span style={{ fontSize: 11, color: '#F97316', fontWeight: 500 }}>Online · Ready to help</span>
+                <span style={{ fontSize: 11, color: c.textMuted, fontWeight: 500 }}>Online · Ask me anything</span>
               </div>
             </div>
           </div>
@@ -192,7 +193,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
                 animation: 'msg-pop 0.22s cubic-bezier(0.16,1,0.3,1)',
               }}
             >
-              {m.role === 'ai' && <AIOrb size={26} />}
+              {m.role === 'ai' && <CritAvatar size={24} />}
 
               <div style={{
                 maxWidth: '78%',
@@ -219,7 +220,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
           {/* Loading indicator */}
           {loading && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', animation: 'msg-pop 0.22s ease' }}>
-              <AIOrb size={26} />
+              <CritAvatar size={24} />
               <div style={{
                 padding: '13px 16px',
                 background: isDark ? 'oklch(0.21 0.006 270)' : '#f8fafc',

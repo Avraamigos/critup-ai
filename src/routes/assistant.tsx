@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Send } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { AIOrb } from '@/components/AIOrb'
+import { CritAvatar } from '@/components/CritAvatar'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -123,9 +124,9 @@ export function AssistantPage() {
     <div style={{ height: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', fontFamily: "'Inter',sans-serif" }}>
       {/* Header */}
       <div style={{ padding: '20px 28px 16px', borderBottom: `1px solid ${c.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <AIOrb size={40} float={true} />
+        <AIOrb size={36} float={true} />
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>AI Project Assistant</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Crit</h1>
           <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>
             {latestAnalysis
               ? `Knows your project inside out · ${latestAnalysis.projectName}`
@@ -138,7 +139,7 @@ export function AssistantPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {msgs.map((m, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: m.role === 'user' ? 'row-reverse' : 'row', gap: 10, alignItems: 'flex-end' }}>
-            {m.role === 'ai' && <AIOrb size={30} />}
+            {m.role === 'ai' && <CritAvatar size={28} />}
             <div style={{ maxWidth: '72%' }}>
               <div style={{
                 padding: '12px 16px', borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
@@ -156,7 +157,7 @@ export function AssistantPage() {
 
         {loading && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-            <AIOrb size={30} />
+            <CritAvatar size={28} />
             <div style={{ padding: '12px 16px', borderRadius: '16px 16px 16px 4px', background: c.cardBg, border: `1px solid ${c.border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: c.textMuted, animation: 'bounce-dot 0.8s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
