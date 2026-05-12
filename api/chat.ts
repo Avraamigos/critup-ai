@@ -15,6 +15,7 @@ function buildSystemPrompt(context: {
   projectName: string
   stage: string
   focusAreas: string[]
+  briefText?: string | null
   conceptScore: number
   spatialScore: number
   presentationScore: number
@@ -55,7 +56,7 @@ Keep responses concise and practical (2-4 short paragraphs max unless more detai
 PROJECT CONTEXT (use this to give specific, relevant answers):
 
 Project: "${context.projectName}"
-Stage: ${context.stage}${context.focusAreas?.length ? `\nFocus areas: ${context.focusAreas.join(', ')}` : ''}
+Stage: ${context.stage}${context.focusAreas?.length ? `\nFocus areas: ${context.focusAreas.join(', ')}` : ''}${context.briefText ? `\n\nCOURSE BRIEF / DEPARTMENT REQUIREMENTS:\n${context.briefText}` : ''}
 
 SCORES:
 - Concept: ${context.conceptScore}/10
@@ -116,7 +117,7 @@ export default async function handler(
       try {
         const { data } = await supabase
           .from('analyses')
-          .select('user_id, concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas), profiles(plan)')
+          .select('user_id, concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas, brief_text), profiles(plan)')
           .eq('id', analysisId)
           .eq('status', 'complete')
           .single()
@@ -126,11 +127,12 @@ export default async function handler(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           rateLimitPlan = ((data as any).profiles as { plan?: string } | null)?.plan ?? 'free'
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const project = (data as any).projects as { name: string; stage: string; focus_areas: string[] } | null
+          const project = (data as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
           analysisContext = {
             projectName: project?.name ?? 'Untitled Project',
             stage: project?.stage ?? 'Unknown',
             focusAreas: project?.focus_areas ?? [],
+            briefText: project?.brief_text ?? null,
             conceptScore: Number(data.concept_score) || 0,
             spatialScore: Number(data.spatial_score) || 0,
             presentationScore: Number(data.presentation_score) || 0,

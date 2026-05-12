@@ -32,19 +32,20 @@ export function NewProjectPage() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState({ name: '', stage: '', focuses: [] as string[], file: null as File | null })
+  const [form, setForm] = useState({ name: '', stage: '', focuses: [] as string[], briefText: '', file: null as File | null })
   const [dragging, setDragging] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const totalSteps = 5
+  const totalSteps = 6
   const canNext = [
     !!form.name.trim(),
     !!form.stage,
     form.focuses.length > 0,
+    true,          // brief is optional — always allow skip
     !!form.file,
-    true, // confirmation step — always enabled
+    true,          // confirmation step
   ][step]
 
   const toggleFocus = (v: string) => {
@@ -95,6 +96,7 @@ export function NewProjectPage() {
         name:        form.name.trim(),
         stage:       form.stage as import('@/lib/database.types').ProjectStage,
         focus_areas: form.focuses,
+        brief_text:  form.briefText.trim() || null,
       }
       const { data: project, error: projErr } = await withTimeout(
         supabase.from('projects').insert(projectInsert).select('id, name').single(),
@@ -127,11 +129,16 @@ export function NewProjectPage() {
 
       // 4. Trigger AI analysis (fire and forget — analysis page polls for completion)
       setUploadStatus('Starting AI analysis…')
+      const analysisRowId = (analysis as unknown as { id: string }).id
       fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisId: (analysis as unknown as { id: string }).id }),
+        body: JSON.stringify({ analysisId: analysisRowId }),
       }).catch(console.error)
+
+      // Make this the active project for Crit chat context immediately
+      localStorage.setItem('critup_last_analysis_id', analysisRowId)
+      localStorage.setItem('critup_last_project_name', form.name.trim())
 
       navigate({ to: '/analysis/$projectId', params: { projectId: project.id } })
     } catch (err: unknown) {
@@ -241,8 +248,52 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 4: Upload PDF */}
+        {/* Step 4: Course Brief / Outline (optional) */}
         {step === 3 && (
+          <>
+            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>
+              Paste your course brief
+            </h1>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 6 }}>
+              Optional — but strongly recommended. Paste the project requirements from your department brief. Crit will evaluate your drawings against these exact constraints.
+            </p>
+            <div style={{ fontSize: 12, color: '#F97316', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} />
+              You can update this later from the project settings.
+            </div>
+            <div style={{ position: 'relative' }}>
+              <textarea
+                value={form.briefText}
+                onChange={e => setForm(f => ({ ...f, briefText: e.target.value }))}
+                placeholder={`Paste your brief here — e.g.\n\n"Design a mixed-use cultural centre on a brownfield site. Programme: 2,000–4,500 m² total. Must include a public gallery (min. 400 m²), café, workshop spaces, and accessible rooftop. Building must respond to the existing industrial typology of the district. Jury will assess concept coherence, section quality, and material narrative."`}
+                rows={11}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '14px 16px', borderRadius: 12,
+                  background: c.cardBg, border: `1.5px solid ${form.briefText ? '#F97316' : c.border}`,
+                  color: c.textPrimary, fontSize: 13, lineHeight: 1.65, resize: 'vertical',
+                  outline: 'none', fontFamily: "'Inter', sans-serif",
+                }}
+                onFocus={e => (e.target.style.borderColor = '#F97316')}
+                onBlur={e => (e.target.style.borderColor = form.briefText ? '#F97316' : c.border)}
+              />
+              {form.briefText && (
+                <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 11, color: c.textMuted }}>
+                  {form.briefText.length} chars
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setStep(s => s + 1)}
+              style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 13, padding: 0, textDecoration: 'underline' }}
+            >
+              Skip — I don't have a brief right now
+            </button>
+          </>
+        )}
+
+        {/* Step 5: Upload PDF */}
+        {step === 4 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to 10 pages · max 50 MB</p>
@@ -283,8 +334,8 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 5: Confirm before upload */}
-        {step === 4 && (
+        {/* Step 6: Confirm before upload */}
+        {step === 5 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Ready to analyse?</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 28 }}>Review everything before we start — this can't be undone once uploaded.</p>
@@ -323,6 +374,21 @@ export function NewProjectPage() {
                 <button onClick={() => setStep(2)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
               </div>
 
+              {/* Brief */}
+              <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 4 }}>COURSE BRIEF</div>
+                  {form.briefText.trim() ? (
+                    <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                      {form.briefText.trim()}
+                    </p>
+                  ) : (
+                    <span style={{ fontSize: 13, color: c.textMuted, fontStyle: 'italic' }}>No brief added — Crit will critique without specific requirements</span>
+                  )}
+                </div>
+                <button onClick={() => setStep(3)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
+              </div>
+
               {/* PDF */}
               <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 18px', border: `1.5px solid oklch(0.72 0.17 145 / 0.6)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, marginRight: 12 }}>
@@ -335,7 +401,7 @@ export function NewProjectPage() {
                     <div style={{ fontSize: 12, color: c.textMuted }}>{form.file ? (form.file.size / 1024 / 1024).toFixed(1) + ' MB' : ''}</div>
                   </div>
                 </div>
-                <button onClick={() => setStep(3)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Change</button>
+                <button onClick={() => setStep(4)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Change</button>
               </div>
             </div>
 

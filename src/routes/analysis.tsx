@@ -454,16 +454,25 @@ export function AnalysisPage() {
         @keyframes spin          { to { transform: rotate(360deg); } }
         @keyframes slide-up      { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes inset-glow-pulse {
-          0%,100% { box-shadow: inset 0 0 40px oklch(0.72 0.18 45/0.45), inset 0 0 80px oklch(0.72 0.18 45/0.18); }
-          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.18 45/0.12), inset 0 0 36px oklch(0.72 0.18 45/0.05); }
+          0%,100% { box-shadow: inset 0 0 60px oklch(0.72 0.18 45/0.7), inset 0 0 120px oklch(0.72 0.18 45/0.35), inset 0 0 200px oklch(0.72 0.18 45/0.15); }
+          50%     { box-shadow: inset 0 0 24px oklch(0.72 0.18 45/0.2),  inset 0 0 50px oklch(0.72 0.18 45/0.08); }
         }
         @keyframes inset-glow-flash {
-          0%,100% { box-shadow: inset 0 0 50px oklch(0.72 0.18 45/0.5),  inset 0 0 100px oklch(0.72 0.18 45/0.2); }
-          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.18 45/0.12), inset 0 0 36px oklch(0.72 0.18 45/0.05); }
+          0%,100% { box-shadow: inset 0 0 70px oklch(0.72 0.18 45/0.75), inset 0 0 140px oklch(0.72 0.18 45/0.4), inset 0 0 220px oklch(0.72 0.18 45/0.18); }
+          50%     { box-shadow: inset 0 0 24px oklch(0.72 0.18 45/0.2),  inset 0 0 50px oklch(0.72 0.18 45/0.08); }
         }
         @keyframes inset-green {
-          0%,100% { box-shadow: inset 0 0 50px oklch(0.72 0.17 145/0.5), inset 0 0 100px oklch(0.72 0.17 145/0.2); }
-          50%     { box-shadow: inset 0 0 18px oklch(0.72 0.17 145/0.12),inset 0 0 36px oklch(0.72 0.17 145/0.05); }
+          0%,100% { box-shadow: inset 0 0 70px oklch(0.72 0.17 145/0.75), inset 0 0 140px oklch(0.72 0.17 145/0.4), inset 0 0 220px oklch(0.72 0.17 145/0.18); }
+          50%     { box-shadow: inset 0 0 24px oklch(0.72 0.17 145/0.2),  inset 0 0 50px oklch(0.72 0.17 145/0.08); }
+        }
+        @keyframes focus-ping {
+          0%    { transform: translate(-50%,-50%) scale(1);   opacity: 0.9; }
+          70%   { transform: translate(-50%,-50%) scale(2.4); opacity: 0; }
+          100%  { transform: translate(-50%,-50%) scale(2.4); opacity: 0; }
+        }
+        @keyframes focus-dot-pulse {
+          0%,100% { box-shadow: 0 0 0 0 oklch(0.72 0.18 45/0.5); }
+          50%     { box-shadow: 0 0 0 6px oklch(0.72 0.18 45/0); }
         }
       `}</style>
 
@@ -535,6 +544,53 @@ export function AnalysisPage() {
                 animation: isSummary ? 'inset-green 4s ease-in-out infinite' : 'inset-glow-flash 4s ease-in-out infinite',
               }}
             />
+
+            {/* Focus annotation dot — shows exactly where on the drawing Claude is pointing */}
+            {!isSummary && current?.focus && (
+              <div
+                key={`dot-${slideIdx}`}
+                style={{
+                  position: 'absolute',
+                  left: `${focusX * 100}%`,
+                  top:  `${focusY * 100}%`,
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              >
+                {/* Ping ring */}
+                <div style={{
+                  position: 'absolute',
+                  width: 36, height: 36,
+                  borderRadius: '50%',
+                  border: '2px solid #F97316',
+                  animation: 'focus-ping 1.8s ease-out infinite',
+                }} />
+                {/* Solid dot */}
+                <div style={{
+                  position: 'absolute',
+                  width: 14, height: 14,
+                  borderRadius: '50%',
+                  background: '#F97316',
+                  transform: 'translate(-50%, -50%)',
+                  boxShadow: '0 0 12px #F97316, 0 0 24px oklch(0.72 0.18 45/0.6)',
+                  animation: 'focus-dot-pulse 2s ease-in-out infinite',
+                  border: '2px solid #fff',
+                }} />
+                {/* Feedback number label */}
+                <div style={{
+                  position: 'absolute',
+                  left: 14, top: -18,
+                  background: '#F97316',
+                  color: '#fff',
+                  fontSize: 10, fontWeight: 800,
+                  padding: '2px 7px', borderRadius: 100,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 8px oklch(0.72 0.18 45/0.4)',
+                }}>
+                  {(current?.n ?? slideIdx + 1)}
+                </div>
+              </div>
+            )}
 
             {/* Slide badge */}
             {!isSummary && (

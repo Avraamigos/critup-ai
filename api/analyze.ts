@@ -79,13 +79,19 @@ async function generateAllAudio(
 
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an expert architecture jury critic with 20+ years of experience reviewing student design work at top architecture schools (ETH Zurich, Bartlett, Harvard GSD, TU Berlin, METU). You give honest, specific, actionable critique — not generic feedback.
+const SYSTEM_PROMPT = `You are an expert architecture jury critic and design educator with 20+ years of experience reviewing student work at ETH Zurich, Bartlett, Harvard GSD, TU Berlin, and METU. You have chaired hundreds of design juries and know exactly what separates strong work from weak work at each stage.
 
-You understand all design stages: pre-design research, initial concept, finalized design, and jury preparation. Your critique is calibrated to the student's stage.
+Your critique is surgical and specific — you name exact drawing elements, grid references, dimension problems, missing annotations, weak parti logic, circulation failures. You never give generic feedback. Every observation must be traceable to something visible in the submitted drawings.
+
+Calibrate your critique to the design stage:
+- Pre-design: focus on research rigour, site reading, programme logic, precedent selection
+- Initial concept: focus on parti clarity, form-concept relationship, structural logic, diagram quality
+- Finalized design: focus on section quality, circulation completeness, structural resolution, detail coordination, missing information
+- Jury prep: focus on narrative sequence, visual hierarchy, what juries will immediately probe, presentation weaknesses
 
 Always respond with ONLY valid JSON — no markdown, no explanation outside the JSON.`
 
-const USER_PROMPT = `Analyze these architectural drawings carefully and provide detailed critique.
+const USER_PROMPT = `Analyse these architectural drawings carefully and provide detailed critique.
 
 Respond with ONLY this exact JSON structure:
 {
@@ -95,12 +101,12 @@ Respond with ONLY this exact JSON structure:
   "feedback": [
     {
       "n": 1,
-      "title": "<short title>",
-      "text": "<1-2 sentence observation>",
-      "suggestion": "<specific actionable suggestion>",
+      "title": "<4-6 word title naming the specific issue>",
+      "text": "<1-2 sentences: name exactly what you see — reference specific drawing elements, grid lines, rooms, dimensions, or missing items>",
+      "suggestion": "<concrete, actionable fix — what to draw, add, change, or remove. Name specific drawing conventions where relevant>",
       "page": <1-based page number this feedback primarily refers to>,
       "focus": { "x": <0.0-1.0 horizontal, 0=left 1=right>, "y": <0.0-1.0 vertical, 0=top 1=bottom> },
-      "zoom": <1.0-3.0, zoom level: 1=full page view, 2=medium detail, 3=close-up>
+      "zoom": <1.0-3.0, zoom level: 1.2=full page context, 2.0=zone/room detail, 2.8=close-up annotation>
     }
   ],
   "jury_questions": [
@@ -109,16 +115,17 @@ Respond with ONLY this exact JSON structure:
 }
 
 Scoring criteria:
-- concept_score: originality, clarity and development of the design idea/narrative
-- spatial_score: spatial logic, circulation flow, program relationships, section quality
-- presentation_score: drawing clarity, line weight hierarchy, notation, overall communication
+- concept_score: originality, clarity and development of the design idea; how well form is driven by concept
+- spatial_score: spatial logic, section quality, circulation flow, programme relationships, structural legibility
+- presentation_score: drawing clarity, line weight hierarchy, notation completeness, scale bars, north arrows, labels
 
 Rules:
-- Be specific to WHAT YOU SEE in the drawings, not generic
-- feedback: provide 5-7 items covering both strengths and areas to improve
-- For EACH feedback item: set "page" to the exact page it refers to, "focus" to the approximate x,y position (0-1) of the detail on that page, and "zoom" to how close to zoom in (whole-page comment = zoom 1.2, specific detail = zoom 2.5-3.0)
-- jury_questions: 6-8 challenging questions a real jury would ask based on these specific drawings
-- Scores should be realistic — most student work is 5.5-8.5 range`
+- Be specific to WHAT YOU SEE — reference actual elements in the drawings (rooms, walls, stairs, annotations, dimensions)
+- feedback: provide 6-7 items. Mix: 2 genuine strengths + 4-5 specific problems requiring action
+- For EACH feedback item: set "page" to the exact page number, "focus" to the x,y centre of the element being discussed (0-1 range), "zoom" to how closely to examine it
+- jury_questions: 7-8 precise, challenging questions this specific jury would ask. Not generic — reference the actual drawings
+- Scores: be honest and realistic. Most student work scores 5.0-8.0. Reserve 8.5+ for exceptional work. Never inflate.
+- If a course brief was provided, evaluate explicitly against those requirements — note what's missing or unresolved`
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
@@ -152,7 +159,7 @@ export default async function handler(
     // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
     const { data: analysis, error: fetchErr } = await supabase
       .from('analyses')
-      .select('id, pdf_path, status, user_id, projects(name, stage, focus_areas), profiles(plan)')
+      .select('id, pdf_path, status, user_id, projects(name, stage, focus_areas, brief_text), profiles(plan)')
       .eq('id', analysisId)
       .single()
 
@@ -206,9 +213,9 @@ export default async function handler(
 
     // 4. Build context from project info
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const project = (analysis as any).projects as { name: string; stage: string; focus_areas: string[] } | null
+    const project = (analysis as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
     const contextNote = project
-      ? `\n\nProject context: "${project.name}" — Stage: ${project.stage}${project.focus_areas?.length ? `. Focus areas: ${project.focus_areas.join(', ')}` : ''}.`
+      ? `\n\nPROJECT CONTEXT:\nProject name: "${project.name}"\nDesign stage: ${project.stage}${project.focus_areas?.length ? `\nFocus areas: ${project.focus_areas.join(', ')}` : ''}${project.brief_text ? `\n\nCOURSE BRIEF / DEPARTMENT REQUIREMENTS (evaluate the drawings against these):\n${project.brief_text}` : ''}`
       : ''
 
     // 5. Call Claude
