@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX } from 'lucide-react'
+import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { PDFViewer } from '@/components/PDFViewer'
 import { useTheme, useColors } from '@/lib/theme'
+import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/database.types'
 
@@ -71,6 +72,7 @@ export function AnalysisPage() {
   const c = useColors(theme)
   const params   = useParams({ from: '/app/analysis/$projectId' })
   const navigate = useNavigate()
+  const { user } = useAuth()
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
   const [project,    setProject]   = useState<ProjectData | null>(null)
@@ -83,6 +85,13 @@ export function AnalysisPage() {
   const [speaking,      setSpeaking]     = useState(false)
   const [captionWords,  setCaptionWords] = useState<string[]>([])
   const [audioReady,    setAudioReady]   = useState(false)   // true once slide 0 is in cache
+
+  // ── Re-upload (new version) state ──
+  const [showReupload,    setShowReupload]    = useState(false)
+  const [reuploadFile,    setReuploadFile]    = useState<File | null>(null)
+  const [reuploadDrag,    setReuploadDrag]    = useState(false)
+  const [reuploadSaving,  setReuploadSaving]  = useState(false)
+  const [reuploadError,   setReuploadError]   = useState<string | null>(null)
 
   // ── Refs so callbacks always see current values ──
   const abortRef      = useRef<AbortController | null>(null)
@@ -135,12 +144,59 @@ export function AnalysisPage() {
     if (project?.name) localStorage.setItem('critup_last_project_name', project.name)
   }, [params.projectId, project?.name])
 
-  const latestAnalysis = project?.analyses
+  const sortedComplete = project?.analyses
     ?.filter(a => a.status === 'complete')
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) ?? []
+
+  const latestAnalysis   = sortedComplete[0]
+  const previousAnalysis = sortedComplete[1] ?? null   // second-most-recent, for score delta
 
   // Keep analysisId ref in sync so speakSlide can read it without re-creating
   useEffect(() => { analysisIdRef.current = latestAnalysis?.id ?? null }, [latestAnalysis?.id])
+
+  // ── Re-upload handler ──
+  const handleReupload = useCallback(async () => {
+    if (!reuploadFile || !user || reuploadSaving) return
+    setReuploadSaving(true)
+    setReuploadError(null)
+    try {
+      // 1. Upload new PDF to storage
+      const pdfPath = `${user.id}/${params.projectId}/${Date.now()}_${reuploadFile.name}`
+      const { error: uploadErr } = await supabase.storage
+        .from('project-pdfs')
+        .upload(pdfPath, reuploadFile, { cacheControl: '3600', upsert: false })
+      if (uploadErr) throw new Error(uploadErr.message)
+
+      // 2. Create new analysis row under same project
+      const { data: newAnalysis, error: rowErr } = await supabase
+        .from('analyses')
+        .insert({ project_id: params.projectId, user_id: user.id, status: 'pending', pdf_path: pdfPath })
+        .select('id')
+        .single()
+      if (rowErr || !newAnalysis) throw new Error(rowErr?.message ?? 'Failed to create analysis row')
+
+      const newId = (newAnalysis as { id: string }).id
+
+      // 3. Trigger analysis (fire-and-forget — polling handles the rest)
+      fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId: newId }),
+      }).catch(console.error)
+
+      // 4. Update active project context for Crit chat
+      localStorage.setItem('critup_last_analysis_id', newId)
+
+      // 5. Close modal — existing realtime subscription picks up status changes automatically
+      setShowReupload(false)
+      setReuploadFile(null)
+      setSlideIdx(0)
+    } catch (err) {
+      setReuploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+    } finally {
+      setReuploadSaving(false)
+    }
+  }, [reuploadFile, user, reuploadSaving, params.projectId])
 
   // ── Get signed PDF URL ──
   useEffect(() => {
@@ -448,6 +504,14 @@ export function AnalysisPage() {
     feedbackItems.find((_, i) => i % 3 === 2)?.title ?? '—',
   ]
 
+  // Score deltas vs previous version (null when no previous analysis)
+  const deltas = {
+    concept:      previousAnalysis ? (latestAnalysis.concept_score      ?? 0) - (previousAnalysis.concept_score      ?? 0) : null,
+    spatial:      previousAnalysis ? (latestAnalysis.spatial_score       ?? 0) - (previousAnalysis.spatial_score       ?? 0) : null,
+    presentation: previousAnalysis ? (latestAnalysis.presentation_score  ?? 0) - (previousAnalysis.presentation_score  ?? 0) : null,
+  }
+  const deltaValues = [deltas.concept, deltas.spatial, deltas.presentation]
+
   return (
     <div style={{ height: 'calc(100vh - 54px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter',sans-serif", background: c.bg }}>
       <style>{`
@@ -496,6 +560,14 @@ export function AnalysisPage() {
           >
             {speaking ? <Volume2 size={13} style={{ animation: 'pulse-ring 0.8s ease-in-out infinite' }} /> : voiceOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
             {voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice'}
+          </button>
+          <button
+            onClick={() => { setShowReupload(true); setReuploadFile(null); setReuploadError(null) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
+          >
+            <Upload size={13} /> New version
           </button>
           <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer' }}>
             <Download size={13} /> Export
@@ -655,7 +727,14 @@ export function AnalysisPage() {
                   <ScoreRing score={ring.score} label="" size={54} theme={theme} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 1 }}>{ring.label.toUpperCase()}</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: c.textPrimary, fontFamily: FONT }}>{ring.score.toFixed(1)}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: c.textPrimary, fontFamily: FONT }}>{ring.score.toFixed(1)}</div>
+                      {deltaValues[i] !== null && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: deltaValues[i]! >= 0 ? 'oklch(0.72 0.17 145)' : 'oklch(0.65 0.18 25)' }}>
+                          {deltaValues[i]! >= 0 ? '+' : ''}{deltaValues[i]!.toFixed(1)}
+                        </div>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11, color: c.textMuted, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
                       {ringSummaries[i]}
                     </div>
@@ -759,6 +838,84 @@ export function AnalysisPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Re-upload modal ── */}
+      {showReupload && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget && !reuploadSaving) { setShowReupload(false); setReuploadFile(null); setReuploadError(null) } }}
+        >
+          <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 440, border: `1px solid ${c.border}`, boxShadow: '0 24px 80px rgba(0,0,0,0.35)', position: 'relative' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <div>
+                <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Upload new version</h2>
+                <p style={{ fontSize: 12, color: c.textMuted, margin: '4px 0 0' }}>{project.name} — {stage?.label}</p>
+              </div>
+              <button onClick={() => { if (!reuploadSaving) { setShowReupload(false); setReuploadFile(null); setReuploadError(null) } }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, lineHeight: 1 }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.6, margin: '0 0 20px' }}>
+              The previous analysis is kept. Scores and feedback for the new version will appear once analysis completes.
+            </p>
+
+            {/* Drop zone */}
+            {!reuploadFile ? (
+              <div
+                onDragOver={e => { e.preventDefault(); setReuploadDrag(true) }}
+                onDragLeave={() => setReuploadDrag(false)}
+                onDrop={e => { e.preventDefault(); setReuploadDrag(false); const f = e.dataTransfer.files[0]; if (f?.type === 'application/pdf') setReuploadFile(f) }}
+                onClick={() => document.getElementById('reupload-input')?.click()}
+                style={{ border: `2px dashed ${reuploadDrag ? '#F97316' : c.border}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', background: reuploadDrag ? 'oklch(0.72 0.18 45/0.05)' : c.cardBg, transition: 'all 0.15s' }}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <Upload size={20} color="#F97316" />
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>Drop your updated PDF here</p>
+                <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>or click to browse</p>
+                <input id="reupload-input" type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setReuploadFile(f) }} />
+              </div>
+            ) : (
+              <div style={{ background: c.cardBg, border: `1.5px solid oklch(0.72 0.17 145/0.6)`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 9, background: 'oklch(0.72 0.17 145/0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={18} color="oklch(0.72 0.17 145)" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reuploadFile.name}</p>
+                  <p style={{ fontSize: 11, color: c.textMuted, margin: '2px 0 0' }}>{(reuploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                </div>
+                <button onClick={() => setReuploadFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4 }}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Error */}
+            {reuploadError && (
+              <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'oklch(0.65 0.18 25/0.1)', border: '1px solid oklch(0.65 0.18 25/0.3)', fontSize: 13, color: 'oklch(0.65 0.18 25)' }}>
+                {reuploadError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button onClick={() => { if (!reuploadSaving) { setShowReupload(false); setReuploadFile(null); setReuploadError(null) } }} disabled={reuploadSaving} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleReupload}
+                disabled={!reuploadFile || reuploadSaving}
+                style={{ padding: '10px 24px', borderRadius: 100, background: reuploadFile && !reuploadSaving ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), border: 'none', color: reuploadFile && !reuploadSaving ? '#fff' : c.textMuted, fontSize: 13, fontWeight: 600, cursor: reuploadFile && !reuploadSaving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7, boxShadow: reuploadFile && !reuploadSaving ? '0 0 16px oklch(0.72 0.18 45/0.35)' : 'none', transition: 'all 0.15s' }}
+              >
+                {reuploadSaving && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                {reuploadSaving ? 'Uploading…' : 'Start analysis →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
