@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { checkAnalyzeLimit } from './_rateLimit'
 
 // Pre-generate ElevenLabs audio for every feedback slide and store in
 // project-audio/{analysisId}/{slideIdx}.mp3 so playback is always instant.
@@ -134,10 +135,10 @@ export default async function handler(
   const supabase = createClient(supabaseUrl, serviceKey)
 
   try {
-    // 1. Fetch analysis + project info
+    // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
     const { data: analysis, error: fetchErr } = await supabase
       .from('analyses')
-      .select('id, pdf_path, status, projects(name, stage, focus_areas)')
+      .select('id, pdf_path, status, user_id, projects(name, stage, focus_areas), profiles(plan)')
       .eq('id', analysisId)
       .single()
 
@@ -149,7 +150,23 @@ export default async function handler(
       return res.json({ success: true, message: 'Already complete' })
     }
 
-    // 2. Mark as processing
+    // 2. Rate limit check (skip if already processing — retry is fine)
+    if (analysis.status !== 'processing' && analysis.user_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const plan = ((analysis as any).profiles as { plan?: string } | null)?.plan ?? 'free'
+      const rl = await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
+      if (!rl.allowed) {
+        return res.status(429).json({
+          error: 'Rate limit reached',
+          message: `You've used all ${rl.limit} analyses for today. Upgrade to Pro for unlimited analyses.`,
+          limit: rl.limit,
+          used: rl.used,
+          resetInSeconds: rl.resetInSeconds,
+        })
+      }
+    }
+
+    // 3. Mark as processing
     await supabase
       .from('analyses')
       .update({ status: 'processing' })

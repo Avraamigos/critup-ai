@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
+import { checkChatLimit } from './_rateLimit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,24 +101,30 @@ export default async function handler(
     return res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY' })
   }
 
-  // ── Optionally load analysis context from Supabase ──────────────────────────
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
+  // ── Optionally load analysis context + run rate limit ──────────────────────
   let analysisContext = null
+  let rateLimitUserId: string | null = null
+  let rateLimitPlan = 'free'
 
-  if (analysisId) {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (supabaseUrl && serviceKey) {
+    const supabase = createClient(supabaseUrl, serviceKey)
 
-    if (supabaseUrl && serviceKey) {
+    if (analysisId) {
       try {
-        const supabase = createClient(supabaseUrl, serviceKey)
         const { data } = await supabase
           .from('analyses')
-          .select('concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas)')
+          .select('user_id, concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas), profiles(plan)')
           .eq('id', analysisId)
           .eq('status', 'complete')
           .single()
 
         if (data) {
+          rateLimitUserId = data.user_id as string
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rateLimitPlan = ((data as any).profiles as { plan?: string } | null)?.plan ?? 'free'
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const project = (data as any).projects as { name: string; stage: string; focus_areas: string[] } | null
           analysisContext = {
@@ -133,7 +140,31 @@ export default async function handler(
         }
       } catch (e) {
         console.error('[chat] Failed to load analysis context:', e)
-        // Continue without context — don't fail the whole request
+      }
+    }
+
+    // Rate limit: only enforce when we have a userId
+    if (rateLimitUserId) {
+      try {
+        const rl = await checkChatLimit(rateLimitUserId, rateLimitPlan, supabase)
+        if (!rl.allowed) {
+          return res.status(429).json({
+            error: 'Rate limit reached',
+            message: `You've sent ${rl.used} messages this hour (limit ${rl.limit}). Upgrade to Pro for unlimited chat.`,
+            limit: rl.limit,
+            used: rl.used,
+            resetInSeconds: rl.resetInSeconds,
+          })
+        }
+
+        // Log this message for rate tracking (fire-and-forget)
+        supabase.from('chat_messages')
+          .insert({ user_id: rateLimitUserId, analysis_id: analysisId ?? null })
+          .then(() => {})
+          .catch(() => {})
+      } catch (e) {
+        console.error('[chat] Rate limit check error:', e)
+        // Fail open — don't block users on rate limit errors
       }
     }
   }
