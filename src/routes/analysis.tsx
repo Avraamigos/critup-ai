@@ -82,6 +82,7 @@ export function AnalysisPage() {
   const [pdfUrl,        setPdfUrl]       = useState<string | null>(null)
   const [speaking,      setSpeaking]     = useState(false)
   const [captionWords,  setCaptionWords] = useState<string[]>([])
+  const [audioReady,    setAudioReady]   = useState(false)   // true once slide 0 is in cache
 
   // ── Refs so callbacks always see current values ──
   const abortRef      = useRef<AbortController | null>(null)
@@ -165,10 +166,10 @@ export function AnalysisPage() {
   // Fetches slide 0 and 1 as soon as analysis data lands, and prefetches
   // slide idx+1 whenever the user navigates. Cache is module-level so it
   // survives navigation within the same session.
-  const prefetchSlide = useCallback((idx: number) => {
+  const prefetchSlide = useCallback((idx: number, onReady?: () => void) => {
     if (idx < 0 || idx >= feedbackRef.current.length) return
     const cacheKey = `${params.projectId}-${idx}`
-    if (globalAudioCache.has(cacheKey)) return
+    if (globalAudioCache.has(cacheKey)) { onReady?.(); return }
     const fb = feedbackRef.current[idx]
     if (!fb) return
     const text = cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
@@ -179,20 +180,29 @@ export function AnalysisPage() {
       body: JSON.stringify({ text, analysisId: aId, slideIdx: idx }),
     })
       .then(r => r.ok ? r.blob() : null)
-      .then(blob => { if (blob) globalAudioCache.set(cacheKey, blob) })
+      .then(blob => {
+        if (blob) {
+          globalAudioCache.set(cacheKey, blob)
+          onReady?.()
+        }
+      })
       .catch(() => {})
   }, [params.projectId])
 
-  // Prefetch first 2 slides when feedback data arrives
+  // Prefetch first 2 slides when feedback data arrives; mark slide 0 ready when done
   useEffect(() => {
     if (feedbackItems.length === 0 || !voiceOn) return
-    prefetchSlide(0)
+    setAudioReady(globalAudioCache.has(`${params.projectId}-0`))
+    prefetchSlide(0, () => setAudioReady(true))
     prefetchSlide(1)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedbackItems.length, latestAnalysis?.id, voiceOn])
 
-  // Prefetch the next slide whenever current slide changes
+  // When slide changes: check if the new slide's audio is already ready
   useEffect(() => {
+    const key = `${params.projectId}-${slideIdx}`
+    setAudioReady(!voiceOn || globalAudioCache.has(key))
+    if (voiceOn) prefetchSlide(slideIdx, () => setAudioReady(true))
     if (voiceOn) prefetchSlide(slideIdx + 1)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideIdx, voiceOn])
@@ -676,9 +686,13 @@ export function AnalysisPage() {
           </button>
           <button
             onClick={handlePlayPause}
-            style={{ width: 48, height: 48, borderRadius: '50%', background: isPlaying ? 'oklch(0.65 0.18 25)' : '#F97316', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${isPlaying ? 'oklch(0.65 0.18 25/0.5)' : 'oklch(0.72 0.18 45/0.5)'}`, transition: 'all 0.2s', flexShrink: 0 }}
+            title={!audioReady && voiceOn && !isPlaying ? 'Loading audio…' : undefined}
+            style={{ width: 48, height: 48, borderRadius: '50%', background: isPlaying ? 'oklch(0.65 0.18 25)' : '#F97316', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${isPlaying ? 'oklch(0.65 0.18 25/0.5)' : 'oklch(0.72 0.18 45/0.5)'}`, transition: 'all 0.2s', flexShrink: 0, opacity: (!audioReady && voiceOn && !isPlaying) ? 0.65 : 1 }}
           >
-            {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
+            {(!audioReady && voiceOn && !isPlaying)
+              ? <Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} />
+              : isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />
+            }
           </button>
           <button
             onClick={() => { killAudio(); setSlideIdx(s => Math.min(s + 1, totalSlides - 1)) }}
