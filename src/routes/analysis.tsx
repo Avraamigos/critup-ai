@@ -50,6 +50,20 @@ const STAGE_META: Record<string, { label: string; color: string }> = {
 // the same browser session — so navigating to dashboard and back won't re-bill ElevenLabs.
 const globalAudioCache = new Map<string, Blob>()
 
+// Strip markdown so the text matches what the TTS API sends to ElevenLabs
+function cleanForTTS(raw: string): string {
+  return raw
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/`[^`]*`/g, '')
+    .replace(/→|->|»|•/g, '. ')
+    .replace(/#+\s*/g, '')
+    .replace(/_{2,}/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function AnalysisPage() {
@@ -147,6 +161,42 @@ export function AnalysisPage() {
   useEffect(() => { feedbackRef.current = feedbackItems }, [feedbackItems])
   useEffect(() => { totalRef.current = feedbackItems.length + 1 }, [feedbackItems.length])
 
+  // ── Prefetch audio into memory so first "Play" is instant ──
+  // Fetches slide 0 and 1 as soon as analysis data lands, and prefetches
+  // slide idx+1 whenever the user navigates. Cache is module-level so it
+  // survives navigation within the same session.
+  const prefetchSlide = useCallback((idx: number) => {
+    if (idx < 0 || idx >= feedbackRef.current.length) return
+    const cacheKey = `${params.projectId}-${idx}`
+    if (globalAudioCache.has(cacheKey)) return
+    const fb = feedbackRef.current[idx]
+    if (!fb) return
+    const text = cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
+    const aId = analysisIdRef.current
+    fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, analysisId: aId, slideIdx: idx }),
+    })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => { if (blob) globalAudioCache.set(cacheKey, blob) })
+      .catch(() => {})
+  }, [params.projectId])
+
+  // Prefetch first 2 slides when feedback data arrives
+  useEffect(() => {
+    if (feedbackItems.length === 0 || !voiceOn) return
+    prefetchSlide(0)
+    prefetchSlide(1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedbackItems.length, latestAnalysis?.id, voiceOn])
+
+  // Prefetch the next slide whenever current slide changes
+  useEffect(() => {
+    if (voiceOn) prefetchSlide(slideIdx + 1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slideIdx, voiceOn])
+
   // ── Kill all audio, pending fetch, timers ──
   const killAudio = useCallback(() => {
     pausedRef.current = false
@@ -209,7 +259,7 @@ export function AnalysisPage() {
     killAudio()
     const fb = feedbackRef.current[idx]
     if (!fb) { onDone?.(); return }
-    const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+    const text = cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
     const cacheKey = `${params.projectId}-${idx}`
 
     const cached = globalAudioCache.get(cacheKey)
@@ -305,7 +355,7 @@ export function AnalysisPage() {
       setSpeaking(true)
       const fb = feedbackRef.current[slideIdx]
       // Resume caption from where it was paused (captionIdxRef holds the word index)
-      if (fb) startCaption(`${fb.title}. ${fb.text}. ${fb.suggestion}`, captionIdxRef.current)
+      if (fb) startCaption(cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`), captionIdxRef.current)
       audioRef.current.play().catch(() => {
         // If browser can't resume (e.g., blob expired), restart fresh
         startSlideAudio(slideIdx)

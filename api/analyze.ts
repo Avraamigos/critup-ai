@@ -2,6 +2,20 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { checkAnalyzeLimit } from './_rateLimit'
 
+// Strip markdown that makes ElevenLabs produce glitchy output
+function cleanForTTS(raw: string): string {
+  return raw
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/`[^`]*`/g, '')
+    .replace(/→|->|»|•/g, '. ')
+    .replace(/#+\s*/g, '')
+    .replace(/_{2,}/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 // Pre-generate ElevenLabs audio for every feedback slide and store in
 // project-audio/{analysisId}/{slideIdx}.mp3 so playback is always instant.
 async function generateAllAudio(
@@ -15,7 +29,7 @@ async function generateAllAudio(
 
   await Promise.allSettled(
     feedback.map(async (fb, idx) => {
-      const text = `${fb.title}. ${fb.text}. ${fb.suggestion}`
+      const text = cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
       const storagePath = `${analysisId}/${idx}.mp3`
 
       // Skip if already stored (handles retries / re-runs)
@@ -37,9 +51,9 @@ async function generateAllAudio(
             text,
             model_id: 'eleven_multilingual_v2',
             voice_settings: {
-              stability: 0.45,
-              similarity_boost: 0.75,
-              style: 0.3,
+              stability: 0.60,
+              similarity_boost: 0.78,
+              style: 0.25,
               use_speaker_boost: true,
             },
           }),
@@ -237,16 +251,8 @@ export default async function handler(
     const spatial_score = Math.min(10, Math.max(0, Number(result.spatial_score) || 0))
     const presentation_score = Math.min(10, Math.max(0, Number(result.presentation_score) || 0))
 
-    // 8. Pre-generate TTS audio for all feedback slides (stored in project-audio bucket).
-    //    We do this BEFORE marking status='complete' so the client always finds
-    //    audio ready the moment the analysis page loads. allSettled = TTS failures
-    //    never block the analysis from completing.
-    const elevenLabsKey = process.env.ELEVENLABS_API_KEY || ''
-    if (elevenLabsKey && result.feedback?.length) {
-      await generateAllAudio(analysisId, result.feedback, elevenLabsKey, supabase)
-    }
-
-    // 9. Write results back to DB (status → complete triggers client realtime update)
+    // 8. Write results to DB immediately — status='complete' triggers the client
+    //    realtime update right away so users see their results as fast as possible.
     const { error: updateErr } = await supabase
       .from('analyses')
       .update({
@@ -261,6 +267,16 @@ export default async function handler(
 
     if (updateErr) {
       return res.status(500).json({ error: 'Failed to save results' })
+    }
+
+    // 9. Pre-generate TTS audio in the background AFTER responding (fire-and-forget).
+    //    This never blocks analysis completion — if ElevenLabs is slow or fails the
+    //    results are already saved. The client-side prefetch + tts.ts on-demand fallback
+    //    handle the case where audio isn't ready yet.
+    const elevenLabsKey = process.env.ELEVENLABS_API_KEY || ''
+    if (elevenLabsKey && result.feedback?.length) {
+      generateAllAudio(analysisId, result.feedback, elevenLabsKey, supabase)
+        .catch(e => console.error('[analyze] background audio pre-gen failed:', e))
     }
 
     return res.json({ success: true, concept_score, spatial_score, presentation_score })

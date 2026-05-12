@@ -9,6 +9,20 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+// Strip markdown/special characters that cause ElevenLabs to glitch
+function cleanForTTS(raw: string): string {
+  return raw
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **bold** → bold
+    .replace(/\*(.*?)\*/g, '$1')       // *italic* → italic
+    .replace(/`[^`]*`/g, '')           // `code` → remove
+    .replace(/→|->|»|•/g, '. ')       // arrows/bullets → pause
+    .replace(/#+\s*/g, '')             // ## headers
+    .replace(/_{2,}/g, '')             // __underline__
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // [link](url) → link text
+    .replace(/\s{2,}/g, ' ')           // collapse whitespace
+    .trim()
+}
+
 export default async function handler(
   req: {
     method: string
@@ -23,8 +37,9 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { text, voiceId: reqVoiceId, analysisId, slideIdx } = req.body ?? {}
-  if (!text) return res.status(400).json({ error: 'text required' })
+  const { text: rawText, voiceId: reqVoiceId, analysisId, slideIdx } = req.body ?? {}
+  if (!rawText) return res.status(400).json({ error: 'text required' })
+  const text = cleanForTTS(rawText)
 
   const apiKey  = process.env.ELEVENLABS_API_KEY || ''
   // Voice ID is hardcoded — the ELEVENLABS_VOICE_ID env var is intentionally
@@ -74,9 +89,9 @@ export default async function handler(
           text,
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
-            stability: 0.45,
-            similarity_boost: 0.75,
-            style: 0.3,
+            stability: 0.60,          // higher = fewer glitches / "aaaaa" artifacts
+            similarity_boost: 0.78,
+            style: 0.25,
             use_speaker_boost: true,
           },
         }),
