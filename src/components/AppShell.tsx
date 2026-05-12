@@ -6,7 +6,7 @@ import {
   Sun, Moon, LogOut, Star, TrendingUp, User,
 } from 'lucide-react'
 import { CritupLogo } from './CritupLogo'
-import { OrbButton } from './ui/orb-button'
+import { AIOrb } from './AIOrb'
 import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -214,7 +214,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* Animated orb AI button */}
-            {!isMobile && <OrbButton onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
+            {!isMobile && <AIOrb size={40} float onClick={() => setChatOpen(o => !o)} active={chatOpen} />}
 
             {/* Account dropdown */}
             <div ref={dropdownRef} style={{ position: 'relative' }}>
