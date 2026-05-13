@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { User, Bell, Globe, Shield, Moon, Sun, Check } from 'lucide-react'
+import { User, Bell, Globe, Shield, Moon, Sun, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { useNavigate } from '@tanstack/react-router'
 
 type Tab = 'profile' | 'notifications' | 'language' | 'account'
 
@@ -22,7 +23,8 @@ const LANGUAGES = [
 export function SettingsPage() {
   const { theme, toggle } = useTheme()
   const c = useColors(theme)
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, refreshProfile, signOut } = useAuth()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab]     = useState<Tab>('profile')
   const [form, setForm]               = useState({ name: '', email: '', university: '' })
@@ -33,6 +35,36 @@ export function SettingsPage() {
   const [notifications, setNotifications] = useState({
     analysis: true, jury: true, tips: false, updates: true,
   })
+
+  // Delete account
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm]     = useState('')
+  const [deleting, setDeleting]               = useState(false)
+  const [deleteError, setDeleteError]         = useState<string | null>(null)
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE' || deleting) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) throw new Error('Not authenticated')
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? 'Delete failed')
+      }
+      await signOut()
+      navigate({ to: '/landing' })
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setDeleting(false)
+    }
+  }
 
   // Populate form from real profile.
   // Use stable primitive deps (id, email, specific fields) instead of object
@@ -274,7 +306,7 @@ export function SettingsPage() {
                 <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 12px' }}>These actions are permanent and cannot be undone.</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>Export data</button>
-                  <button style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid oklch(0.65 0.18 25 / 0.4)`, color: 'oklch(0.65 0.18 25)', fontSize: 13, cursor: 'pointer' }}>Delete account</button>
+                  <button onClick={() => { setShowDeleteModal(true); setDeleteConfirm(''); setDeleteError(null) }} style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid oklch(0.65 0.18 25 / 0.4)`, color: 'oklch(0.65 0.18 25)', fontSize: 13, cursor: 'pointer' }}>Delete account</button>
                 </div>
               </div>
             </div>
@@ -283,5 +315,47 @@ export function SettingsPage() {
         </div>
       </div>
     </div>
+
+    {/* ── Delete account modal ── */}
+    {showDeleteModal && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+        onClick={e => { if (e.target === e.currentTarget && !deleting) setShowDeleteModal(false) }}>
+        <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 420, border: `1px solid oklch(0.65 0.18 25 / 0.4)`, boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'oklch(0.65 0.18 25 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertTriangle size={17} color="oklch(0.65 0.18 25)" />
+            </div>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: c.textPrimary, margin: 0 }}>Delete your account</h2>
+          </div>
+          <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65, margin: '0 0 16px' }}>
+            This permanently deletes your account, all projects, analyses, and uploaded files. <strong style={{ color: c.textPrimary }}>This cannot be undone.</strong>
+          </p>
+          <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 8px' }}>Type <strong style={{ color: c.textPrimary }}>DELETE</strong> to confirm:</p>
+          <input
+            value={deleteConfirm}
+            onChange={e => setDeleteConfirm(e.target.value)}
+            placeholder="DELETE"
+            disabled={deleting}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: 10, background: c.cardBg, border: `1.5px solid ${deleteConfirm === 'DELETE' ? 'oklch(0.65 0.18 25)' : c.border}`, color: c.textPrimary, fontSize: 14, outline: 'none', fontFamily: 'monospace', marginBottom: 16 }}
+          />
+          {deleteError && (
+            <div style={{ padding: '10px 12px', borderRadius: 8, background: 'oklch(0.65 0.18 25/0.08)', border: '1px solid oklch(0.65 0.18 25/0.3)', fontSize: 13, color: 'oklch(0.65 0.18 25)', marginBottom: 14 }}>
+              {deleteError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowDeleteModal(false)} disabled={deleting} style={{ padding: '9px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>
+              Cancel
+            </button>
+            <button onClick={handleDeleteAccount} disabled={deleteConfirm !== 'DELETE' || deleting}
+              style={{ padding: '9px 20px', borderRadius: 100, background: deleteConfirm === 'DELETE' && !deleting ? 'oklch(0.65 0.18 25)' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), border: 'none', color: deleteConfirm === 'DELETE' && !deleting ? '#fff' : c.textMuted, fontSize: 13, fontWeight: 600, cursor: deleteConfirm === 'DELETE' && !deleting ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
+              {deleting && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
+              {deleting ? 'Deleting…' : 'Delete my account'}
+            </button>
+          </div>
+        </div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )}
   )
 }

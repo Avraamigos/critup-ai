@@ -17,6 +17,8 @@ import { JuryPage } from '@/routes/jury'
 import { AssistantPage } from '@/routes/assistant'
 import { SettingsPage } from '@/routes/settings'
 import { HelpPage } from '@/routes/help'
+import { PrivacyPage } from '@/routes/privacy'
+import { TermsPage } from '@/routes/terms'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -46,6 +48,8 @@ const onboardingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/o
 const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/pricing', component: PricingPage })
 const newProjectRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projects/new', component: NewProjectPage })
 const analysisLoadingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/analysis/loading', component: AnalysisLoadingPage })
+const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/privacy', component: PrivacyPage })
+const termsRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/terms',   component: TermsPage })
 
 // App shell routes
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage })
@@ -73,6 +77,8 @@ const routeTree = rootRoute.addChildren([
   pricingRoute,
   newProjectRoute,
   analysisLoadingRoute,
+  privacyRoute,
+  termsRoute,
 ])
 
 export const router = createRouter({ routeTree })

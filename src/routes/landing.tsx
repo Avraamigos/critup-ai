@@ -374,10 +374,9 @@ export function LandingPage() {
       <footer style={{ borderTop:`1px solid ${c.border}`, padding:'28px 48px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
         <CritupLogo size={18} showText theme={theme} />
         <div style={{ display:'flex', gap:24, fontSize:13, color:c.textMuted }}>
-          {['Privacy', 'Terms', 'Contact'].map(l => <a key={l} href="#" style={{ color:'inherit', textDecoration:'none' }}
-            onMouseEnter={e => (e.currentTarget.style.color = c.textPrimary)}
-            onMouseLeave={e => (e.currentTarget.style.color = c.textMuted)}
-          >{l}</a>)}
+          <Link to="/privacy" style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Privacy</Link>
+          <Link to="/terms"   style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Terms</Link>
+          <a href="mailto:hello@critup.ai" style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Contact</a>
         </div>
         <div style={{ fontSize:12, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai · Avraam Valikhan, Founder & CEO · Adil Kamal Batcha, Co-founder</div>
       </footer>
