@@ -132,6 +132,7 @@ export function SettingsPage() {
   )
 
   return (
+    <>
     <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
       <h1 style={{
         fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary,
@@ -357,5 +358,6 @@ export function SettingsPage() {
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     )}
+    </>
   )
 }

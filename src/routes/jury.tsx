@@ -116,7 +116,8 @@ export function JuryPage() {
     rec.interimResults  = true
     rec.lang            = 'en-US'
 
-    rec.onresult = (e: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
       let final = ''
       let interim = ''
       for (let i = 0; i < e.results.length; i++) {
@@ -127,7 +128,8 @@ export function JuryPage() {
       setInterimText(interim)
     }
 
-    rec.onerror = (e: SpeechRecognitionErrorEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onerror = (e: any) => {
       if (e.error === 'not-allowed') setMicError('Microphone access was denied. Please allow mic access in your browser and try again.')
       else if (e.error === 'no-speech') { /* ignore, just silence */ }
       else setMicError(`Recording error: ${e.error}`)
@@ -366,7 +368,7 @@ export function JuryPage() {
                   {feedback && (
                     <>
                       {/* What landed */}
-                      <div style={{ background: c.cardBg, borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.17 145/0.35)', background: c.isDark ? 'oklch(0.72 0.17 145/0.06)' : 'oklch(0.96 0.02 145)' } as React.CSSProperties}>
+                      <div style={{ background: c.isDark ? 'oklch(0.72 0.17 145/0.06)' : 'oklch(0.96 0.02 145)', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.17 145/0.35)' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.55 0.17 145)', letterSpacing: '0.1em', marginBottom: 8 }}>✓ WHAT LANDED</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{feedback.whatLanded}</p>
                       </div>
