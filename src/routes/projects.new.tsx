@@ -30,7 +30,7 @@ export function NewProjectPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({ name: '', stage: '', focuses: [] as string[], briefText: '', file: null as File | null })
   const [dragging, setDragging] = useState(false)
@@ -65,6 +65,68 @@ export function NewProjectPage() {
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) setForm(f => ({ ...f, file }))
+  }
+
+  // Wait for profile to load before rendering — profile arrives async after auth resolves,
+  // so without this check the wizard flashes briefly with analyses_used=0 and the wall never triggers.
+  if (user && !profile) {
+    return (
+      <div style={{ minHeight: '100vh', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #F97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    )
+  }
+
+  const isFree = !profile || profile.plan === 'free'
+  const analysesUsed = (profile as { analyses_used?: number } | null)?.analyses_used ?? 0
+
+  if (isFree && analysesUsed >= 1) {
+    return (
+      <div style={{ minHeight: '100vh', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
+        <DotGrid theme={theme} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, width: '100%', textAlign: 'center' }}>
+          <div style={{ marginBottom: 24 }}>
+            <CritupLogo size={40} />
+          </div>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: c.textPrimary, marginBottom: 12 }}>
+            You've used your free analysis
+          </h1>
+          <p style={{ fontSize: 15, color: c.textMuted, marginBottom: 32, lineHeight: 1.6 }}>
+            The free plan includes <strong style={{ color: c.textPrimary }}>1 project analysis</strong>. Upgrade to Pro to keep getting feedback on your work.
+          </p>
+          <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 16, padding: '24px 28px', marginBottom: 28, textAlign: 'left' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>Pro includes</p>
+            {[
+              ['📊', 'Unlimited project analyses'],
+              ['💬', 'Unlimited AI chat sessions'],
+              ['⚖️', 'Jury practice & mock Q&A'],
+              ['📄', 'PDF export with your name'],
+            ].map(([icon, label]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span style={{ fontSize: 14, color: c.textPrimary }}>{label}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => window.location.href = '/pricing'}
+            style={{ display: 'block', width: '100%', padding: '14px 0', borderRadius: 12, background: '#F97316', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginBottom: 16, transition: 'opacity 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            Upgrade to Pro →
+          </button>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 14, cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Back to dashboard
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Wrap a thenable (incl. PostgrestBuilder) with a timeout so we never hang forever

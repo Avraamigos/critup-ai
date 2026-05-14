@@ -64,6 +64,7 @@ export function ProjectsPage() {
   const [filter, setFilter] = useState('all')
   const [menuOpen, setMenuOpen] = useState<string | null>(null) // project id with open menu
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close context menu on outside click
@@ -273,7 +274,7 @@ export function ProjectsPage() {
                         </button>
                         <div style={{ height: 1, background: c.border, margin: '2px 4px' }} />
                         <button
-                          onClick={e => { e.stopPropagation(); if (window.confirm(`Delete "${p.name}"? This cannot be undone.`)) deleteProject(p.id) }}
+                          onClick={e => { e.stopPropagation(); setMenuOpen(null); setConfirmDelete({ id: p.id, name: p.name }) }}
                           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'none', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'oklch(0.65 0.18 25)', fontSize: 13 }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.65 0.18 25/0.08)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -331,6 +332,41 @@ export function ProjectsPage() {
       {!loading && projects.length > 0 && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: c.textMuted }}>
           <p style={{ fontSize: 14 }}>No projects match your search.</p>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 18, padding: '28px 28px 24px', maxWidth: 380, width: '90%', fontFamily: FONT }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'oklch(0.65 0.18 25 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Trash2 size={20} color="oklch(0.65 0.18 25)" />
+            </div>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: c.textPrimary, margin: '0 0 8px' }}>
+              Delete "{confirmDelete.name}"?
+            </h2>
+            <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 24px', lineHeight: 1.5 }}>
+              This will permanently delete the project and all its analyses. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: `1px solid ${c.border}`, background: 'transparent', color: c.textPrimary, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { deleteProject(confirmDelete.id); setConfirmDelete(null) }}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: 'oklch(0.65 0.18 25)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
