@@ -70,6 +70,8 @@ export function DashboardPage() {
     : 'Architecture Student'
 
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
+  const isPro = profile?.plan !== 'free'
+  const analysesUsed = (profile as { analyses_used?: number } | null)?.analyses_used ?? 0
 
   useEffect(() => {
     if (!user?.id) return
@@ -132,6 +134,42 @@ export function DashboardPage() {
           {projects.length === 0 ? "Create your first project to get started." : `You have ${projects.length} project${projects.length !== 1 ? 's' : ''}. Keep improving.`}
         </p>
       </div>
+
+      {/* Free plan usage banner */}
+      {!isPro && !loading && (
+        <div style={{
+          marginBottom: isMobile ? 16 : 20,
+          padding: '14px 18px',
+          borderRadius: 14,
+          background: analysesUsed >= 1
+            ? (c.isDark ? 'oklch(0.22 0.015 35)' : '#fff7ed')
+            : (c.isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc'),
+          border: `1px solid ${analysesUsed >= 1 ? 'oklch(0.72 0.18 45/0.4)' : c.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          position: 'relative', zIndex: 1,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+            {/* Analyses */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted, fontFamily: FONT }}>Analyses</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: analysesUsed >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{analysesUsed}/1</span>
+              </div>
+              <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.30 0.004 270)' : '#e5e7eb', overflow: 'hidden', width: 120 }}>
+                <div style={{ height: '100%', width: `${Math.min(100, analysesUsed * 100)}%`, borderRadius: 100, background: analysesUsed >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: c.textMuted, fontFamily: FONT }}>
+              {analysesUsed >= 1
+                ? <span>Free analysis used — <span style={{ color: '#F97316', fontWeight: 600 }}>upgrade for unlimited</span></span>
+                : '1 free analysis remaining · Jury Practice, unlimited chat & more with Pro'}
+            </div>
+          </div>
+          <Link to="/pricing" style={{ flexShrink: 0, padding: '7px 16px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)', fontFamily: FONT }}>
+            {analysesUsed >= 1 ? 'Upgrade now' : 'Upgrade to Pro'}
+          </Link>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {loading && (
