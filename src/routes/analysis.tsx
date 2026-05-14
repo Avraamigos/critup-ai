@@ -75,6 +75,7 @@ export function AnalysisPage() {
   const { user } = useAuth()
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
+  const [isMobile,   setIsMobile]   = useState(() => window.innerWidth < 768)
   const [project,    setProject]   = useState<ProjectData | null>(null)
   const [loading,    setLoading]   = useState(true)
   const [error,      setError]     = useState<string | null>(null)
@@ -110,6 +111,12 @@ export function AnalysisPage() {
   // Stable ref to the analysis ID — needed inside speakSlide callback without
   // re-creating it every time latestAnalysis changes reference
   const analysisIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // Keep refs in sync with state (order matters — these run before the main effect)
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
@@ -669,48 +676,50 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{ padding: '10px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, borderBottom: `1px solid ${c.border}` }}>
+      <div style={{ padding: isMobile ? '8px 14px' : '10px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, borderBottom: `1px solid ${c.border}` }}>
         <div>
           <button onClick={() => navigate({ to: '/projects' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 12, padding: 0, marginBottom: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
             <ChevronLeft size={13} /> My Projects
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 16, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>{project.name}</h1>
-            <span style={{ fontSize: 10, fontWeight: 700, color: stage?.color, background: `${stage?.color}22`, padding: '2px 8px', borderRadius: 100, letterSpacing: '0.06em' }}>{stage?.label?.toUpperCase()}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? 140 : 'none' }}>{project.name}</h1>
+            {!isMobile && <span style={{ fontSize: 10, fontWeight: 700, color: stage?.color, background: `${stage?.color}22`, padding: '2px 8px', borderRadius: 100, letterSpacing: '0.06em' }}>{stage?.label?.toUpperCase()}</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {/* Voice toggle */}
           <button
             onClick={() => setVoiceOn(v => !v)}
             title={voiceOn ? 'Turn off voice' : 'Turn on AI voice narration'}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: voiceOn ? 'oklch(0.72 0.18 45/0.12)' : c.cardBg, border: `1px solid ${voiceOn ? '#F97316' : c.border}`, color: voiceOn ? '#F97316' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: voiceOn ? 'oklch(0.72 0.18 45/0.12)' : c.cardBg, border: `1px solid ${voiceOn ? '#F97316' : c.border}`, color: voiceOn ? '#F97316' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
           >
             {speaking ? <Volume2 size={13} style={{ animation: 'pulse-ring 0.8s ease-in-out infinite' }} /> : voiceOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
-            {voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice'}
+            {!isMobile && (voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice')}
           </button>
           <button
             onClick={() => { setShowReupload(true); setReuploadFile(null); setReuploadError(null) }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
           >
-            <Upload size={13} /> New version
+            <Upload size={13} />{!isMobile && ' New version'}
           </button>
-          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
-          >
-            <Download size={13} /> Export PDF
-          </button>
+          {!isMobile && (
+            <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
+            >
+              <Download size={13} /> Export PDF
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Main ── */}
-      <div style={{ flex: 1, display: 'flex', gap: 18, padding: '16px 22px 0', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 0 : 18, padding: isMobile ? '10px 14px 0' : '16px 22px 0', overflow: isMobile ? 'auto' : 'hidden', minHeight: 0 }}>
 
         {/* Left: viewer with INSET glow */}
-        <div style={{ flex: '0 0 58%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ flex: isMobile ? '0 0 auto' : '0 0 58%', display: 'flex', flexDirection: 'column', minHeight: 0, height: isMobile ? 280 : undefined }}>
           <div
             key={`viewer-${slideIdx}`}
             style={{
@@ -832,7 +841,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
         </div>
 
         {/* Right: scores + feedback */}
-        <div style={{ flex: '0 0 42%', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', paddingBottom: 4 }}>
+        <div style={{ flex: isMobile ? '0 0 auto' : '0 0 42%', display: 'flex', flexDirection: 'column', gap: 10, overflowY: isMobile ? 'visible' : 'auto', paddingBottom: isMobile ? 0 : 4, marginTop: isMobile ? 12 : 0 }}>
           {!isSummary ? (
             <div key={`panel-${slideIdx}`} style={{ animation: 'slide-up 0.3s ease-out', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ background: c.cardBg, borderRadius: 16, padding: '16px', border: `1.5px solid #F97316`, boxShadow: '0 0 20px oklch(0.72 0.18 45/0.1)' }}>
@@ -914,7 +923,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ padding: '10px 22px 14px', flexShrink: 0 }}>
+      <div style={{ padding: isMobile ? '8px 14px 12px' : '10px 22px 14px', flexShrink: 0 }}>
         {/* Caption bar */}
         <div style={{ background: c.isDark ? 'oklch(0.15 0.004 270)' : '#f8fafc', border: `1px solid ${speaking ? 'oklch(0.72 0.18 45/0.5)' : c.border}`, borderRadius: 12, padding: '10px 16px', marginBottom: 10, minHeight: 46, display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.3s' }}>
           <Volume2 size={13} color={speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0, transition: 'color 0.3s' }} />

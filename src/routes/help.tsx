@@ -3,14 +3,14 @@ import { Search, ChevronDown, ChevronUp, MessageSquare, BookOpen, Video } from '
 import { useTheme, useColors } from '@/lib/theme'
 
 const FAQS = [
-  { q: 'How many pages can I upload in a PDF?', a: 'Free plan supports up to 10 pages per analysis. Monthly and Yearly plans support unlimited pages.' },
+  { q: 'How many analyses do I get?', a: 'The Free plan includes 1 project analysis. The Monthly plan ($8/mo) and Yearly plan ($49/yr) give you unlimited analyses.' },
   { q: 'What design disciplines does Critup support?', a: 'Architecture, Interior Architecture, Urban Design, and Landscape Architecture. More disciplines are coming soon.' },
   { q: 'How accurate is the AI scoring?', a: 'Scores are calibrated against common jury rubrics (concept clarity, spatial logic, presentation quality). They are a guide, not a grade — use them to identify weak points to address.' },
   { q: 'Can I re-analyse a project after making changes?', a: 'Yes — just upload the updated PDF from the project page. Each upload creates a new analysis snapshot so you can track improvement over time.' },
   { q: 'What language is the feedback delivered in?', a: 'You can choose English, Russian, or Turkish in Onboarding or Settings. The full critique and jury questions will be generated in your selected language.' },
-  { q: 'Is my work kept private?', a: 'Your uploaded PDFs and analyses are private to your account. We do not share or use your design work to train models.' },
-  { q: 'How do I practise jury questions?', a: 'Go to Jury Practice in the sidebar. You can select questions generated from your project and record your answer — the AI will give feedback on timing and clarity.' },
-  { q: 'When will paid plans launch?', a: "We're currently in open beta — all features are free. Payments are coming soon. You'll be notified before anything changes." },
+  { q: 'Is my work kept private?', a: 'Your uploaded PDFs and analyses are private to your account. We do not share or use your design work to train AI models.' },
+  { q: 'How do I practise jury questions?', a: 'Go to Jury Practice in the sidebar. You can select questions generated from your project and practice answering them with the AI.' },
+  { q: 'How do I upgrade my plan?', a: 'Go to Settings → Plan & Billing to view your current plan and upgrade. Payments are processed securely by Stripe.' },
 ]
 
 const GUIDES = [
