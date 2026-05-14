@@ -56,7 +56,7 @@ export function useColors(theme: Theme) {
     textPrimary: isDark ? 'oklch(0.96 0 0)' : '#111827',
     textMuted: isDark ? 'oklch(0.65 0.005 270)' : '#6b7280',
     inputBg: isDark ? 'oklch(0.19 0.004 270)' : '#f9fafb',
-    activeBg: isDark ? 'oklch(0.28 0.006 270)' : '#f0fdf4',
+    activeBg: isDark ? 'oklch(0.28 0.006 270)' : '#fff7ed',
     hoverBorder: 'oklch(0.72 0.18 45 / 0.35)',
     orange: '#F97316',
     green: 'oklch(0.72 0.17 145)',

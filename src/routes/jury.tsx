@@ -395,13 +395,13 @@ export function JuryPage() {
                   {feedback && (
                     <>
                       {/* What landed */}
-                      <div style={{ background: c.isDark ? 'oklch(0.72 0.17 145/0.06)' : 'oklch(0.96 0.02 145)', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.17 145/0.35)' }}>
+                      <div style={{ background: c.isDark ? 'oklch(0.72 0.17 145/0.06)' : '#f0fdf4', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.17 145/0.35)' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.55 0.17 145)', letterSpacing: '0.1em', marginBottom: 8 }}>✓ WHAT LANDED</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{feedback.whatLanded}</p>
                       </div>
 
                       {/* The gap */}
-                      <div style={{ background: c.isDark ? 'oklch(0.72 0.18 45/0.06)' : 'oklch(0.97 0.02 45)', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.18 45/0.3)' }}>
+                      <div style={{ background: c.isDark ? 'oklch(0.72 0.18 45/0.06)' : '#fff7ed', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.18 45/0.3)' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 8 }}>↗ THE GAP</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{feedback.theGap}</p>
                       </div>
