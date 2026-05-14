@@ -31,7 +31,9 @@ function makeGreeting() {
   return "Hi! Upload a project to get started. I'll analyse your drawings and give you targeted critique, score breakdowns, and jury prep."
 }
 
-async function callChatAPI(messages: Message[], analysisId: string | null): Promise<string> {
+interface LimitError { limitReached: true; message: string }
+
+async function callChatAPI(messages: Message[], analysisId: string | null): Promise<string | LimitError> {
   const payload = {
     analysisId: analysisId ?? undefined,
     messages: messages.map(m => ({
@@ -45,6 +47,11 @@ async function callChatAPI(messages: Message[], analysisId: string | null): Prom
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+
+  if (res.status === 429 || res.status === 403) {
+    const err = await res.json().catch(() => ({})) as { message?: string }
+    return { limitReached: true, message: err.message ?? "You've reached your free plan limit." }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -61,6 +68,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
   const [messages, setMessages] = useState<Message[]>(() => [{ role: 'ai', text: makeGreeting() }])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [limitMsg, setLimitMsg] = useState<string | null>(null)
 
   // Re-initialise greeting when panel is opened
   useEffect(() => {
@@ -68,6 +76,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
       setMessages([{ role: 'ai', text: makeGreeting() }])
       setInput('')
       setError(null)
+      setLimitMsg(null)
     }
   }, [open])
 
@@ -75,7 +84,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
   const textRef = useRef<HTMLTextAreaElement>(null)
 
   const send = async (text: string) => {
-    if (!text.trim() || loading) return
+    if (!text.trim() || loading || !!limitMsg) return
     const userMsg: Message = { role: 'user', text: text.trim() }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
@@ -85,12 +94,16 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
 
     try {
       const analysisId = getLastAnalysisId()
-      const reply = await callChatAPI(newMessages, analysisId)
-      setMessages(m => [...m, { role: 'ai', text: reply }])
+      const result = await callChatAPI(newMessages, analysisId)
+      if (typeof result === 'object' && result.limitReached) {
+        setLimitMsg(result.message)
+        setMessages(newMessages.slice(0, -1))
+      } else {
+        setMessages(m => [...m, { role: 'ai', text: result as string }])
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setError(msg)
-      // Remove the user message that failed so they can retry
       setMessages(newMessages.slice(0, -1))
     } finally {
       setLoading(false)
@@ -254,6 +267,17 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
 
           <div ref={endRef} />
         </div>
+
+        {/* ── Limit banner ── */}
+        {limitMsg && (
+          <div style={{ margin: '0 14px 10px', padding: '12px 14px', borderRadius: 12, background: isDark ? 'oklch(0.22 0.015 35)' : '#fff7ed', border: '1.5px solid oklch(0.72 0.18 45/0.4)', flexShrink: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', marginBottom: 4 }}>Free plan limit reached</div>
+            <div style={{ fontSize: 12, color: isDark ? '#fbd5b0' : '#92400e', lineHeight: 1.5, marginBottom: 10 }}>{limitMsg}</div>
+            <a href="/pricing" style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
+              Upgrade to Pro →
+            </a>
+          </div>
+        )}
 
         {/* ── Chips ── */}
         <div style={{ padding: '6px 14px 0', display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>

@@ -27,7 +27,7 @@ export function JuryPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
   const [questions,    setQuestions]    = useState<string[]>([])
@@ -203,6 +203,33 @@ export function JuryPage() {
     setFeedback(null)
     setFeedbackErr(null)
     setMicError(null)
+  }
+
+  // ── Paywall for free users ────────────────────────────────────────────────
+  const isFree = !profile || profile.plan === 'free'
+  if (isFree) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 54px)', padding: '0 24px', fontFamily: FONT }}>
+        <div style={{ maxWidth: 420, textAlign: 'center' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 32 }}>🎤</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, margin: '0 0 10px', letterSpacing: '-0.03em' }}>Jury Practice is Pro</h2>
+          <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.65, margin: '0 0 24px' }}>
+            Practice answering jury questions out loud and get real-time coaching on how to frame your argument. Unlock it with a Pro plan.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, textAlign: 'left', padding: '16px 20px', borderRadius: 14, background: c.cardBg, border: `1px solid ${c.border}` }}>
+            {['Live speech transcription', 'AI coaching on every answer', 'Framing suggestions from your critique', 'Predicted follow-up questions'].map(f => (
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: c.textPrimary }}>
+                <span style={{ color: '#F97316', fontWeight: 700 }}>✓</span> {f}
+              </div>
+            ))}
+          </div>
+          <a href="/pricing" style={{ display: 'inline-block', padding: '12px 32px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px oklch(0.72 0.18 45/0.4)' }}>
+            Upgrade to Pro →
+          </a>
+          <div style={{ marginTop: 12, fontSize: 12, color: c.textMuted }}>$8/month · Cancel anytime</div>
+        </div>
+      </div>
+    )
   }
 
   // ── Render ────────────────────────────────────────────────────────────────

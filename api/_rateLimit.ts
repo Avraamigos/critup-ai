@@ -1,8 +1,18 @@
 /**
- * Supabase-backed rate limiting — no extra services needed.
+ * Supabase-backed rate limiting.
  *
- * Free plan  → 5 analyses per 24 h, 40 chat messages per hour
- * Pro plan   → unlimited
+ * Free plan limits (lifetime caps — never reset):
+ *   • Analyses : 1 ever
+ *   • Chat msgs: 10 ever
+ *   • Jury      : blocked entirely (upgrade required)
+ *
+ * Pro plan limits (daily abuse protection — resets every 24 h):
+ *   • Analyses : 10 / day
+ *   • Chat msgs: 100 / day
+ *   • Jury      : 20 / day
+ *
+ * IP rate limit (all users, blocks scrapers/competitors):
+ *   • Analyse endpoint: 5 requests / hour per IP
  */
 import { type SupabaseClient } from '@supabase/supabase-js'
 
@@ -12,12 +22,11 @@ export interface RateLimitResult {
   used: number
   remaining: number
   resetInSeconds: number
+  /** Set when free user hits a hard wall — tells the UI which modal to show */
+  upgradeRequired?: boolean
 }
 
 // ─── Analyses ─────────────────────────────────────────────────────────────────
-
-const ANALYZE_LIMITS = { free: 5, pro: 999 } as const
-const ANALYZE_WINDOW_H = 24
 
 export async function checkAnalyzeLimit(
   userId: string,
@@ -25,36 +34,60 @@ export async function checkAnalyzeLimit(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>
 ): Promise<RateLimitResult> {
-  const limit = plan === 'free' ? ANALYZE_LIMITS.free : ANALYZE_LIMITS.pro
-  const since = new Date(Date.now() - ANALYZE_WINDOW_H * 3600 * 1000).toISOString()
+  try {
+    if (plan === 'free') {
+      // Lifetime cap: read the immutable counter from profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('analyses_used')
+        .eq('id', userId)
+        .single()
 
-  const { count, error } = await supabase
-    .from('analyses')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .in('status', ['complete', 'processing'])
-    .gte('created_at', since)
+      if (error) {
+        console.error('[rateLimit] profiles fetch error:', error)
+        return { allowed: true, limit: 1, used: 0, remaining: 1, resetInSeconds: 0 }
+      }
 
-  if (error) {
-    // On DB error, let the request through rather than blocking users
-    console.error('[rateLimit] analyze count error:', error)
-    return { allowed: true, limit, used: 0, remaining: limit, resetInSeconds: 0 }
-  }
+      const used = (data as { analyses_used: number } | null)?.analyses_used ?? 0
+      return {
+        allowed: used < 1,
+        limit: 1,
+        used,
+        remaining: Math.max(0, 1 - used),
+        resetInSeconds: 0,
+        upgradeRequired: used >= 1,
+      }
+    }
 
-  const used = count ?? 0
-  return {
-    allowed: used < limit,
-    limit,
-    used,
-    remaining: Math.max(0, limit - used),
-    resetInSeconds: ANALYZE_WINDOW_H * 3600,
+    // Pro: 10 analyses per 24 h (abuse protection)
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase
+      .from('analyses')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .in('status', ['complete', 'processing'])
+      .gte('created_at', since)
+
+    if (error) {
+      console.error('[rateLimit] analyze count error:', error)
+      return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 }
+    }
+
+    const used = count ?? 0
+    return {
+      allowed: used < 10,
+      limit: 10,
+      used,
+      remaining: Math.max(0, 10 - used),
+      resetInSeconds: 24 * 3600,
+    }
+  } catch (e) {
+    console.error('[rateLimit] checkAnalyzeLimit threw:', e)
+    return { allowed: true, limit: 1, used: 0, remaining: 1, resetInSeconds: 0 }
   }
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
-
-const CHAT_LIMITS = { free: 40, pro: 999 } as const
-const CHAT_WINDOW_H = 1
 
 export async function checkChatLimit(
   userId: string,
@@ -62,32 +95,153 @@ export async function checkChatLimit(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>
 ): Promise<RateLimitResult> {
-  const limit = plan === 'free' ? CHAT_LIMITS.free : CHAT_LIMITS.pro
-  const since = new Date(Date.now() - CHAT_WINDOW_H * 3600 * 1000).toISOString()
+  try {
+    if (plan === 'free') {
+      // Lifetime cap: count all chat messages ever sent
+      const { count, error } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
 
-  const { count, error } = await supabase
-    .from('chat_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', since)
+      if (error) {
+        console.error('[rateLimit] chat count error:', error)
+        return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 }
+      }
 
-  if (error) {
-    // Table might not exist yet — fail open rather than blocking users
-    console.error('[rateLimit] chat count error:', error)
-    return { allowed: true, limit, used: 0, remaining: limit, resetInSeconds: 0 }
-  }
+      const used = count ?? 0
+      return {
+        allowed: used < 10,
+        limit: 10,
+        used,
+        remaining: Math.max(0, 10 - used),
+        resetInSeconds: 0,
+        upgradeRequired: used >= 10,
+      }
+    }
 
-  const used = count ?? 0
-  return {
-    allowed: used < limit,
-    limit,
-    used,
-    remaining: Math.max(0, limit - used),
-    resetInSeconds: CHAT_WINDOW_H * 3600,
+    // Pro: 100 messages per 24 h (abuse protection)
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', since)
+
+    if (error) {
+      console.error('[rateLimit] chat count error:', error)
+      return { allowed: true, limit: 100, used: 0, remaining: 100, resetInSeconds: 0 }
+    }
+
+    const used = count ?? 0
+    return {
+      allowed: used < 100,
+      limit: 100,
+      used,
+      remaining: Math.max(0, 100 - used),
+      resetInSeconds: 24 * 3600,
+    }
+  } catch (e) {
+    console.error('[rateLimit] checkChatLimit threw:', e)
+    return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 }
   }
 }
 
-// ─── Helper: get user + plan from analysis ────────────────────────────────────
+// ─── Jury Practice ────────────────────────────────────────────────────────────
+
+export async function checkJuryLimit(
+  userId: string,
+  plan: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>
+): Promise<RateLimitResult> {
+  if (plan === 'free') {
+    return { allowed: false, limit: 0, used: 0, remaining: 0, resetInSeconds: 0, upgradeRequired: true }
+  }
+
+  try {
+    // Pro: 20 jury sessions per 24 h
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase
+      .from('jury_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', since)
+
+    if (error) {
+      // Table may not exist yet — fail open
+      return { allowed: true, limit: 20, used: 0, remaining: 20, resetInSeconds: 24 * 3600 }
+    }
+
+    const used = count ?? 0
+    return {
+      allowed: used < 20,
+      limit: 20,
+      used,
+      remaining: Math.max(0, 20 - used),
+      resetInSeconds: 24 * 3600,
+    }
+  } catch (e) {
+    console.error('[rateLimit] checkJuryLimit threw:', e)
+    return { allowed: true, limit: 20, used: 0, remaining: 20, resetInSeconds: 0 }
+  }
+}
+
+// ─── IP rate limit ────────────────────────────────────────────────────────────
+// 5 requests per hour per IP on the analyse endpoint.
+// Uses the rate_limit_ip table (created in migration 004).
+
+export async function checkIpLimit(
+  ip: string,
+  endpoint: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>
+): Promise<RateLimitResult> {
+  const LIMIT = 5
+  const WINDOW_H = 1
+
+  try {
+    const windowStart = new Date(Date.now() - WINDOW_H * 3600 * 1000).toISOString()
+
+    const { data, error } = await supabase
+      .from('rate_limit_ip')
+      .select('window_start, count')
+      .eq('ip', ip)
+      .eq('endpoint', endpoint)
+      .single()
+
+    if (error || !data || (data as { window_start: string }).window_start < windowStart) {
+      // No record or expired window — reset
+      await supabase
+        .from('rate_limit_ip')
+        .upsert({ ip, endpoint, window_start: new Date().toISOString(), count: 1 })
+      return { allowed: true, limit: LIMIT, used: 1, remaining: LIMIT - 1, resetInSeconds: WINDOW_H * 3600 }
+    }
+
+    const rec = data as { window_start: string; count: number }
+    if (rec.count >= LIMIT) {
+      return { allowed: false, limit: LIMIT, used: rec.count, remaining: 0, resetInSeconds: WINDOW_H * 3600 }
+    }
+
+    await supabase
+      .from('rate_limit_ip')
+      .update({ count: rec.count + 1 })
+      .eq('ip', ip)
+      .eq('endpoint', endpoint)
+
+    return {
+      allowed: true,
+      limit: LIMIT,
+      used: rec.count + 1,
+      remaining: LIMIT - rec.count - 1,
+      resetInSeconds: WINDOW_H * 3600,
+    }
+  } catch (e) {
+    console.error('[rateLimit] checkIpLimit threw:', e)
+    return { allowed: true, limit: LIMIT, used: 0, remaining: LIMIT, resetInSeconds: 0 }
+  }
+}
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 export async function getUserFromAnalysis(
   analysisId: string,

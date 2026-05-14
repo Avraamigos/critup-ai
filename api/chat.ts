@@ -151,11 +151,14 @@ export default async function handler(
         const rl = await checkChatLimit(rateLimitUserId, rateLimitPlan, supabase)
         if (!rl.allowed) {
           return res.status(429).json({
-            error: 'Rate limit reached',
-            message: `You've sent ${rl.used} messages this hour (limit ${rl.limit}). Upgrade to Pro for unlimited chat.`,
+            error: 'limit_reached',
+            feature: 'chat',
+            plan: rateLimitPlan,
+            message: rl.upgradeRequired
+              ? "You've used your 10 free messages. Upgrade to Pro for unlimited chat."
+              : `You've sent ${rl.used} messages today (limit ${rl.limit}). Try again tomorrow.`,
             limit: rl.limit,
             used: rl.used,
-            resetInSeconds: rl.resetInSeconds,
           })
         }
 

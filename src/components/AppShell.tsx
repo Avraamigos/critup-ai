@@ -163,10 +163,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {sidebarOpen && !isPro && (
             <div style={{ margin: '10px 10px 8px', padding: '14px', borderRadius: 12, background: c.isDark ? 'oklch(0.225 0.004 270)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45 / 0.3)', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.08)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 4, letterSpacing: '0.04em', fontFamily: FONT }}>FREE PLAN</div>
-              <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 10, lineHeight: 1.4, fontFamily: FONT }}>Unlock unlimited analyses</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 8, letterSpacing: '0.04em', fontFamily: FONT }}>FREE PLAN</div>
+              {/* Analyses usage bar */}
+              {(() => {
+                const used = (profile as { analyses_used?: number } | null)?.analyses_used ?? 0
+                const pct = Math.min(100, used * 100)
+                return (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, color: c.textMuted, fontFamily: FONT }}>Analyses</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: used >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{used}/1 used</span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.32 0.004 270)' : '#fde8d0', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: used >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
+                    </div>
+                  </div>
+                )
+              })()}
               <Link to="/pricing" style={{ display: 'block', width: '100%', padding: '7px 0', borderRadius: 7, background: '#F97316', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 10px oklch(0.72 0.18 45 / 0.35)', textAlign: 'center', textDecoration: 'none', fontFamily: FONT }}>
-                Upgrade →
+                Upgrade to Pro →
               </Link>
             </div>
           )}

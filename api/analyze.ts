@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { checkAnalyzeLimit } from './_rateLimit'
+import { checkAnalyzeLimit, checkIpLimit } from './_rateLimit'
 
 // Strip markdown that makes ElevenLabs produce glitchy output
 function cleanForTTS(raw: string): string {
@@ -130,7 +130,11 @@ Rules:
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
-  req: { method: string; body: { analysisId: string } },
+  req: {
+    method: string
+    body: { analysisId: string }
+    headers: Record<string, string | string[] | undefined>
+  },
   res: {
     status: (code: number) => { json: (body: unknown) => void; end: () => void }
     json: (body: unknown) => void
@@ -155,6 +159,21 @@ export default async function handler(
 
   const supabase = createClient(supabaseUrl, serviceKey)
 
+  // ── IP rate limit: 5 requests / hour per IP (blocks competitor scraping) ──
+  const rawIp = req.headers['x-forwarded-for']
+  const ip = (Array.isArray(rawIp) ? rawIp[0] : rawIp ?? 'unknown').split(',')[0].trim()
+  try {
+    const ipCheck = await checkIpLimit(ip, 'analyze', supabase)
+    if (!ipCheck.allowed) {
+      return res.status(429).json({
+        error: 'Too many requests',
+        message: 'Too many analysis requests from this IP. Try again in an hour.',
+      })
+    }
+  } catch {
+    // Fail open — don't block users on IP check errors
+  }
+
   try {
     // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
     const { data: analysis, error: fetchErr } = await supabase
@@ -177,12 +196,17 @@ export default async function handler(
       const plan = ((analysis as any).profiles as { plan?: string } | null)?.plan ?? 'free'
       const rl = await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
       if (!rl.allowed) {
+        // Mark failed so the UI doesn't spin forever
+        await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
         return res.status(429).json({
-          error: 'Rate limit reached',
-          message: `You've used all ${rl.limit} analyses for today. Upgrade to Pro for unlimited analyses.`,
+          error: 'limit_reached',
+          feature: 'analyses',
+          plan,
+          message: rl.upgradeRequired
+            ? 'You\'ve used your 1 free analysis. Upgrade to Pro for unlimited analyses.'
+            : `You've run ${rl.used} analyses today (limit ${rl.limit}). Try again tomorrow.`,
           limit: rl.limit,
           used: rl.used,
-          resetInSeconds: rl.resetInSeconds,
         })
       }
     }

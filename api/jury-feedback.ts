@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
+import { checkJuryLimit } from './_rateLimit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,47 @@ export default async function handler(
   const serviceKey    = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
   if (!anthropicKey) return res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY' })
+
+  // ── Plan check + jury rate limit ─────────────────────────────────────────────
+  if (supabaseUrl && serviceKey) {
+    try {
+      const sb = createClient(supabaseUrl, serviceKey)
+
+      // Get user plan from analysis (if analysisId provided) or from JWT header
+      let userId: string | null = null
+      let plan = 'free'
+
+      if (analysisId) {
+        const { data: aData } = await sb
+          .from('analyses')
+          .select('user_id, profiles(plan)')
+          .eq('id', analysisId)
+          .single()
+        if (aData) {
+          userId = aData.user_id as string
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          plan = ((aData as any).profiles as { plan?: string } | null)?.plan ?? 'free'
+        }
+      }
+
+      if (userId) {
+        const juryCheck = await checkJuryLimit(userId, plan, sb)
+        if (!juryCheck.allowed) {
+          return res.status(juryCheck.upgradeRequired ? 403 : 429).json({
+            error: 'limit_reached',
+            feature: 'jury',
+            plan,
+            message: juryCheck.upgradeRequired
+              ? 'Jury Practice is a Pro feature. Upgrade to unlock unlimited practice sessions.'
+              : `You've used ${juryCheck.used} jury sessions today (limit ${juryCheck.limit}).`,
+          })
+        }
+      }
+    } catch (e) {
+      console.error('[jury-feedback] plan check error:', e)
+      // Fail open
+    }
+  }
 
   // ── Load project context (optional — enriches feedback significantly) ──────
   let projectContext = ''
