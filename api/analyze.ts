@@ -178,7 +178,7 @@ export default async function handler(
     // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
     const { data: analysis, error: fetchErr } = await supabase
       .from('analyses')
-      .select('id, pdf_path, status, user_id, projects(name, stage, focus_areas, brief_text), profiles(plan)')
+      .select('id, pdf_path, status, user_id, projects(id, name, stage, focus_areas, brief_text), profiles(plan)')
       .eq('id', analysisId)
       .single()
 
@@ -300,7 +300,106 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to save results' })
     }
 
-    // 9. Pre-generate TTS audio in the background AFTER responding (fire-and-forget).
+    // 9. Send email notification (fire-and-forget — never blocks completion)
+    const resendKey = process.env.RESEND_API_KEY || ''
+    if (resendKey && analysis.user_id) {
+      const sendEmail = async () => {
+        try {
+          // Fetch user email from auth
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(analysis.user_id as string)
+          const email = authUser?.email
+          if (!email) return
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const proj = (analysis as any).projects as { id: string; name: string } | null
+          const analysisUrl = `https://critup.ai/app/analysis/${proj?.id ?? ''}`
+          const projectName = proj?.name ?? 'Your project'
+          const avg = ((concept_score + spatial_score + presentation_score) / 3).toFixed(1)
+          const scoreColor = (s: number) => s >= 7.5 ? '#1a9e4a' : s >= 5 ? '#F97316' : '#d93025'
+          const SF = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif`
+
+          const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:${SF};-webkit-font-smoothing:antialiased">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:40px 0">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e5e7eb">
+
+  <!-- Header -->
+  <tr><td style="background:#111;padding:24px 32px;text-align:center">
+    <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px">Critup<span style="color:#F97316">.ai</span></span>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="padding:32px 32px 0">
+    <p style="font-size:22px;font-weight:800;color:#111;margin:0 0 8px;letter-spacing:-0.5px">Your critique is ready</p>
+    <p style="font-size:15px;color:#6b7280;margin:0 0 28px;line-height:1.5">AI analysis complete for <strong style="color:#111">${projectName}</strong></p>
+
+    <!-- Scores -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1.5px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:24px">
+      <tr>
+        <td align="center" style="padding:18px 10px;border-right:1px solid #e5e7eb">
+          <div style="font-size:28px;font-weight:800;color:${scoreColor(concept_score)}">${concept_score.toFixed(1)}</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px">Concept</div>
+        </td>
+        <td align="center" style="padding:18px 10px;border-right:1px solid #e5e7eb">
+          <div style="font-size:28px;font-weight:800;color:${scoreColor(spatial_score)}">${spatial_score.toFixed(1)}</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px">Spatial</div>
+        </td>
+        <td align="center" style="padding:18px 10px;border-right:1px solid #e5e7eb">
+          <div style="font-size:28px;font-weight:800;color:${scoreColor(presentation_score)}">${presentation_score.toFixed(1)}</div>
+          <div style="font-size:10px;font-weight:600;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px">Presentation</div>
+        </td>
+        <td align="center" style="padding:18px 10px;background:#fff8f3">
+          <div style="font-size:28px;font-weight:800;color:#F97316">${avg}</div>
+          <div style="font-size:10px;font-weight:600;color:#F97316;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px">Average</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- CTA -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px">
+      <tr><td align="center">
+        <a href="${analysisUrl}" style="display:inline-block;padding:14px 36px;background:#F97316;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:100px;letter-spacing:-0.2px">
+          View full critique →
+        </a>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:20px 32px 24px;border-top:1px solid #f0f0f0">
+    <p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.6">
+      You're receiving this because you submitted a project on <a href="https://critup.ai" style="color:#F97316;text-decoration:none">Critup.ai</a>.<br/>
+      Questions? Email <a href="mailto:hello@critup.ai" style="color:#F97316;text-decoration:none">hello@critup.ai</a>
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`
+
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${resendKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'Critup.ai <hello@critup.ai>',
+              to: [email],
+              subject: `Your critique is ready — ${projectName} scored ${avg}/10`,
+              html,
+            }),
+          })
+        } catch (e) {
+          console.error('[analyze] Email notification failed:', e)
+        }
+      }
+      sendEmail()
+    }
+
+    // 10. Pre-generate TTS audio in the background AFTER responding (fire-and-forget).
     //    This never blocks analysis completion — if ElevenLabs is slow or fails the
     //    results are already saved. The client-side prefetch + tts.ts on-demand fallback
     //    handle the case where audio isn't ready yet.
