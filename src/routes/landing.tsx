@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare } from 'lucide-react'
+import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { AIOrb } from '@/components/AIOrb'
 import { useTheme, useColors } from '@/lib/theme'
@@ -21,6 +21,14 @@ export function LandingPage() {
   const c = useColors(theme)
   const [activeStage, setActiveStage] = useState(0)
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const handle = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handle)
+    return () => window.removeEventListener('resize', handle)
+  }, [])
 
   const stages = [
     { name: 'Pre-Design', feedback: "Your brief shows a strong civic program. Focus your concept around the tension between public/private threshold — this is what juries probe first at this stage. Precedents worth studying: Sou Fujimoto's spatial gradients, Aires Mateus's spatial economy." },
@@ -48,142 +56,160 @@ export function LandingPage() {
     <div style={{ background: c.bg, color: c.textPrimary, fontFamily: "'Inter', sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
 
       {/* ── NAV ── */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 48px', height: 62, background: isDark ? 'oklch(0.16 0.004 270 / 0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${c.border}` }}>
-        <CritupLogo size={22} showText theme={theme} />
-        <div style={{ display: 'flex', gap: 32, fontSize: 14, color: c.textMuted, fontWeight: 500 }}>
-          {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
-            <button key={id} onClick={() => scrollTo(id)} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: 0, fontFamily: "'Inter', sans-serif" }}
-              onMouseEnter={e => (e.currentTarget.style.color = c.textPrimary)}
-              onMouseLeave={e => (e.currentTarget.style.color = c.textMuted)}
-            >{label}</button>
-          ))}
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: isDark ? 'oklch(0.16 0.004 270 / 0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${c.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 20px' : '0 48px', height: 62 }}>
+          <CritupLogo size={22} showText theme={theme} />
+
+          {/* Desktop nav links */}
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: 32, fontSize: 14, color: c.textMuted, fontWeight: 500 }}>
+              {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
+                <button key={id} onClick={() => scrollTo(id)} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: 0, fontFamily: "'Inter', sans-serif" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = c.textPrimary)}
+                  onMouseLeave={e => (e.currentTarget.style.color = c.textMuted)}
+                >{label}</button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={toggle} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '7px', cursor: 'pointer', display: 'flex' }}>
+              {isDark ? <Sun size={14} color={c.textMuted} /> : <Moon size={14} color={c.textMuted} />}
+            </button>
+            {isMobile ? (
+              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '7px', cursor: 'pointer', display: 'flex' }}>
+                <Menu size={16} color={c.textMuted} />
+              </button>
+            ) : (
+              <>
+                <Link to="/login" style={{ padding: '7px 18px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>Sign in</Link>
+                <Link to="/signup" style={{ padding: '8px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)' }}>Get started free</Link>
+              </>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button onClick={toggle} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '7px', cursor: 'pointer', display: 'flex' }}>
-            {isDark ? <Sun size={14} color={c.textMuted} /> : <Moon size={14} color={c.textMuted} />}
-          </button>
-          <Link to="/login" style={{ padding: '7px 18px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>Sign in</Link>
-          <Link to="/signup" style={{ padding: '8px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)' }}>Get started free</Link>
-        </div>
+
+        {/* Mobile dropdown menu */}
+        {isMobile && mobileMenuOpen && (
+          <div style={{ padding: '12px 20px 16px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: 8, background: isDark ? 'oklch(0.16 0.004 270)' : '#fff' }}>
+            {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
+              <button key={id} onClick={() => { scrollTo(id); setMobileMenuOpen(false) }} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 15, fontWeight: 500, cursor: 'pointer', padding: '6px 0', textAlign: 'left', fontFamily: "'Inter', sans-serif" }}>{label}</button>
+            ))}
+            <div style={{ height: 1, background: c.border, margin: '4px 0' }} />
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{ padding: '10px 0', color: c.textPrimary, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Sign in</Link>
+            <Link to="/signup" onClick={() => setMobileMenuOpen(false)} style={{ padding: '11px 0', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>Get started free</Link>
+          </div>
+        )}
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{ paddingTop: 130, paddingBottom: 70, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ paddingTop: isMobile ? 100 : 130, paddingBottom: isMobile ? 48 : 70, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <DotGrid theme={theme} />
         <div style={{ position: 'absolute', top: '-15%', left: '50%', transform: 'translateX(-50%)', width: '80%', height: '70%', background: 'radial-gradient(ellipse 60% 50% at 50% 10%, oklch(0.72 0.18 45 / 0.07) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 1 }} />
 
-        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2 }}>
-          {/* Badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px 5px 10px', borderRadius: 100, background: 'oklch(0.72 0.18 45 / 0.1)', border: '1px solid oklch(0.72 0.18 45 / 0.22)', fontSize: 13, color: '#F97316', fontWeight: 500, marginBottom: 30 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px 5px 10px', borderRadius: 100, background: 'oklch(0.72 0.18 45 / 0.1)', border: '1px solid oklch(0.72 0.18 45 / 0.22)', fontSize: 13, color: '#F97316', fontWeight: 500, marginBottom: 28 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F97316', display: 'inline-block', animation: 'hero-pulse 2s ease-in-out infinite' }} />
             AI jury feedback for design students
           </div>
 
-          {/* Headline */}
-          <h1 style={{ fontSize: 'clamp(42px, 6.5vw, 74px)', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 20, color: c.textPrimary, fontFamily: FONT_DISPLAY }}>
+          <h1 style={{ fontSize: isMobile ? '38px' : 'clamp(42px, 6.5vw, 74px)', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 18, color: c.textPrimary, fontFamily: FONT_DISPLAY }}>
             Stop guessing what<br />your jury will say
           </h1>
-          <p style={{ fontSize: 18, color: c.textMuted, lineHeight: 1.65, maxWidth: 500, margin: '0 auto 36px' }}>
+          <p style={{ fontSize: isMobile ? 16 : 18, color: c.textMuted, lineHeight: 1.65, maxWidth: 500, margin: '0 auto 32px' }}>
             Upload your project boards. Get honest, specific critique — the same feedback a 20-year jury veteran would give — before you step into the room.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
-            <Link to="/signup" style={{ padding: '14px 34px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 24px oklch(0.72 0.18 45 / 0.35)', textDecoration: 'none', fontFamily: FONT_DISPLAY, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 36 }}>
+            <Link to="/signup" style={{ padding: isMobile ? '13px 28px' : '14px 34px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: isMobile ? 15 : 16, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 24px oklch(0.72 0.18 45 / 0.35)', textDecoration: 'none', fontFamily: FONT_DISPLAY, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               Analyse my project free <ArrowRight size={16} />
             </Link>
-            <button onClick={() => scrollTo('how')} style={{ padding: '14px 26px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>See how it works ↓</button>
+            {!isMobile && (
+              <button onClick={() => scrollTo('how')} style={{ padding: '14px 26px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>See how it works ↓</button>
+            )}
           </div>
 
-          {/* Trust micro-copy */}
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: isMobile ? 14 : 24, justifyContent: 'center', flexWrap: 'wrap' }}>
             {['No credit card required', 'Architecture, Interior, Urban', 'English · Russian · Turkish'].map(t => (
-              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: c.textMuted }}>
-                <Check size={13} color="#F97316" strokeWidth={2.5} />{t}
+              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.textMuted }}>
+                <Check size={12} color="#F97316" strokeWidth={2.5} />{t}
               </div>
             ))}
           </div>
         </div>
 
-        {/* App mock */}
-        <div style={{ maxWidth: 960, margin: '60px auto 0', padding: '0 24px', position: 'relative', zIndex: 2 }}>
-          <div style={{ background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', border: `1px solid ${c.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: isDark ? '0 0 0 1px oklch(0.30 0.004 270), 0 40px 100px oklch(0.72 0.18 45 / 0.10)' : '0 40px 100px rgba(0,0,0,0.10)', transform: 'perspective(1400px) rotateX(2.5deg)' }}>
-            {/* Window chrome */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 18px', borderBottom: `1px solid ${c.border}`, background: isDark ? 'oklch(0.22 0.004 270)' : '#f9fafb' }}>
-              <div style={{ display: 'flex', gap: 5 }}>{['#ef4444','#f59e0b','#22c55e'].map((col,i) => <div key={i} style={{ width:10, height:10, borderRadius:'50%', background:col, opacity:0.8 }} />)}</div>
-              <div style={{ flex:1, background: isDark ? 'oklch(0.18 0.004 270)' : '#e5e7eb', borderRadius:6, height:22, display:'flex', alignItems:'center', paddingLeft:10, fontSize:11, color:c.textMuted }}>critup.ai/analysis/river-pavilion</div>
-            </div>
-            {/* Content */}
-            <div style={{ display:'flex', height:340 }}>
-              {/* Left — PDF viewer */}
-              <div style={{ width:'54%', background: isDark ? 'oklch(0.18 0.004 270)' : '#f4f5f7', borderRight:`1px solid ${c.border}`, position:'relative', padding:14, display:'flex', flexDirection:'column', gap:10 }}>
-                {/* Mini page thumbnails */}
-                <div style={{ display:'flex', gap:8, marginBottom:4 }}>
-                  {[1,2,3].map(p => (
-                    <div key={p} style={{ flex:1, height:36, borderRadius:6, background: p===1 ? '#F97316' : (isDark ? 'oklch(0.26 0.004 270)' : '#e5e7eb'), border: p===1 ? '1.5px solid #F97316' : `1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color: p===1 ? '#fff' : c.textMuted }}>PG {p}</div>
-                  ))}
-                </div>
-                {/* Main board */}
-                <div style={{ flex:1, borderRadius:10, background: isDark ? 'oklch(0.22 0.004 270)' : '#eaeaea', border:`1px solid ${c.border}`, position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {/* Fake drawing lines */}
-                  <svg width="100%" height="100%" style={{ position:'absolute', inset:0, opacity:0.35 }}>
-                    <line x1="20%" y1="10%" x2="80%" y2="10%" stroke={isDark?'#555':'#aaa'} strokeWidth="1"/>
-                    <rect x="15%" y="20%" width="30%" height="50%" fill="none" stroke={isDark?'#666':'#bbb'} strokeWidth="1.5"/>
-                    <rect x="55%" y="25%" width="28%" height="40%" fill="none" stroke={isDark?'#666':'#bbb'} strokeWidth="1"/>
-                    <line x1="15%" y1="75%" x2="85%" y2="75%" stroke={isDark?'#444':'#ccc'} strokeWidth="0.8" strokeDasharray="4,3"/>
-                    <line x1="50%" y1="20%" x2="50%" y2="70%" stroke={isDark?'#555':'#bbb'} strokeWidth="0.8" strokeDasharray="3,3"/>
-                  </svg>
-                  <span style={{ fontSize:10, color:c.textMuted, opacity:0.5, zIndex:1 }}>Ground Floor Plan</span>
-                  {/* Annotation dots */}
-                  {[{x:'28%',y:'38%'},{x:'65%',y:'30%'},{x:'46%',y:'68%'}].map((pos,i) => (
-                    <div key={i} style={{ position:'absolute', left:pos.x, top:pos.y, width:26, height:26, borderRadius:'50%', background:'oklch(0.72 0.18 45 / 0.25)', border:'2px solid #F97316', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#F97316', boxShadow:'0 0 10px oklch(0.72 0.18 45 / 0.5)' }}>{i+1}</div>
-                  ))}
-                </div>
+        {/* App mock — desktop only */}
+        {!isMobile && (
+          <div style={{ maxWidth: 960, margin: '60px auto 0', padding: '0 24px', position: 'relative', zIndex: 2 }}>
+            <div style={{ background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', border: `1px solid ${c.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: isDark ? '0 0 0 1px oklch(0.30 0.004 270), 0 40px 100px oklch(0.72 0.18 45 / 0.10)' : '0 40px 100px rgba(0,0,0,0.10)', transform: 'perspective(1400px) rotateX(2.5deg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 18px', borderBottom: `1px solid ${c.border}`, background: isDark ? 'oklch(0.22 0.004 270)' : '#f9fafb' }}>
+                <div style={{ display: 'flex', gap: 5 }}>{['#ef4444','#f59e0b','#22c55e'].map((col,i) => <div key={i} style={{ width:10, height:10, borderRadius:'50%', background:col, opacity:0.8 }} />)}</div>
+                <div style={{ flex:1, background: isDark ? 'oklch(0.18 0.004 270)' : '#e5e7eb', borderRadius:6, height:22, display:'flex', alignItems:'center', paddingLeft:10, fontSize:11, color:c.textMuted }}>critup.ai/analysis/river-pavilion</div>
               </div>
-              {/* Right — critique panel */}
-              <div style={{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:10, background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', overflowY:'auto' }}>
-                {/* Scores */}
-                <div style={{ display:'flex', gap:8 }}>
-                  {[{l:'Concept',s:7.4,c:'#F97316'},{l:'Spatial',s:8.1,c:'oklch(0.72 0.17 145)'},{l:'Present.',s:6.8,c:'#F97316'}].map(({l,s,c:col}) => (
-                    <div key={l} style={{ flex:1, background: isDark ? 'oklch(0.16 0.004 270)' : '#f9fafb', borderRadius:9, padding:'8px 4px', textAlign:'center', border:`1px solid ${c.border}` }}>
-                      <div style={{ fontSize:19, fontWeight:800, fontFamily:FONT_DISPLAY, color:col, letterSpacing:'-0.02em' }}>{s}</div>
-                      <div style={{ fontSize:9, color:c.textMuted, marginTop:1, textTransform:'uppercase', letterSpacing:'0.05em' }}>{l}</div>
+              <div style={{ display:'flex', height:340 }}>
+                <div style={{ width:'54%', background: isDark ? 'oklch(0.18 0.004 270)' : '#f4f5f7', borderRight:`1px solid ${c.border}`, position:'relative', padding:14, display:'flex', flexDirection:'column', gap:10 }}>
+                  <div style={{ display:'flex', gap:8, marginBottom:4 }}>
+                    {[1,2,3].map(p => (
+                      <div key={p} style={{ flex:1, height:36, borderRadius:6, background: p===1 ? '#F97316' : (isDark ? 'oklch(0.26 0.004 270)' : '#e5e7eb'), border: p===1 ? '1.5px solid #F97316' : `1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color: p===1 ? '#fff' : c.textMuted }}>PG {p}</div>
+                    ))}
+                  </div>
+                  <div style={{ flex:1, borderRadius:10, background: isDark ? 'oklch(0.22 0.004 270)' : '#eaeaea', border:`1px solid ${c.border}`, position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <svg width="100%" height="100%" style={{ position:'absolute', inset:0, opacity:0.35 }}>
+                      <line x1="20%" y1="10%" x2="80%" y2="10%" stroke={isDark?'#555':'#aaa'} strokeWidth="1"/>
+                      <rect x="15%" y="20%" width="30%" height="50%" fill="none" stroke={isDark?'#666':'#bbb'} strokeWidth="1.5"/>
+                      <rect x="55%" y="25%" width="28%" height="40%" fill="none" stroke={isDark?'#666':'#bbb'} strokeWidth="1"/>
+                      <line x1="15%" y1="75%" x2="85%" y2="75%" stroke={isDark?'#444':'#ccc'} strokeWidth="0.8" strokeDasharray="4,3"/>
+                      <line x1="50%" y1="20%" x2="50%" y2="70%" stroke={isDark?'#555':'#bbb'} strokeWidth="0.8" strokeDasharray="3,3"/>
+                    </svg>
+                    <span style={{ fontSize:10, color:c.textMuted, opacity:0.5, zIndex:1 }}>Ground Floor Plan</span>
+                    {[{x:'28%',y:'38%'},{x:'65%',y:'30%'},{x:'46%',y:'68%'}].map((pos,i) => (
+                      <div key={i} style={{ position:'absolute', left:pos.x, top:pos.y, width:26, height:26, borderRadius:'50%', background:'oklch(0.72 0.18 45 / 0.25)', border:'2px solid #F97316', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#F97316', boxShadow:'0 0 10px oklch(0.72 0.18 45 / 0.5)' }}>{i+1}</div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ flex:1, padding:16, display:'flex', flexDirection:'column', gap:10, background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', overflowY:'auto' }}>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {[{l:'Concept',s:7.4,col:'#F97316'},{l:'Spatial',s:8.1,col:'oklch(0.72 0.17 145)'},{l:'Present.',s:6.8,col:'#F97316'}].map(({l,s,col}) => (
+                      <div key={l} style={{ flex:1, background: isDark ? 'oklch(0.16 0.004 270)' : '#f9fafb', borderRadius:9, padding:'8px 4px', textAlign:'center', border:`1px solid ${c.border}` }}>
+                        <div style={{ fontSize:19, fontWeight:800, fontFamily:FONT_DISPLAY, color:col, letterSpacing:'-0.02em' }}>{s}</div>
+                        <div style={{ fontSize:9, color:c.textMuted, marginTop:1, textTransform:'uppercase', letterSpacing:'0.05em' }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {[
+                    {n:1, t:'Threshold logic', d:'Entry sequence is underspecified. A 1:200 section would clarify the public→private transition.'},
+                    {n:2, t:'Circulation dead-end', d:'NE corner (Grid B-3) creates a spatial dead end. Connect to service core or add secondary exit.'},
+                    {n:3, t:'Section datum missing', d:'Ground level datum ±0.00m is absent. Jury will probe this immediately — add before submission.'},
+                  ].map(({n,t,d}) => (
+                    <div key={n} style={{ background: isDark ? 'oklch(0.17 0.004 270)' : '#f9fafb', borderRadius:9, padding:'9px 11px', border:`1px solid ${c.border}`, display:'flex', gap:8, flexShrink:0 }}>
+                      <div style={{ width:20, height:20, borderRadius:'50%', background:'#F97316', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0 }}>{n}</div>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:c.textPrimary, marginBottom:2 }}>{t}</div>
+                        <div style={{ fontSize:10, color:c.textMuted, lineHeight:1.45 }}>{d}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
-                {/* Feedback items */}
-                {[
-                  {n:1, t:'Threshold logic', d:'Entry sequence is underspecified. A 1:200 section would clarify the public→private transition.'},
-                  {n:2, t:'Circulation dead-end', d:'NE corner (Grid B-3) creates a spatial dead end. Connect to service core or add secondary exit.'},
-                  {n:3, t:'Section datum missing', d:'Ground level datum ±0.00m is absent. Jury will probe this immediately — add before submission.'},
-                ].map(({n,t,d}) => (
-                  <div key={n} style={{ background: isDark ? 'oklch(0.17 0.004 270)' : '#f9fafb', borderRadius:9, padding:'9px 11px', border:`1px solid ${c.border}`, display:'flex', gap:8, flexShrink:0 }}>
-                    <div style={{ width:20, height:20, borderRadius:'50%', background:'#F97316', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0 }}>{n}</div>
-                    <div>
-                      <div style={{ fontSize:11, fontWeight:700, color:c.textPrimary, marginBottom:2 }}>{t}</div>
-                      <div style={{ fontSize:10, color:c.textMuted, lineHeight:1.45 }}>{d}</div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* ── MEET CRIT ── */}
-      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#fafafa', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding:'64px 40px' }}>
-        <div style={{ maxWidth:720, margin:'0 auto', display:'flex', alignItems:'center', gap:48, flexWrap:'wrap', justifyContent:'center' }}>
+      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#fafafa', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding: isMobile ? '48px 24px' : '64px 40px' }}>
+        <div style={{ maxWidth:720, margin:'0 auto', display:'flex', alignItems:'center', gap: isMobile ? 28 : 48, flexWrap:'wrap', justifyContent:'center' }}>
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, flexShrink:0 }}>
-            <AIOrb size={80} float />
+            <AIOrb size={isMobile ? 60 : 80} float />
             <div style={{ fontSize:13, fontWeight:700, color:c.textPrimary, letterSpacing:'-0.01em' }}>Meet Crit</div>
             <div style={{ fontSize:11, color:'#F97316', fontWeight:500 }}>Your AI design critic</div>
           </div>
-          <div style={{ flex:1, minWidth:280 }}>
-            <h2 style={{ fontSize:28, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 12px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>
+          <div style={{ flex:1, minWidth: isMobile ? '100%' : 280 }}>
+            <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 12px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>
               A critic that actually knows your work
             </h2>
             <p style={{ fontSize:15, color:c.textMuted, lineHeight:1.7, margin:'0 0 16px' }}>
-              Crit reads your drawings page by page, spots weak points, predicts jury questions, and coaches you on how to answer them. It knows the difference between a pre-design sketch and a jury-prep board — and talks to you accordingly.
+              Crit reads your drawings page by page, spots weak points, predicts jury questions, and coaches you on how to answer them.
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {['Narrates your boards with voice critique','Pins annotations on exact areas','Simulates real jury Q&A for your project'].map(t => (
@@ -200,23 +226,20 @@ export function LandingPage() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how" style={{ maxWidth:960, margin:'0 auto', padding:'88px 40px', position:'relative' }}>
+      <section id="how" style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px', position:'relative' }}>
         <DotGrid theme={theme} />
-        <div style={{ textAlign:'center', marginBottom:52, position:'relative', zIndex:1 }}>
+        <div style={{ textAlign:'center', marginBottom:44, position:'relative', zIndex:1 }}>
           <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Process</div>
-          <h2 style={{ fontSize:40, fontWeight:800, letterSpacing:'-0.035em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Three steps to jury-ready</h2>
+          <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight:800, letterSpacing:'-0.035em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Three steps to jury-ready</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:24, position:'relative', zIndex:1 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16, position:'relative', zIndex:1 }}>
           {[
             { icon: Upload, n:'01', title:'Upload your boards', desc:'Combine your plans, sections, renders, and diagrams into one PDF. Every page gets its own analysis.' },
             { icon: Zap,    n:'02', title:'Crit reads everything', desc:'Scores your concept, spatial logic, and presentation. Pins annotations on the exact areas that need work.' },
             { icon: MessageSquare, n:'03', title:'Practice and refine', desc:'Get predicted jury questions tailored to your drawings. Chat with Crit to work through any weakness.' },
           ].map(({ icon: Icon, n, title, desc }) => (
-            <div key={n} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:18, padding:'28px', border:`1px solid ${c.border}`, transition:'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.border='1px solid oklch(0.72 0.18 45 / 0.3)'; e.currentTarget.style.boxShadow='0 0 28px oklch(0.72 0.18 45 / 0.07)' }}
-              onMouseLeave={e => { e.currentTarget.style.border=`1px solid ${c.border}`; e.currentTarget.style.boxShadow='none' }}
-            >
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+            <div key={n} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:18, padding:'24px', border:`1px solid ${c.border}` }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
                 <div style={{ width:40, height:40, borderRadius:10, background:'oklch(0.72 0.18 45 / 0.1)', border:'1px solid oklch(0.72 0.18 45 / 0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <Icon size={18} color="#F97316" />
                 </div>
@@ -230,20 +253,20 @@ export function LandingPage() {
       </section>
 
       {/* ── STAGE FEATURE ── */}
-      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding:'80px 40px' }}>
+      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '80px 40px' }}>
         <div style={{ maxWidth:760, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:40 }}>
+          <div style={{ textAlign:'center', marginBottom:32 }}>
             <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Adaptive feedback</div>
-            <h2 style={{ fontSize:36, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Feedback that knows your stage</h2>
-            <p style={{ fontSize:15, color:c.textMuted, margin:0 }}>Pre-design gets different critique than jury prep. Select your stage to see the difference.</p>
+            <h2 style={{ fontSize: isMobile ? 24 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Feedback that knows your stage</h2>
+            <p style={{ fontSize:14, color:c.textMuted, margin:0 }}>Pre-design gets different critique than jury prep.</p>
           </div>
-          <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', marginBottom:24 }}>
+          <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', marginBottom:20 }}>
             {stages.map((s, i) => (
-              <button key={i} onClick={() => setActiveStage(i)} style={{ padding:'8px 20px', borderRadius:100, border:'none', cursor:'pointer', background: activeStage===i ? '#F97316' : (isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), color: activeStage===i ? '#fff' : c.textMuted, fontSize:13, fontWeight:500, transition:'all 0.2s', boxShadow: activeStage===i ? '0 0 14px oklch(0.72 0.18 45 / 0.35)' : 'none', fontFamily:"'Inter', sans-serif" }}>{s.name}</button>
+              <button key={i} onClick={() => setActiveStage(i)} style={{ padding:'7px 16px', borderRadius:100, border:'none', cursor:'pointer', background: activeStage===i ? '#F97316' : (isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), color: activeStage===i ? '#fff' : c.textMuted, fontSize:13, fontWeight:500, transition:'all 0.2s', boxShadow: activeStage===i ? '0 0 14px oklch(0.72 0.18 45 / 0.35)' : 'none', fontFamily:"'Inter', sans-serif" }}>{s.name}</button>
             ))}
           </div>
-          <div style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:16, border:'1px solid oklch(0.72 0.18 45 / 0.2)', padding:'22px 26px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+          <div style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:16, border:'1px solid oklch(0.72 0.18 45 / 0.2)', padding:'20px 22px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
               <div style={{ width:8, height:8, borderRadius:'50%', background:'#F97316' }} />
               <span style={{ fontSize:10, fontWeight:700, color:'#F97316', letterSpacing:'0.1em', textTransform:'uppercase' }}>{stages[activeStage].name} · Crit's feedback</span>
             </div>
@@ -253,12 +276,12 @@ export function LandingPage() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ maxWidth:960, margin:'0 auto', padding:'88px 40px' }}>
-        <div style={{ textAlign:'center', marginBottom:52 }}>
+      <section id="features" style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px' }}>
+        <div style={{ textAlign:'center', marginBottom:44 }}>
           <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>What you get</div>
-          <h2 style={{ fontSize:38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Everything built for design school</h2>
+          <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Everything built for design school</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap:14 }}>
           {[
             { icon:'🎙', title:'PDF Voiceover',      desc:'Crit narrates your boards page by page with spoken, targeted critique.' },
             { icon:'📌', title:'Pinned Annotations', desc:'Pulsating markers on exact areas needing attention — not just text.' },
@@ -267,43 +290,52 @@ export function LandingPage() {
             { icon:'🌍', title:'Multi-language',     desc:'Full critique in English, Russian, and Turkish.' },
             { icon:'📈', title:'Score Tracking',     desc:'Concept, spatial, and presentation scores tracked across projects.' },
           ].map(({ icon, title, desc }) => (
-            <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding:'22px', border:`1px solid ${c.border}`, transition:'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.border='1px solid oklch(0.72 0.18 45 / 0.3)'; e.currentTarget.style.boxShadow='0 0 20px oklch(0.72 0.18 45 / 0.07)' }}
-              onMouseLeave={e => { e.currentTarget.style.border=`1px solid ${c.border}`; e.currentTarget.style.boxShadow='none' }}
-            >
-              <div style={{ width:36, height:36, borderRadius:9, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, fontSize:18 }}>{icon}</div>
-              <h3 style={{ fontSize:14, fontWeight:700, margin:'0 0 6px', letterSpacing:'-0.01em', color:c.textPrimary }}>{title}</h3>
-              <p style={{ fontSize:13, color:c.textMuted, lineHeight:1.55, margin:0 }}>{desc}</p>
+            <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}` }}>
+              <div style={{ width:36, height:36, borderRadius:9, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, fontSize:18 }}>{icon}</div>
+              <h3 style={{ fontSize:14, fontWeight:700, margin:'0 0 5px', letterSpacing:'-0.01em', color:c.textPrimary }}>{title}</h3>
+              <p style={{ fontSize:12, color:c.textMuted, lineHeight:1.55, margin:0 }}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding:'80px 40px' }}>
+      <section id="pricing" style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '80px 40px' }}>
         <div style={{ maxWidth:900, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:48 }}>
+          <div style={{ textAlign:'center', marginBottom:40 }}>
             <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Pricing</div>
-            <h2 style={{ fontSize:38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Start free. Upgrade anytime.</h2>
+            <h2 style={{ fontSize: isMobile ? 28 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Start free. Upgrade anytime.</h2>
             <p style={{ fontSize:15, color:c.textMuted, margin:0 }}>No card required to start. Cancel anytime.</p>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:20 }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16 }}>
             {[
-              { name:'Free', price:'$0', sub:'', features:['5 project analyses per day','Concept, Spatial & Presentation scores','PDF upload up to 50 pages','Pinned annotations','Ask Crit (40 messages/hr)'], cta:'Start analysing free', featured:false },
-              { name:'Monthly', price:'$9', sub:'/mo', features:['Unlimited analyses','PDF voiceover narration','Jury Q&A practice sessions','Full project history','Priority processing'], cta:'Start monthly', featured:true, badge:'Most popular' },
-              { name:'Yearly', price:'$59', sub:'/yr', crossed:'$108', save:'Save 45%', features:['Everything in Monthly','Video presentation coach','Earliest access to new features','Direct support'], cta:'Start yearly', featured:false, badge:'Best value' },
+              {
+                name:'Free', price:'$0', sub:'', featured:false,
+                features:['1 project analysis','Concept, Spatial & Presentation scores','Pinned annotations on your drawings','10 messages with Crit'],
+                cta:'Start analysing free',
+              },
+              {
+                name:'Monthly', price:'$8', sub:'/mo', featured:true, badge:'Most popular',
+                features:['Unlimited project analyses','PDF voiceover narration','Jury Q&A practice sessions','Unlimited Crit chat','Full project history'],
+                cta:'Start monthly',
+              },
+              {
+                name:'Yearly', price:'$49', sub:'/yr', crossed:'$96', save:'Save 49%', featured:false, badge:'Best value',
+                features:['Everything in Monthly','Priority AI processing','Earliest access to new features','Direct support'],
+                cta:'Start yearly',
+              },
             ].map(({ name, price, sub, crossed, save, features: feats, cta, featured, badge }) => (
-              <div key={name} style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:20, padding:'30px 26px', border: featured ? '1.5px solid #F97316' : `1px solid ${c.border}`, boxShadow: featured ? '0 0 40px oklch(0.72 0.18 45 / 0.12)' : 'none', position:'relative', transform: featured ? 'scale(1.02)' : 'scale(1)', transition:'transform 0.2s' }}>
+              <div key={name} style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:20, padding:'28px 24px', border: featured ? '1.5px solid #F97316' : `1px solid ${c.border}`, boxShadow: featured ? '0 0 40px oklch(0.72 0.18 45 / 0.12)' : 'none', position:'relative', marginTop: (!isMobile && featured) ? -8 : 0 }}>
                 {badge && <div style={{ position:'absolute', top:-12, left:'50%', transform:'translateX(-50%)', background: featured ? '#F97316' : (isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), padding:'4px 14px', borderRadius:100, fontSize:11, fontWeight:700, color: featured ? '#fff' : c.textMuted, whiteSpace:'nowrap' }}>{badge}</div>}
-                <div style={{ marginBottom:20 }}>
+                <div style={{ marginBottom:18 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'#F97316', marginBottom:8, letterSpacing:'0.06em' }}>{name.toUpperCase()}</div>
                   <div style={{ display:'flex', alignItems:'baseline', gap:2, marginBottom:4 }}>
-                    <span style={{ fontSize:44, fontWeight:800, fontFamily:FONT_DISPLAY, letterSpacing:'-0.04em', lineHeight:1, color:c.textPrimary }}>{price}</span>
+                    <span style={{ fontSize:42, fontWeight:800, fontFamily:FONT_DISPLAY, letterSpacing:'-0.04em', lineHeight:1, color:c.textPrimary }}>{price}</span>
                     <span style={{ fontSize:14, color:c.textMuted }}>{sub}</span>
                   </div>
                   {crossed && <div style={{ fontSize:12, color:c.textMuted }}><span style={{ textDecoration:'line-through' }}>{crossed}</span><span style={{ color:'oklch(0.72 0.17 145)', marginLeft:6, fontWeight:600 }}>{save}</span></div>}
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:22 }}>
                   {feats.map(f => (
                     <div key={f} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
                       <Check size={13} color="oklch(0.72 0.17 145)" strokeWidth={2.5} style={{ flexShrink:0, marginTop:1 }} />
@@ -319,16 +351,16 @@ export function LandingPage() {
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section style={{ maxWidth:960, margin:'0 auto', padding:'88px 40px' }}>
-        <div style={{ textAlign:'center', marginBottom:48 }}>
+      <section style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px' }}>
+        <div style={{ textAlign:'center', marginBottom:40 }}>
           <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Early users</div>
-          <h2 style={{ fontSize:36, fontWeight:800, letterSpacing:'-0.03em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>What students say</h2>
+          <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>What students say</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16 }}>
           {testimonials.map(({ quote, name, meta }) => (
-            <div key={name} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:18, padding:'26px', border:`1px solid ${c.border}` }}>
-              <div style={{ fontSize:32, color:'#F97316', lineHeight:1, marginBottom:12, fontFamily:'Georgia, serif', opacity:0.7 }}>"</div>
-              <p style={{ fontSize:14, lineHeight:1.7, color:c.textMuted, margin:'0 0 18px' }}>{quote}</p>
+            <div key={name} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:18, padding:'24px', border:`1px solid ${c.border}` }}>
+              <div style={{ fontSize:32, color:'#F97316', lineHeight:1, marginBottom:10, fontFamily:'Georgia, serif', opacity:0.7 }}>"</div>
+              <p style={{ fontSize:14, lineHeight:1.7, color:c.textMuted, margin:'0 0 16px' }}>{quote}</p>
               <div style={{ fontSize:13, fontWeight:600, color:c.textPrimary }}>{name}</div>
               <div style={{ fontSize:12, color:c.textMuted, marginTop:2 }}>{meta}</div>
             </div>
@@ -337,9 +369,9 @@ export function LandingPage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, padding:'72px 40px' }}>
+      <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '72px 40px' }}>
         <div style={{ maxWidth:660, margin:'0 auto' }}>
-          <h2 style={{ fontSize:34, fontWeight:800, letterSpacing:'-0.03em', textAlign:'center', marginBottom:40, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Common questions</h2>
+          <h2 style={{ fontSize: isMobile ? 26 : 34, fontWeight:800, letterSpacing:'-0.03em', textAlign:'center', marginBottom:36, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Common questions</h2>
           <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
             {faqs.map(({ q, a }, i) => (
               <div key={i} style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:12, border:`1px solid ${c.border}`, overflow:'hidden' }}>
@@ -355,35 +387,33 @@ export function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section style={{ padding:'96px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
+      <section style={{ padding: isMobile ? '72px 20px' : '96px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
         <DotGrid theme={theme} />
         <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 60% 70% at 50% 50%, oklch(0.72 0.18 45 / 0.06) 0%, transparent 70%)', pointerEvents:'none' }} />
         <div style={{ position:'relative', zIndex:1 }}>
-          <div style={{ display:'flex', justifyContent:'center', marginBottom:24 }}>
-            <AIOrb size={64} float />
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:22 }}>
+            <AIOrb size={isMobile ? 52 : 64} float />
           </div>
-          <h2 style={{ fontSize:'clamp(36px,5vw,54px)', fontWeight:800, letterSpacing:'-0.035em', marginBottom:12, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Ready to walk in confident?</h2>
-          <p style={{ fontSize:16, color:c.textMuted, marginBottom:34 }}>First analysis is free. No card required.</p>
-          <Link to="/signup" style={{ padding:'15px 40px', borderRadius:100, background:'#F97316', color:'#fff', fontSize:16, fontWeight:600, cursor:'pointer', boxShadow:'0 0 28px oklch(0.72 0.18 45 / 0.35)', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:8 }}>
+          <h2 style={{ fontSize: isMobile ? 30 : 'clamp(36px,5vw,54px)', fontWeight:800, letterSpacing:'-0.035em', marginBottom:10, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Ready to walk in confident?</h2>
+          <p style={{ fontSize:15, color:c.textMuted, marginBottom:30 }}>First analysis is free. No card required.</p>
+          <Link to="/signup" style={{ padding: isMobile ? '13px 32px' : '15px 40px', borderRadius:100, background:'#F97316', color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer', boxShadow:'0 0 28px oklch(0.72 0.18 45 / 0.35)', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:8 }}>
             Analyse my project free <ArrowRight size={16} />
           </Link>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop:`1px solid ${c.border}`, padding:'28px 48px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
+      <footer style={{ borderTop:`1px solid ${c.border}`, padding: isMobile ? '24px 20px' : '28px 48px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:14 }}>
         <CritupLogo size={18} showText theme={theme} />
-        <div style={{ display:'flex', gap:24, fontSize:13, color:c.textMuted }}>
-          <Link to="/privacy" style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Privacy</Link>
-          <Link to="/terms"   style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Terms</Link>
-          <a href="mailto:hello@critup.ai" style={{ color:c.textMuted, textDecoration:'none' }} onMouseEnter={e=>(e.currentTarget.style.color=c.textPrimary)} onMouseLeave={e=>(e.currentTarget.style.color=c.textMuted)}>Contact</a>
+        <div style={{ display:'flex', gap:20, fontSize:13, color:c.textMuted }}>
+          <Link to="/privacy" style={{ color:c.textMuted, textDecoration:'none' }}>Privacy</Link>
+          <Link to="/terms"   style={{ color:c.textMuted, textDecoration:'none' }}>Terms</Link>
+          <a href="mailto:hello@critup.ai" style={{ color:c.textMuted, textDecoration:'none' }}>Contact</a>
         </div>
-        <div style={{ fontSize:12, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai · Avraam Valikhan, Founder & CEO · Adil Kamal Batcha, Co-founder</div>
+        <div style={{ fontSize:11, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai · Avraam Valikhan & Adil Kamal Batcha</div>
       </footer>
 
-      <style>{`
-        @keyframes hero-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-      `}</style>
+      <style>{`@keyframes hero-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }`}</style>
     </div>
   )
 }
