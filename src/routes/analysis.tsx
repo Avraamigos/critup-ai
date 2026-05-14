@@ -118,6 +118,7 @@ export function AnalysisPage() {
   // ── Load data with polling ──
   useEffect(() => {
     let pollTimer: ReturnType<typeof setTimeout> | null = null
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
     const load = async () => {
       const { data, error: err } = await supabase
         .from('projects')
@@ -129,13 +130,24 @@ export function AnalysisPage() {
       setProject(proj)
       setLoading(false)
       const stillPending = proj.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
-      if (stillPending) pollTimer = setTimeout(load, 4000)
+      if (stillPending) {
+        pollTimer = setTimeout(load, 4000)
+        // Give up after 3 minutes — mark locally as timed out so user sees an error
+        if (!timeoutTimer) {
+          timeoutTimer = setTimeout(() => {
+            if (pollTimer) clearTimeout(pollTimer)
+            setError('Analysis is taking longer than expected. Please try re-uploading your PDF.')
+          }, 3 * 60 * 1000)
+        }
+      } else {
+        if (timeoutTimer) clearTimeout(timeoutTimer)
+      }
     }
     setLoading(true); setError(null); load()
     const sub = supabase.channel(`analysis-${params.projectId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analyses', filter: `project_id=eq.${params.projectId}` }, load)
       .subscribe()
-    return () => { if (pollTimer) clearTimeout(pollTimer); supabase.removeChannel(sub) }
+    return () => { if (pollTimer) clearTimeout(pollTimer); if (timeoutTimer) clearTimeout(timeoutTimer); supabase.removeChannel(sub) }
   }, [params.projectId])
 
   // ── Remember last-visited project so the sidebar nav and AI chat can reference it ──
