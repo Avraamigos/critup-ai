@@ -19,6 +19,7 @@ import { SettingsPage } from '@/routes/settings'
 import { HelpPage } from '@/routes/help'
 import { PrivacyPage } from '@/routes/privacy'
 import { TermsPage } from '@/routes/terms'
+import { MeetCritPage } from '@/routes/meet-crit'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -48,8 +49,9 @@ const onboardingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/o
 const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/pricing', component: PricingPage })
 const newProjectRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projects/new', component: NewProjectPage })
 const analysisLoadingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/analysis/loading', component: AnalysisLoadingPage })
-const privacyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/privacy', component: PrivacyPage })
-const termsRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/terms',   component: TermsPage })
+const privacyRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/privacy',    component: PrivacyPage })
+const termsRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/terms',      component: TermsPage })
+const meetCritRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/meet-crit',  component: MeetCritPage })
 
 // App shell routes
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage })
@@ -79,6 +81,7 @@ const routeTree = rootRoute.addChildren([
   analysisLoadingRoute,
   privacyRoute,
   termsRoute,
+  meetCritRoute,
 ])
 
 export const router = createRouter({ routeTree })
