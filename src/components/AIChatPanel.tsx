@@ -90,10 +90,17 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
     setMessages(newMessages)
     setInput('')
     setError(null)
-    setLoading(true)
 
+    const analysisId = getLastAnalysisId()
+
+    // No project uploaded yet — reply locally without hitting the API
+    if (!analysisId) {
+      setMessages(m => [...m, { role: 'ai', text: "I don't have any of your projects to work with yet. Upload a design first and I'll give you targeted critique, scores, and jury prep." }])
+      return
+    }
+
+    setLoading(true)
     try {
-      const analysisId = getLastAnalysisId()
       const result = await callChatAPI(newMessages, analysisId)
       if (typeof result === 'object' && result.limitReached) {
         setLimitMsg(result.message)
