@@ -110,8 +110,21 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
-      setError(msg)
-      setMessages(newMessages.slice(0, -1))
+      // HTTP 500 usually means the stored analysisId is stale (e.g. from a previous
+      // account). Clear it and show a friendly "upload first" reply instead of an error.
+      if (msg.includes('500') || msg.includes('HTTP 5')) {
+        try {
+          localStorage.removeItem('critup_last_analysis_id')
+          localStorage.removeItem('critup_last_project_name')
+        } catch {}
+        setMessages([
+          ...newMessages,
+          { role: 'ai', text: "I don't have any of your projects to work with yet. Upload a design first and I'll give you targeted critique, scores, and jury prep." },
+        ])
+      } else {
+        setError(msg)
+        setMessages(newMessages.slice(0, -1))
+      }
     } finally {
       setLoading(false)
     }

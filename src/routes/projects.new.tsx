@@ -359,39 +359,98 @@ export function NewProjectPage() {
         {/* Step 5: Upload PDF */}
         {step === 4 && (
           <>
+            <style>{`
+              @keyframes upload-float { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-6px); } }
+              @keyframes upload-glow  { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+              @keyframes upload-spin  { to { transform:rotate(360deg); } }
+              .upload-zone:hover .upload-icon-ring { transform:scale(1.07); }
+            `}</style>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to 10 pages · max 50 MB</p>
 
             {!form.file ? (
               <div
+                className="upload-zone"
                 onDragOver={e => { e.preventDefault(); setDragging(true) }}
                 onDragLeave={() => setDragging(false)}
                 onDrop={onDrop}
-                style={{
-                  border: `2px dashed ${dragging ? '#F97316' : c.border}`, borderRadius: 16, padding: '48px 24px',
-                  textAlign: 'center', background: dragging ? 'oklch(0.72 0.18 45 / 0.04)' : c.cardBg,
-                  transition: 'all 0.15s', cursor: 'pointer',
-                }}
                 onClick={() => document.getElementById('file-input')?.click()}
+                style={{
+                  position: 'relative', borderRadius: 20, padding: '52px 24px 44px',
+                  textAlign: 'center', cursor: 'pointer', overflow: 'hidden',
+                  background: dragging
+                    ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.08)' : '#fff7ed')
+                    : c.cardBg,
+                  border: `2px dashed ${dragging ? '#F97316' : (c.isDark ? 'oklch(0.32 0.008 270)' : '#d1d5db')}`,
+                  transition: 'all 0.2s',
+                  boxShadow: dragging ? '0 0 0 4px oklch(0.72 0.18 45/0.12), inset 0 0 40px oklch(0.72 0.18 45/0.04)' : 'none',
+                }}
               >
-                <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'oklch(0.72 0.18 45 / 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <Upload size={22} color="#F97316" />
+                {/* Ambient glow */}
+                <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 200, height: 200, background: 'radial-gradient(circle, oklch(0.72 0.18 45/0.09) 0%, transparent 70%)', pointerEvents: 'none', animation: 'upload-glow 3s ease-in-out infinite' }} />
+
+                {/* Floating icon */}
+                <div
+                  className="upload-icon-ring"
+                  style={{
+                    width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px',
+                    background: dragging
+                      ? 'linear-gradient(135deg, oklch(0.72 0.18 45/0.25), oklch(0.72 0.18 45/0.1))'
+                      : (c.isDark ? 'oklch(0.22 0.008 270)' : '#f3f4f6'),
+                    border: `1.5px solid ${dragging ? '#F97316' : (c.isDark ? 'oklch(0.3 0.008 270)' : '#e5e7eb')}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: dragging ? '0 0 28px oklch(0.72 0.18 45/0.3)' : '0 4px 16px rgba(0,0,0,0.08)',
+                    animation: 'upload-float 3s ease-in-out infinite',
+                    transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+                    position: 'relative',
+                  }}
+                >
+                  <Upload size={26} color={dragging ? '#F97316' : (c.isDark ? 'oklch(0.6 0.005 270)' : '#9ca3af')} strokeWidth={1.8} />
                 </div>
-                <p style={{ fontSize: 15, fontWeight: 600, color: c.textPrimary, margin: '0 0 6px' }}>Drop your PDF here</p>
-                <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>or click to browse</p>
+
+                <p style={{ fontSize: 16, fontWeight: 700, color: dragging ? '#F97316' : c.textPrimary, margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+                  {dragging ? 'Drop it!' : 'Drop your PDF here'}
+                </p>
+                <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 24px', lineHeight: 1.5 }}>
+                  or{' '}
+                  <span style={{ color: '#F97316', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                    click to browse
+                  </span>
+                </p>
+
+                {/* Badges row */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {[['📄', 'PDF only'], ['📑', 'Up to 10 pages'], ['💾', 'Max 50 MB']].map(([icon, label]) => (
+                    <div key={label} style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px', borderRadius: 100,
+                      background: c.isDark ? 'oklch(0.21 0.006 270)' : '#f9fafb',
+                      border: `1px solid ${c.isDark ? 'oklch(0.28 0.006 270)' : '#e5e7eb'}`,
+                      fontSize: 11, color: c.textMuted, fontWeight: 500,
+                    }}>
+                      <span style={{ fontSize: 12 }}>{icon}</span>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+
                 <input id="file-input" type="file" accept=".pdf" onChange={onFileChange} style={{ display: 'none' }} />
               </div>
             ) : (
-              <div style={{ background: c.cardBg, border: `1.5px solid oklch(0.72 0.17 145)`, borderRadius: 16, padding: '20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'oklch(0.72 0.17 145 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText size={20} color="oklch(0.72 0.17 145)" />
+              <div style={{ background: c.isDark ? 'oklch(0.17 0.01 145/0.6)' : '#f0fdf4', border: `1.5px solid oklch(0.72 0.17 145 / 0.5)`, borderRadius: 18, padding: '22px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 0 24px oklch(0.72 0.17 145/0.1)' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145/0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={24} color="oklch(0.65 0.17 145)" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'oklch(0.65 0.17 145)', letterSpacing: '0.07em', marginBottom: 4, textTransform: 'uppercase' }}>PDF ready</div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.file.name}</p>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{(form.file.size / 1024 / 1024).toFixed(1)} MB</p>
                 </div>
-                <button onClick={() => setForm(f => ({ ...f, file: null }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4 }}>
-                  <X size={16} />
+                <button onClick={() => setForm(f => ({ ...f, file: null }))} style={{ background: c.isDark ? 'oklch(0.25 0.006 270)' : '#e5e7eb', border: 'none', cursor: 'pointer', color: c.textMuted, padding: '6px', borderRadius: 8, display: 'flex', transition: 'all 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = c.isDark ? 'oklch(0.3 0.006 270)' : '#d1d5db')}
+                  onMouseLeave={e => (e.currentTarget.style.background = c.isDark ? 'oklch(0.25 0.006 270)' : '#e5e7eb')}
+                >
+                  <X size={15} />
                 </button>
               </div>
             )}
