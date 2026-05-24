@@ -139,9 +139,9 @@ export function SettingsPage() {
     try {
       const ext = file.name.split('.').pop()
       const path = `${user.id}/avatar.${ext}`
-      const { error: uploadErr } = await supabase.storage.from('project-avatars').upload(path, file, { upsert: true })
+      const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
       if (uploadErr) throw uploadErr
-      const { data: urlData } = supabase.storage.from('project-avatars').getPublicUrl(path)
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
       const url = urlData.publicUrl
       await supabase.auth.updateUser({ data: { avatar_url: url } })
       setAvatarUrl(url)
