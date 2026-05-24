@@ -218,13 +218,7 @@ export function ProjectsPage() {
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>📂</div>
           <p style={{ fontSize: 16, fontWeight: 600, color: c.textPrimary, margin: '0 0 6px' }}>No projects yet</p>
-          <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 24px' }}>Create your first project to get AI critique</p>
-          <button
-            onClick={() => navigate({ to: '/projects/new' })}
-            style={{ padding: '11px 28px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)' }}
-          >
-            <Plus size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />New project
-          </button>
+          <p style={{ fontSize: 14, color: c.textMuted, margin: 0 }}>Hit <strong style={{ color: c.textPrimary }}>+ New project</strong> above to upload your first design and get AI critique.</p>
         </div>
       )}
 
