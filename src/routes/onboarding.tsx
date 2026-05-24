@@ -30,7 +30,22 @@ const STEPS = [
   },
   {
     q: "What's your university?", key: 'university', type: 'search' as const,
-    suggestions: ['MIT', 'ETH Zurich', 'TU Berlin', 'METU', 'Bartlett UCL', 'Pratt Institute', 'SCI-Arc', 'AA London', 'TU Delft', 'Columbia GSAPP'],
+    suggestions: [
+      'MIT', 'ETH Zurich', 'TU Delft', 'Bartlett UCL', 'AA London', 'Columbia GSAPP',
+      'Harvard GSD', 'Yale School of Architecture', 'SCI-Arc', 'Pratt Institute',
+      'TU Berlin', 'RWTH Aachen', 'KIT Karlsruhe', 'TU Munich', 'Stuttgart University',
+      'METU', 'ITU Istanbul', 'Bilkent University', 'Yıldız Technical University',
+      'TU Vienna', 'TU Graz', 'BOKU Vienna',
+      'Politecnico di Milano', 'La Sapienza Roma', 'IUAV Venice',
+      'ETSAM Madrid', 'ETSAB Barcelona', 'UPC Barcelona',
+      'Paris-Belleville', 'Paris-Malaquais', 'École Polytechnique',
+      'UCL London', 'Manchester School of Architecture', 'Edinburgh School of Architecture',
+      'Cornell AAP', 'USC Architecture', 'UCLA Architecture', 'Georgia Tech',
+      'University of Toronto', 'McGill School of Architecture',
+      'UNSW Sydney', 'University of Melbourne', 'Monash University',
+      'NUS Singapore', 'CUHK Hong Kong', 'Tsinghua University',
+      'Other / Not listed',
+    ],
   },
   {
     q: 'Preferred language?', key: 'language', type: 'single' as const,
@@ -156,28 +171,51 @@ export function OnboardingPage() {
           </div>
         )}
 
-        {cur.type === 'search' && (
-          <div>
-            <input
-              value={(curSel as string) || ''}
-              onChange={e => setSel(s => ({ ...s, [cur.key]: e.target.value }))}
-              placeholder="Search your university..."
-              style={{ width: '100%', padding: '13px 16px', borderRadius: 12, boxSizing: 'border-box', background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 15, outline: 'none', fontFamily: "'Inter',sans-serif" }}
-              onFocus={e => e.target.style.borderColor = '#F97316'}
-              onBlur={e => e.target.style.borderColor = c.border}
-            />
-            <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {[...(cur.suggestions || []), 'Other / Not listed'].map(s => (
-                <button key={s} onClick={() => setSel(sv => ({ ...sv, [cur.key]: s }))} style={{
-                  padding: '6px 14px', borderRadius: 100,
-                  background: curSel === s ? 'oklch(0.72 0.18 45 / 0.12)' : c.cardBg,
-                  border: curSel === s ? '1px solid #F97316' : `1px solid ${c.border}`,
-                  color: curSel === s ? '#F97316' : c.textMuted, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                }}>{s}</button>
-              ))}
+        {cur.type === 'search' && (() => {
+          const query = ((curSel as string) || '').toLowerCase()
+          const allSuggestions = cur.suggestions || []
+          const filtered = query.length >= 1
+            ? allSuggestions.filter(s => s.toLowerCase().includes(query)).slice(0, 8)
+            : allSuggestions.slice(0, 8)
+          const exactMatch = allSuggestions.some(s => s.toLowerCase() === query)
+          return (
+            <div style={{ position: 'relative' }}>
+              <input
+                value={(curSel as string) || ''}
+                onChange={e => setSel(s => ({ ...s, [cur.key]: e.target.value }))}
+                placeholder="Search your university..."
+                autoComplete="off"
+                style={{ width: '100%', padding: '13px 16px', borderRadius: 12, boxSizing: 'border-box', background: c.cardBg, border: `1.5px solid #F97316`, color: c.textPrimary, fontSize: 15, outline: 'none', fontFamily: "'Inter',sans-serif" }}
+              />
+              {/* Dropdown suggestions */}
+              {filtered.length > 0 && (
+                <div style={{ marginTop: 8, background: c.cardBg, borderRadius: 12, border: `1px solid ${c.border}`, overflow: 'hidden', boxShadow: c.isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.1)' }}>
+                  {filtered.map((s, i) => (
+                    <button key={s} onMouseDown={() => setSel(sv => ({ ...sv, [cur.key]: s }))} style={{
+                      width: '100%', padding: '12px 16px', background: curSel === s ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.1)' : '#fff7ed') : 'transparent',
+                      border: 'none', borderBottom: i < filtered.length - 1 ? `1px solid ${c.border}` : 'none',
+                      color: curSel === s ? '#F97316' : c.textPrimary, fontSize: 14, fontWeight: curSel === s ? 600 : 400,
+                      cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                      {s}
+                      {curSel === s && <Check size={14} color="#F97316" />}
+                    </button>
+                  ))}
+                  {/* Custom entry if typed something not in list */}
+                  {query.length > 1 && !exactMatch && !filtered.includes(curSel as string) && (
+                    <button onMouseDown={() => setSel(sv => ({ ...sv, [cur.key]: curSel as string }))} style={{
+                      width: '100%', padding: '12px 16px', background: 'transparent',
+                      border: 'none', borderTop: `1px solid ${c.border}`,
+                      color: '#F97316', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontStyle: 'italic',
+                    }}>
+                      Use "{curSel}" →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         <div style={{ marginTop: 'auto', paddingTop: 36, display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={goNext} disabled={saving} style={{

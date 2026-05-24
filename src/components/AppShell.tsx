@@ -77,6 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()
   const isPro = profile?.plan !== 'free'
+  const avatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
 
   const sidebarW = sidebarOpen ? 240 : 72
 
@@ -187,7 +188,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
 
           <div style={{ padding: '12px 12px 14px', borderTop: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #F97316, oklch(0.65 0.20 35))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: FONT }}>{displayInitial}</div>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarUrl ? 'transparent' : 'linear-gradient(135deg, #F97316, oklch(0.65 0.20 35))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: FONT, overflow: 'hidden' }}>
+            {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : displayInitial}
+          </div>
             {sidebarOpen && (
               <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: c.textPrimary, whiteSpace: 'nowrap', fontFamily: FONT }}>{profile?.full_name || displayName}</div>
@@ -242,7 +245,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   border: `1px solid ${c.border}`, cursor: 'pointer',
                 }}
               >
-                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #F97316, oklch(0.65 0.20 35))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: FONT }}>{displayInitial}</div>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: avatarUrl ? 'transparent' : 'linear-gradient(135deg, #F97316, oklch(0.65 0.20 35))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: FONT, overflow: 'hidden' }}>
+                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : displayInitial}
+                </div>
                 {!isMobile && <span style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, fontFamily: FONT }}>{displayName}</span>}
                 <ChevronRight size={12} color={c.textMuted} />
               </button>
