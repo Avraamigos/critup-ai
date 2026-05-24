@@ -92,7 +92,7 @@ export function SignupPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           {[
             { key: 'name', label: 'Full name', type: 'text', placeholder: 'Your full name' },
-            { key: 'email', label: 'Email', type: 'email', placeholder: 'you@university.edu' },
+            { key: 'email', label: 'Email', type: 'email', placeholder: 'you@email.com' },
             { key: 'password', label: 'Password', type: 'password', placeholder: '••••••••' },
             { key: 'confirm', label: 'Confirm password', type: 'password', placeholder: '••••••••' },
           ].map(({ key, label, type, placeholder }) => (

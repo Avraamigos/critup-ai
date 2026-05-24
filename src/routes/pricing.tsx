@@ -40,12 +40,12 @@ export function PricingPage() {
       cta: 'Continue free', featured: false, action: () => navigate({ to: '/' }),
     },
     {
-      name: 'Monthly', price: '$9', sub: '/mo', cancel: 'Cancel anytime',
+      name: 'Monthly', price: '$8', sub: '/mo', cancel: 'Cancel anytime',
       features: ['Unlimited project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
       cta: 'Start monthly', featured: true, badge: 'Most popular', action: () => { track.upgradeClicked('pricing_monthly'); setPaywallOpen(true) },
     },
     {
-      name: 'Yearly', price: '$59', sub: '/yr', crossed: '$108', save: 'Save 45%',
+      name: 'Yearly', price: '$55', sub: '/yr', crossed: '$96', save: 'Save 43%',
       features: ['Everything in Monthly', 'Video presentation coach', 'Priority processing', 'Early access to new features'],
       cta: 'Start yearly', featured: false, badge: 'Best value', action: () => { track.upgradeClicked('pricing_yearly'); setPaywallOpen(true) },
     },

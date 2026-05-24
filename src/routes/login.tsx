@@ -70,7 +70,7 @@ export function LoginPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>Email</label>
-            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }} placeholder="you@university.edu"
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }} placeholder="you@email.com"
               style={{ ...inp, borderColor: errors.email ? 'oklch(0.65 0.18 25)' : c.border }}
               onFocus={e => e.target.style.borderColor = errors.email ? 'oklch(0.65 0.18 25)' : '#F97316'}
               onBlur={e => e.target.style.borderColor = errors.email ? 'oklch(0.65 0.18 25)' : c.border}
