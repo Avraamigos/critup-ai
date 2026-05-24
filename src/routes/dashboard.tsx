@@ -173,11 +173,51 @@ export function DashboardPage() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 10, color: c.textMuted }}>
-          <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: 14 }}>Loading your projects…</span>
-          <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
-        </div>
+        <>
+          <style>{`
+            @keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+            @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+            .sk { border-radius: 8px; animation: shimmer 1.4s ease infinite; background: ${c.isDark
+              ? 'linear-gradient(90deg, oklch(0.22 0.004 270) 25%, oklch(0.26 0.004 270) 50%, oklch(0.22 0.004 270) 75%)'
+              : 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)'}; background-size: 800px 100%; }
+          `}</style>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 18, marginBottom: isMobile ? 12 : 20 }}>
+            {/* Active project skeleton */}
+            <div style={{ gridColumn: isMobile ? '1' : '1 / 3', background: c.cardBg, borderRadius: 18, padding: isMobile ? 18 : 24, border: `1px solid ${c.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <div className="sk" style={{ height: 10, width: 80, marginBottom: 10 }} />
+                  <div className="sk" style={{ height: 18, width: '60%', marginBottom: 10 }} />
+                  <div className="sk" style={{ height: 10, width: 100 }} />
+                </div>
+                <div className="sk" style={{ height: 34, width: 110, borderRadius: 100, alignSelf: 'flex-start' }} />
+              </div>
+              <div style={{ display: 'flex', gap: isMobile ? 12 : 20 }}>
+                {[82, 82, 82].map((s, i) => (
+                  <div key={i} className="sk" style={{ width: s, height: s, borderRadius: '50%' }} />
+                ))}
+              </div>
+            </div>
+            {/* New project skeleton */}
+            <div style={{ background: c.cardBg, borderRadius: 18, padding: isMobile ? 18 : 24, border: `1px solid ${c.border}` }}>
+              <div className="sk" style={{ width: 40, height: 40, borderRadius: 11, marginBottom: 14 }} />
+              <div className="sk" style={{ height: 16, width: '55%', marginBottom: 8 }} />
+              <div className="sk" style={{ height: 11, width: '75%' }} />
+            </div>
+          </div>
+          {/* Quick actions skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 10 : 14, marginBottom: isMobile ? 20 : 28 }}>
+            {[1, 2].map(i => (
+              <div key={i} style={{ background: c.cardBg, borderRadius: 14, padding: isMobile ? 14 : '16px 18px', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="sk" style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="sk" style={{ height: 13, width: '50%', marginBottom: 6 }} />
+                  <div className="sk" style={{ height: 10, width: '35%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {!loading && (

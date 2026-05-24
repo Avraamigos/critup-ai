@@ -7,6 +7,7 @@ import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/database.types'
+import { track } from '@/lib/analytics'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ export function AnalysisPage() {
   const [reuploadDrag,    setReuploadDrag]    = useState(false)
   const [reuploadSaving,  setReuploadSaving]  = useState(false)
   const [reuploadError,   setReuploadError]   = useState<string | null>(null)
+  const [retryKey,        setRetryKey]        = useState(0)
 
   // ── Refs so callbacks always see current values ──
   const abortRef      = useRef<AbortController | null>(null)
@@ -155,7 +157,7 @@ export function AnalysisPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analyses', filter: `project_id=eq.${params.projectId}` }, load)
       .subscribe()
     return () => { if (pollTimer) clearTimeout(pollTimer); if (timeoutTimer) clearTimeout(timeoutTimer); supabase.removeChannel(sub) }
-  }, [params.projectId])
+  }, [params.projectId, retryKey])
 
   // ── Remember last-visited project so the sidebar nav and AI chat can reference it ──
   useEffect(() => {
@@ -464,10 +466,24 @@ export function AnalysisPage() {
 
   // ── Error ──
   if (error || !project) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
-      <AlertCircle size={32} color="oklch(0.65 0.18 25)" />
-      <p style={{ fontSize: 14, color: c.textMuted }}>{error || 'Project not found.'}</p>
-      <button onClick={() => navigate({ to: '/projects' })} style={{ padding: '8px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Back</button>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: '0 24px', textAlign: 'center' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'oklch(0.65 0.18 25 / 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <AlertCircle size={26} color="oklch(0.65 0.18 25)" />
+      </div>
+      <div>
+        <p style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 6px' }}>Something went wrong</p>
+        <p style={{ fontSize: 13, color: c.textMuted, margin: 0, maxWidth: 320 }}>{error || 'Project not found.'}</p>
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={() => navigate({ to: '/projects' })} style={{ padding: '9px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          ← My Projects
+        </button>
+        {error && (
+          <button onClick={() => setRetryKey(k => k + 1)} style={{ padding: '9px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 14px oklch(0.72 0.18 45 / 0.3)' }}>
+            Try again
+          </button>
+        )}
+      </div>
     </div>
   )
 
@@ -532,6 +548,7 @@ export function AnalysisPage() {
   const deltaValues = [deltas.concept, deltas.spatial, deltas.presentation]
 
   const handleExport = () => {
+    track.pdfExported(params.projectId)
     const date = new Date(latestAnalysis.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     const stageLabel = stage?.label ?? project.stage
     const scoreColor = (s: number) => s >= 7.5 ? '#1a9e4a' : s >= 5 ? '#F97316' : '#d93025'

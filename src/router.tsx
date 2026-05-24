@@ -20,6 +20,8 @@ import { HelpPage } from '@/routes/help'
 import { PrivacyPage } from '@/routes/privacy'
 import { TermsPage } from '@/routes/terms'
 import { MeetCritPage } from '@/routes/meet-crit'
+import { NotFoundPage } from '@/routes/not-found'
+import { ResetPasswordPage } from '@/routes/reset-password'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -52,6 +54,8 @@ const analysisLoadingRoute = createRoute({ getParentRoute: () => rootRoute, path
 const privacyRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/privacy',    component: PrivacyPage })
 const termsRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/terms',      component: TermsPage })
 const meetCritRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/meet-crit',  component: MeetCritPage })
+const resetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage })
+const notFoundRoute  = createRoute({ getParentRoute: () => rootRoute, path: '*', component: NotFoundPage })
 
 // App shell routes
 const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage })
@@ -82,6 +86,8 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
   meetCritRoute,
+  resetPasswordRoute,
+  notFoundRoute,
 ])
 
 export const router = createRouter({ routeTree })

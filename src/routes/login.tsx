@@ -80,7 +80,7 @@ export function LoginPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280' }}>Password</label>
-              <a href="#" style={{ fontSize: 12, color: '#F97316', textDecoration: 'none' }}>Forgot?</a>
+              <button onClick={() => navigate({ to: '/reset-password' })} style={{ background: 'none', border: 'none', color: '#F97316', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: 0 }}>Forgot?</button>
             </div>
             <input type="password" value={password} onChange={e => { setPassword(e.target.value); setErrors(v => ({ ...v, password: '' })) }} placeholder="••••••••"
               style={{ ...inp, borderColor: errors.password ? 'oklch(0.65 0.18 25)' : c.border }}

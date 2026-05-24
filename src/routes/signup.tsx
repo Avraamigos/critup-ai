@@ -4,6 +4,7 @@ import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { track } from '@/lib/analytics'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   const dotColor = theme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.04)'
@@ -27,6 +28,7 @@ export function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [verifyEmail, setVerifyEmail] = useState('')
   const update = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
   const inp = { width: '100%', padding: '11px 14px', borderRadius: 9, boxSizing: 'border-box' as const, background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f9fafb', border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, outline: 'none', fontFamily: "'Inter',sans-serif", transition: 'border 0.15s' }
@@ -42,10 +44,37 @@ export function SignupPage() {
     const { error } = await signUp(form.email, form.password, form.name)
     setLoading(false)
     if (error) { setErrors({ email: error }); return }
-    navigate({ to: '/onboarding' })
+    track.signedUp('email')
+    // If Supabase email confirmation is enabled, user won't be signed in yet
+    // Show "check your email" screen instead of navigating
+    setVerifyEmail(form.email)
+  }
+
+  // ── Check your email screen ──
+  if (verifyEmail) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.bg, fontFamily: "'Inter', sans-serif", position: 'relative', overflow: 'hidden' }}>
+        <DotGrid theme={theme} />
+        <div style={{ width: '100%', maxWidth: 420, padding: '44px 40px', background: c.cardBg, borderRadius: 24, border: `1px solid ${c.border}`, position: 'relative', zIndex: 1, textAlign: 'center', boxShadow: c.isDark ? 'none' : '0 8px 40px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontSize: 48, marginBottom: 20 }}>📬</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 10px', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Check your email</h1>
+          <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 6px', lineHeight: 1.6 }}>
+            We sent a confirmation link to
+          </p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#F97316', margin: '0 0 20px' }}>{verifyEmail}</p>
+          <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 28px', lineHeight: 1.6 }}>
+            Click the link in the email to verify your account and get started.
+          </p>
+          <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>
+            Wrong email? <button onClick={() => setVerifyEmail('')} style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 12, fontWeight: 500, padding: 0 }}>Go back</button>
+          </p>
+        </div>
+      </div>
+    )
   }
 
   const signUpWithGoogle = async () => {
+    track.signedUp('google')
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/onboarding` },

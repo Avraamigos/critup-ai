@@ -4,6 +4,7 @@ import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from '@tanstack/react-router'
+import { track } from '@/lib/analytics'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ export function JuryPage() {
   // ── Start recording ───────────────────────────────────────────────────────
   const startRecording = () => {
     if (!speechSupported) return
+    track.juryStarted(analysisId ?? 'unknown')
     setMicError(null)
     setTranscript('')
     setInterimText('')

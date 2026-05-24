@@ -106,10 +106,16 @@ export function AssistantPage() {
     setMsgs(newMsgs)
     setInput('')
     setError(null)
-    setLoading(true)
 
+    // No project uploaded yet — respond locally without hitting the API
+    if (!latestAnalysis) {
+      setMsgs(m => [...m, { role: 'ai', text: "I don't have any of your projects to work with yet. Upload your first design and I'll give you targeted critique, score breakdowns, and jury prep.", ts: now() }])
+      return
+    }
+
+    setLoading(true)
     try {
-      const reply = await sendToAPI(newMsgs, latestAnalysis?.id ?? null)
+      const reply = await sendToAPI(newMsgs, latestAnalysis.id)
       setMsgs(m => [...m, { role: 'ai', text: reply, ts: now() }])
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'

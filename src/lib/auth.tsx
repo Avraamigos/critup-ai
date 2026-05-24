@@ -32,15 +32,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // IMPORTANT: fetchProfile must NOT be called inside the onAuthStateChange callback
   // because Supabase holds the auth lock for the entire duration of async callbacks.
   // Awaiting a network call there deadlocks signOut (which also needs the lock).
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = async (user: User): Promise<Profile | null> => {
     try {
       const { data } = await Promise.race([
-        Promise.resolve(supabase.from('profiles').select('*').eq('id', userId).single()),
+        Promise.resolve(supabase.from('profiles').select('*').eq('id', user.id).single()),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('profile fetch timeout')), 8_000)
         ),
       ])
-      return data ?? null
+      if (data) return data
+
+      // No profile — Google OAuth new user. Create one from their Google metadata.
+      const fullName = (user.user_metadata?.full_name as string | undefined)
+        || (user.user_metadata?.name as string | undefined)
+        || ''
+      const { data: created } = await supabase.from('profiles').insert({
+        id: user.id,
+        full_name: fullName,
+        plan: 'free',
+        language: 'en',
+        analyses_used: 0,
+        onboarding_complete: false,
+      }).select().single()
+      return created ?? null
     } catch {
       return null
     }
@@ -66,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }))
       if (session?.user) {
         // Fetch profile OUTSIDE the auth lock via .then() — never blocks lock
-        const userId = session.user.id
-        fetchProfile(userId).then(profile => {
+        const sessionUser = session.user
+        fetchProfile(sessionUser).then(profile => {
           setState(s => ({ ...s, profile }))
         })
       } else {
@@ -114,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (state.user) {
-      const profile = await fetchProfile(state.user.id)
+      const profile = await fetchProfile(state.user)
       setState(s => ({ ...s, profile: profile ?? null }))
     }
   }

@@ -5,6 +5,7 @@ import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { track } from '@/lib/analytics'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   const dotColor = theme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.04)'
@@ -119,7 +120,7 @@ export function NewProjectPage() {
             Upgrade to Pro →
           </button>
           <button
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => navigate({ to: '/' })}
             style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 14, cursor: 'pointer', textDecoration: 'underline' }}
           >
             Back to dashboard
@@ -202,6 +203,7 @@ export function NewProjectPage() {
       localStorage.setItem('critup_last_analysis_id', analysisRowId)
       localStorage.setItem('critup_last_project_name', form.name.trim())
 
+      track.analysisCreated(project.id)
       navigate({ to: '/analysis/$projectId', params: { projectId: project.id } })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')

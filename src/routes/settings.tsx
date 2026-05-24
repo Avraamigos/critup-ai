@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { User, Bell, Globe, Shield, Moon, Sun, Check, AlertTriangle, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { User, Bell, Globe, Shield, Moon, Sun, Check, AlertTriangle, Loader2, Eye, EyeOff, Camera } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -33,14 +33,33 @@ export function SettingsPage() {
   const [saveError, setSaveError]     = useState<string | null>(null)
   const [language, setLanguage]       = useState('en')
   const [notifications, setNotifications] = useState({
-    analysis: true, jury: true, tips: false, updates: true,
+    analysis: true, jury: true, updates: true,
   })
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default')
+
+  // Change photo
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUrl, setAvatarUrl]     = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+
+  // Change password
+  const [pwForm, setPwForm]           = useState({ current: '', next: '', confirm: '' })
+  const [pwError, setPwError]         = useState<string | null>(null)
+  const [pwSaving, setPwSaving]       = useState(false)
+  const [pwSaved, setPwSaved]         = useState(false)
+  const [showPw, setShowPw]           = useState({ current: false, next: false, confirm: false })
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm]     = useState('')
   const [deleting, setDeleting]               = useState(false)
   const [deleteError, setDeleteError]         = useState<string | null>(null)
+
+  // Init notification permission state
+  useEffect(() => {
+    if (!('Notification' in window)) { setNotifPermission('unsupported'); return }
+    setNotifPermission(Notification.permission)
+  }, [])
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== 'DELETE' || deleting) return
@@ -66,10 +85,6 @@ export function SettingsPage() {
     }
   }
 
-  // Populate form from real profile.
-  // Use stable primitive deps (id, email, specific fields) instead of object
-  // references — prevents double-fire when onAuthStateChange emits a new User
-  // object for the same session.
   useEffect(() => {
     if (profile || user) {
       setForm({
@@ -78,6 +93,9 @@ export function SettingsPage() {
         university: profile?.university || '',
       })
       if (profile?.language) setLanguage(profile.language)
+      // Load avatar from user metadata
+      const meta = user?.user_metadata
+      if (meta?.avatar_url) setAvatarUrl(meta.avatar_url as string)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, profile?.full_name, profile?.university, profile?.language, user?.id, user?.email])
@@ -99,14 +117,12 @@ export function SettingsPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      // Timeout guard: Supabase on free tier can occasionally hang
       const result = await Promise.race([
         supabase.from('profiles').update({ full_name: form.name, university: form.university, language }).eq('id', user.id),
         new Promise<{ error: Error }>(resolve => setTimeout(() => resolve({ error: new Error('Request timed out') }), 8000)),
       ]) as { error: Error | null }
       setSaving(false)
       if (result.error) { setSaveError(result.error.message); return }
-      // Don't await refreshProfile — let it update in the background
       refreshProfile().catch(() => {})
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -116,12 +132,62 @@ export function SettingsPage() {
     }
   }
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    setPhotoUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${user.id}/avatar.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+      if (uploadErr) throw uploadErr
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const url = urlData.publicUrl
+      await supabase.auth.updateUser({ data: { avatar_url: url } })
+      setAvatarUrl(url)
+    } catch {
+      // Avatar bucket might not be set up — silently fail
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
+  const changePassword = async () => {
+    if (pwForm.next.length < 6) { setPwError('New password must be at least 6 characters'); return }
+    if (pwForm.next !== pwForm.confirm) { setPwError('Passwords do not match'); return }
+    setPwSaving(true); setPwError(null)
+    const { error } = await supabase.auth.updateUser({ password: pwForm.next })
+    setPwSaving(false)
+    if (error) { setPwError(error.message); return }
+    setPwSaved(true)
+    setPwForm({ current: '', next: '', confirm: '' })
+    setTimeout(() => setPwSaved(false), 3000)
+  }
+
+  const requestNotifPermission = async () => {
+    if (!('Notification' in window)) return
+    const result = await Notification.requestPermission()
+    setNotifPermission(result)
+  }
+
+  const exportData = async () => {
+    if (!user) return
+    const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const { data: analyses } = await supabase.from('analyses').select('id, status, concept_score, spatial_score, presentation_score, created_at').eq('user_id', user.id)
+    const { data: projects } = await supabase.from('projects').select('id, name, stage, created_at').eq('user_id', user.id)
+    const blob = new Blob([JSON.stringify({ profile: profileData, projects, analyses }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'critup-data.json'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const Toggle = ({ val, onChange }: { val: boolean; onChange: () => void }) => (
     <button onClick={onChange} style={{
       width: 44, height: 24, borderRadius: 100, border: 'none', cursor: 'pointer',
       transition: 'all 0.2s',
       background: val ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#d1d5db'),
-      position: 'relative',
+      position: 'relative', flexShrink: 0,
     }}>
       <div style={{
         width: 18, height: 18, borderRadius: '50%', background: '#fff',
@@ -166,17 +232,33 @@ export function SettingsPage() {
           {activeTab === 'profile' && (
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 20px' }}>Profile</h2>
+
+              {/* Avatar */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24, paddingBottom: 24, borderBottom: `1px solid ${c.border}` }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#F97316', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                  {initials}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: avatarUrl ? 'transparent' : '#F97316', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff', overflow: 'hidden' }}>
+                    {avatarUrl
+                      ? <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : initials
+                    }
+                  </div>
+                  {photoUploading && (
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Loader2 size={16} color="#fff" style={{ animation: 'spin 0.8s linear infinite' }} />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 2px' }}>{form.name || 'Your name'}</p>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: '0 0 8px' }}>{form.email}</p>
-                  <button style={{ fontSize: 12, color: '#F97316', background: 'none', border: `1px solid #F97316`, borderRadius: 100, padding: '4px 12px', cursor: 'pointer' }}>Change photo</button>
+                  <button onClick={() => photoInputRef.current?.click()} style={{ fontSize: 12, color: '#F97316', background: 'none', border: '1px solid #F97316', borderRadius: 100, padding: '4px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Camera size={11} /> Change photo
+                  </button>
+                  <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
                 </div>
               </div>
 
+              {/* Profile fields */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {([
                   { label: 'Full name',   key: 'name'       as const, editable: true  },
@@ -228,6 +310,45 @@ export function SettingsPage() {
                   {saved ? <><Check size={15} /> Saved!</> : saving ? 'Saving…' : 'Save changes'}
                 </button>
               </div>
+
+              {/* ── Change Password ── */}
+              <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${c.border}` }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, margin: '0 0 14px' }}>Change password</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {([
+                    { key: 'next'    as const, label: 'New password'     },
+                    { key: 'confirm' as const, label: 'Confirm password' },
+                  ]).map(({ key, label }) => (
+                    <div key={key}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, display: 'block', marginBottom: 6 }}>{label}</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPw[key] ? 'text' : 'password'}
+                          value={pwForm[key]}
+                          onChange={e => { setPwForm(f => ({ ...f, [key]: e.target.value })); setPwError(null) }}
+                          placeholder="••••••••"
+                          style={{ ...inp, paddingRight: 40 }}
+                          onFocus={e => e.target.style.borderColor = '#F97316'}
+                          onBlur={e => e.target.style.borderColor = c.border}
+                        />
+                        <button onClick={() => setShowPw(s => ({ ...s, [key]: !s[key] }))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 0, display: 'flex' }}>
+                          {showPw[key] ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {pwError && <p style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)', margin: 0 }}>{pwError}</p>}
+                  {pwSaved && <p style={{ fontSize: 12, color: '#1a9e4a', margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}><Check size={12} /> Password updated!</p>}
+                  <button onClick={changePassword} disabled={pwSaving || !pwForm.next || !pwForm.confirm} style={{
+                    padding: '10px', borderRadius: 100, background: c.isDark ? 'oklch(0.28 0.006 270)' : '#f3f4f6',
+                    border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 600,
+                    cursor: pwSaving ? 'not-allowed' : 'pointer', opacity: (!pwForm.next || !pwForm.confirm) ? 0.5 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                    {pwSaving ? 'Updating…' : 'Update password'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -235,12 +356,33 @@ export function SettingsPage() {
           {activeTab === 'notifications' && (
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 20px' }}>Notifications</h2>
+
+              {/* Browser permission banner */}
+              {notifPermission !== 'unsupported' && notifPermission !== 'granted' && (
+                <div style={{ background: c.isDark ? 'oklch(0.72 0.18 45 / 0.08)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45 / 0.3)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, margin: '0 0 2px' }}>Enable desktop notifications</p>
+                    <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{notifPermission === 'denied' ? 'Notifications are blocked — allow them in your browser settings.' : 'Get notified when your analysis is ready.'}</p>
+                  </div>
+                  {notifPermission !== 'denied' && (
+                    <button onClick={requestNotifPermission} style={{ padding: '8px 16px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45 / 0.3)' }}>
+                      Allow
+                    </button>
+                  )}
+                </div>
+              )}
+              {notifPermission === 'granted' && (
+                <div style={{ background: c.isDark ? 'oklch(0.72 0.18 45 / 0.06)' : '#f0fdf4', border: '1px solid oklch(0.55 0.15 145 / 0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Check size={14} color="#1a9e4a" />
+                  <p style={{ fontSize: 13, color: '#1a9e4a', margin: 0, fontWeight: 500 }}>Desktop notifications are enabled</p>
+                </div>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {([
-                  { key: 'analysis' as const, label: 'Analysis complete',        desc: 'When your project analysis is ready'      },
-                  { key: 'jury'     as const, label: 'Jury practice reminders',  desc: 'Daily reminders to practise before jury'  },
-                  { key: 'tips'     as const, label: 'Weekly tips',              desc: 'Design and presentation tips from the AI' },
-                  { key: 'updates'  as const, label: 'Product updates',          desc: 'New features and improvements'            },
+                  { key: 'analysis' as const, label: 'Analysis complete',       desc: 'When your project analysis is ready'     },
+                  { key: 'jury'     as const, label: 'Jury practice reminders', desc: 'Daily reminders to practise before jury' },
+                  { key: 'updates'  as const, label: 'Product updates',         desc: 'New features and improvements'           },
                 ]).map(({ key, label, desc }, i, arr) => (
                   <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: i < arr.length - 1 ? `1px solid ${c.border}` : 'none' }}>
                     <div>
@@ -290,24 +432,31 @@ export function SettingsPage() {
           {activeTab === 'account' && (
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 20px' }}>Account & Plan</h2>
-              <div style={{ background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f8fafc', borderRadius: 14, padding: '16px', border: `1px solid ${c.border}`, marginBottom: 20 }}>
+
+              {/* Plan card */}
+              <div style={{ background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f8fafc', borderRadius: 14, padding: '18px', border: `1px solid ${c.border}`, marginBottom: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 4 }}>CURRENT PLAN</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: c.textPrimary, textTransform: 'capitalize' }}>{profile?.plan ?? 'Free'}</div>
-                    <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>{profile?.analyses_used ?? 0} analyses used</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 6 }}>CURRENT PLAN</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, textTransform: 'capitalize', letterSpacing: '-0.02em' }}>{profile?.plan === 'free' || !profile?.plan ? 'Free' : profile.plan}</div>
+                    <div style={{ fontSize: 13, color: c.textMuted, marginTop: 4 }}>{profile?.analyses_used ?? 0} analyses used · {profile?.plan === 'free' || !profile?.plan ? '1 included free' : 'Unlimited'}</div>
                   </div>
-                  <button style={{ padding: '10px 18px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.3)' }}>
+                  <button
+                    onClick={() => navigate({ to: '/pricing' })}
+                    style={{ padding: '10px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', whiteSpace: 'nowrap' }}
+                  >
                     Upgrade →
                   </button>
                 </div>
               </div>
-              <div style={{ borderRadius: 14, padding: '16px', border: `1px solid oklch(0.65 0.18 25 / 0.3)` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'oklch(0.65 0.18 25)', marginBottom: 10 }}>Danger zone</div>
+
+              {/* Danger zone */}
+              <div style={{ borderRadius: 14, padding: '16px', border: '1px solid oklch(0.65 0.18 25 / 0.3)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'oklch(0.65 0.18 25)', marginBottom: 6 }}>Danger zone</div>
                 <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 12px' }}>These actions are permanent and cannot be undone.</p>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>Export data</button>
-                  <button onClick={() => { setShowDeleteModal(true); setDeleteConfirm(''); setDeleteError(null) }} style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid oklch(0.65 0.18 25 / 0.4)`, color: 'oklch(0.65 0.18 25)', fontSize: 13, cursor: 'pointer' }}>Delete account</button>
+                  <button onClick={exportData} style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>Export data</button>
+                  <button onClick={() => { setShowDeleteModal(true); setDeleteConfirm(''); setDeleteError(null) }} style={{ padding: '8px 14px', borderRadius: 100, background: 'transparent', border: '1px solid oklch(0.65 0.18 25 / 0.4)', color: 'oklch(0.65 0.18 25)', fontSize: 13, cursor: 'pointer' }}>Delete account</button>
                 </div>
               </div>
             </div>
@@ -321,7 +470,7 @@ export function SettingsPage() {
     {showDeleteModal && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
         onClick={e => { if (e.target === e.currentTarget && !deleting) setShowDeleteModal(false) }}>
-        <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 420, border: `1px solid oklch(0.65 0.18 25 / 0.4)`, boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 420, border: '1px solid oklch(0.65 0.18 25 / 0.4)', boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'oklch(0.65 0.18 25 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <AlertTriangle size={17} color="oklch(0.65 0.18 25)" />
@@ -345,9 +494,7 @@ export function SettingsPage() {
             </div>
           )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button onClick={() => setShowDeleteModal(false)} disabled={deleting} style={{ padding: '9px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>
-              Cancel
-            </button>
+            <button onClick={() => setShowDeleteModal(false)} disabled={deleting} style={{ padding: '9px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
             <button onClick={handleDeleteAccount} disabled={deleteConfirm !== 'DELETE' || deleting}
               style={{ padding: '9px 20px', borderRadius: 100, background: deleteConfirm === 'DELETE' && !deleting ? 'oklch(0.65 0.18 25)' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), border: 'none', color: deleteConfirm === 'DELETE' && !deleting ? '#fff' : c.textMuted, fontSize: 13, fontWeight: 600, cursor: deleteConfirm === 'DELETE' && !deleting ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s' }}>
               {deleting && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}

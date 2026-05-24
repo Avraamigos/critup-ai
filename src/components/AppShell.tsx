@@ -61,12 +61,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', handle)
   }, [accountOpen])
 
-  // ── Auth guard: redirect to landing if not logged in ──
+  // ── Auth guard: redirect to landing if not logged in, onboarding if incomplete ──
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate({ to: '/landing' })
-    }
-  }, [authLoading, user, navigate])
+    if (authLoading) return
+    if (!user) { navigate({ to: '/landing' }); return }
+    if (profile && !profile.onboarding_complete) { navigate({ to: '/onboarding' }); return }
+  }, [authLoading, user, profile, navigate])
 
   const signOut = () => {
     setAccountOpen(false)

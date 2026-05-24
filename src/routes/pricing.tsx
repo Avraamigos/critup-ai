@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Check, Lock, X } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
+import { track } from '@/lib/analytics'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   const dotColor = theme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.04)'
@@ -41,12 +42,12 @@ export function PricingPage() {
     {
       name: 'Monthly', price: '$9', sub: '/mo', cancel: 'Cancel anytime',
       features: ['Unlimited project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
-      cta: 'Start monthly', featured: true, badge: 'Most popular', action: () => setPaywallOpen(true),
+      cta: 'Start monthly', featured: true, badge: 'Most popular', action: () => { track.upgradeClicked('pricing_monthly'); setPaywallOpen(true) },
     },
     {
       name: 'Yearly', price: '$59', sub: '/yr', crossed: '$108', save: 'Save 45%',
       features: ['Everything in Monthly', 'Video presentation coach', 'Priority processing', 'Early access to new features'],
-      cta: 'Start yearly', featured: false, badge: 'Best value', action: () => setPaywallOpen(true),
+      cta: 'Start yearly', featured: false, badge: 'Best value', action: () => { track.upgradeClicked('pricing_yearly'); setPaywallOpen(true) },
     },
   ]
 
