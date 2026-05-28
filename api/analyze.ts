@@ -310,23 +310,22 @@ export default async function handler(
       .update({ status: 'processing' })
       .eq('id', analysisId)
 
-    // 3. Download PDF from storage
+    // 3. Generate signed URL for the PDF (avoids downloading + base64 encoding)
     if (!analysis.pdf_path) {
       await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
       return res.status(400).json({ error: 'No PDF attached to this analysis' })
     }
 
-    const { data: fileData, error: dlErr } = await supabase.storage
+    const { data: signedUrlData, error: urlErr } = await supabase.storage
       .from('project-pdfs')
-      .download(analysis.pdf_path)
+      .createSignedUrl(analysis.pdf_path, 300) // valid for 5 minutes
 
-    if (dlErr || !fileData) {
+    if (urlErr || !signedUrlData?.signedUrl) {
       await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
-      return res.status(500).json({ error: 'Failed to download PDF' })
+      return res.status(500).json({ error: 'Failed to get PDF URL' })
     }
 
-    const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
-    const pdfBase64 = pdfBuffer.toString('base64')
+    const pdfUrl = signedUrlData.signedUrl
 
     // 4. Build context from project info
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -352,7 +351,7 @@ export default async function handler(
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 2500,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -360,11 +359,8 @@ export default async function handler(
           content: [
             {
               type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBase64,
-              },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              source: { type: 'url', url: pdfUrl } as any,
             },
             {
               type: 'text',
