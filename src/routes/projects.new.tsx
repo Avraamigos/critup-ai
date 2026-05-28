@@ -44,7 +44,7 @@ export function NewProjectPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isFreeUser = !profile || profile.plan === 'free'
-  const PAGE_LIMIT = isFreeUser ? 10 : 20
+  const PAGE_LIMIT = 50
 
   const validateAndSetFile = useCallback(async (file: File) => {
     setPageCountError(null)
@@ -472,9 +472,6 @@ export function NewProjectPage() {
                 <AlertTriangle size={16} color="#F97316" style={{ flexShrink: 0, marginTop: 1 }} />
                 <p style={{ margin: 0, fontSize: 13, color: c.textPrimary, lineHeight: 1.5 }}>
                   {pageCountError}
-                  {isFreeUser && (
-                    <> <span style={{ color: '#F97316', fontWeight: 600 }}>Upgrade to Pro</span> for up to 20 pages.</>
-                  )}
                 </p>
               </div>
             )}

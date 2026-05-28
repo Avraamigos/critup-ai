@@ -49,7 +49,7 @@ export function PricingPage() {
   const plans = [
     {
       name: 'Free', price: '$0', sub: '',
-      features: ['1 complete AI critique', 'Concept, Spatial & Presentation scores', 'PDF upload (up to 10 pages)', 'Basic jury questions'],
+      features: ['1 complete AI critique', 'Concept, Spatial & Presentation scores', 'PDF upload (up to 50 pages)', 'Basic jury questions'],
       cta: 'Continue free', featured: false, action: () => navigate({ to: '/' }),
     },
     {
