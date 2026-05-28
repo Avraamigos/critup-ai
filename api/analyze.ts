@@ -375,7 +375,14 @@ export default async function handler(
 
     // Strip markdown code fences if present
     const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    const result = JSON.parse(clean)
+    let result: Record<string, unknown>
+    try {
+      result = JSON.parse(clean)
+    } catch {
+      console.error('[analyze] JSON parse failed. Raw response:', raw.slice(0, 500))
+      await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+      return res.status(500).json({ error: 'AI returned invalid response, please try again' })
+    }
 
     // 7. Validate scores
     const concept_score = Math.min(10, Math.max(0, Number(result.concept_score) || 0))
