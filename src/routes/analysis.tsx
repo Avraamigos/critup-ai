@@ -124,16 +124,29 @@ export function AnalysisPage() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  // ── Progress bar: exponential fill, never self-completes (screen disappears when done) ──
+  // ── Progress bar: exponential fill, survives page reloads via localStorage ──
   useEffect(() => {
     const isPending = project?.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
-    if (!isPending) return
-    setProgress(0)
+    if (!isPending) {
+      localStorage.removeItem(`critup_analysis_start_${params.projectId}`)
+      return
+    }
+    // Restore start time from localStorage so reloads resume progress correctly
+    const key = `critup_analysis_start_${params.projectId}`
+    const stored = localStorage.getItem(key)
+    const startTime = stored ? parseInt(stored, 10) : Date.now()
+    if (!stored) localStorage.setItem(key, String(startTime))
+
+    // Calculate initial progress based on elapsed time (assume ~120s total)
+    const elapsed = (Date.now() - startTime) / 1000
+    const initialProgress = Math.min(94, elapsed / 120 * 97)
+    setProgress(initialProgress)
+
     const tick = setInterval(() => {
-      setProgress(p => p + Math.max(0.15, (97 - p) * 0.022))
+      setProgress(p => p + Math.max(0.1, (97 - p) * 0.018))
     }, 400)
     return () => clearInterval(tick)
-  }, [project?.analyses?.map(a => a.status).join()])
+  }, [project?.analyses?.map(a => a.status).join(), params.projectId])
 
   // Keep refs in sync with state (order matters — these run before the main effect)
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
@@ -564,7 +577,7 @@ export function AnalysisPage() {
             </div>
 
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>Analysis in progress</h2>
-            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 320, margin: '8px 0 0', lineHeight: 1.6 }}>Crit is reviewing your drawings in detail.<br/>This usually takes 30–50 seconds.</p>
+            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 320, margin: '8px 0 0', lineHeight: 1.6 }}>Crit is reviewing your drawings in detail.<br/>This usually takes 1–2 minutes.</p>
           </>
         ) : (
           <>
