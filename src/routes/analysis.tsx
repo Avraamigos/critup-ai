@@ -73,7 +73,8 @@ export function AnalysisPage() {
   const c = useColors(theme)
   const params   = useParams({ from: '/app/analysis/$projectId' })
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const isPro = !!profile && profile.plan !== 'free'
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
   const [isMobile,   setIsMobile]   = useState(() => window.innerWidth < 768)
@@ -82,11 +83,14 @@ export function AnalysisPage() {
   const [error,      setError]     = useState<string | null>(null)
   const [slideIdx,      setSlideIdx]     = useState(0)
   const [isPlaying,     setIsPlaying]    = useState(false)
-  const [voiceOn,       setVoiceOn]      = useState(true)   // ON by default
+  const [voiceOn,       setVoiceOn]      = useState(false)  // set true for pro users once profile loads
   const [pdfUrl,        setPdfUrl]       = useState<string | null>(null)
   const [speaking,      setSpeaking]     = useState(false)
   const [captionWords,  setCaptionWords] = useState<string[]>([])
   const [audioReady,    setAudioReady]   = useState(false)   // true once slide 0 is in cache
+
+  // ── Analysis progress bar state ──
+  const [progress, setProgress] = useState(0)
 
   // ── Re-upload (new version) state ──
   const [showReupload,    setShowReupload]    = useState(false)
@@ -120,9 +124,23 @@ export function AnalysisPage() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  // ── Progress bar: exponential fill, never self-completes (screen disappears when done) ──
+  useEffect(() => {
+    const isPending = project?.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
+    if (!isPending) return
+    setProgress(0)
+    const tick = setInterval(() => {
+      setProgress(p => p + Math.max(0.15, (97 - p) * 0.022))
+    }, 400)
+    return () => clearInterval(tick)
+  }, [project?.analyses?.map(a => a.status).join()])
+
   // Keep refs in sync with state (order matters — these run before the main effect)
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
   useEffect(() => { voiceOnRef.current   = voiceOn   }, [voiceOn])
+
+  // Enable voice by default once we confirm the user is Pro
+  useEffect(() => { if (isPro) setVoiceOn(true) }, [isPro])
 
   // ── Load data with polling ──
   useEffect(() => {
@@ -497,12 +515,56 @@ export function AnalysisPage() {
       <div style={{ marginTop: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
         {isPending ? (
           <>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px oklch(0.72 0.18 45/0.3)', animation: 'pulse-ring 2.5s ease-in-out infinite' }}>
-              <Loader2 size={30} color="#F97316" style={{ animation: 'spin 1s linear infinite' }} />
+            <style>{`
+              @keyframes bar-shimmer {
+                0%   { transform: translateX(-100%); }
+                100% { transform: translateX(250%); }
+              }
+              @keyframes bar-glow-pulse {
+                0%,100% { box-shadow: 0 0 8px #F97316, 0 0 20px oklch(0.72 0.18 45/0.35); }
+                50%     { box-shadow: 0 0 16px #F97316, 0 0 40px oklch(0.72 0.18 45/0.6); }
+              }
+            `}</style>
+
+            {/* Stage label */}
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#F97316', margin: '0 0 20px', letterSpacing: '0.01em', fontFamily: FONT }}>
+              {progress < 8  ? 'Receiving your drawings…'
+              : progress < 22 ? 'Reading every page…'
+              : progress < 52 ? 'Studying your design…'
+              : progress < 75 ? 'Writing critique…'
+              : progress < 90 ? 'Checking quality…'
+              : 'Almost ready…'}
+            </p>
+
+            {/* Bar track */}
+            <div style={{
+              width: 280, height: 6, borderRadius: 100,
+              background: c.isDark ? 'oklch(0.22 0.006 270)' : '#e5e7eb',
+              overflow: 'hidden',
+              position: 'relative',
+            }}>
+              {/* Filled portion */}
+              <div style={{
+                height: '100%',
+                width: `${Math.min(97, progress)}%`,
+                borderRadius: 100,
+                background: 'linear-gradient(90deg, #e86a00, #F97316, #ffaa55)',
+                transition: 'width 0.4s ease',
+                animation: 'bar-glow-pulse 2s ease-in-out infinite',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                {/* Shimmer sweep */}
+                <div style={{
+                  position: 'absolute', top: 0, bottom: 0, width: '35%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                  animation: 'bar-shimmer 1.8s ease-in-out infinite',
+                }} />
+              </div>
             </div>
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse-ring{0%,100%{box-shadow:0 0 20px oklch(0.72 0.18 45/0.2)}50%{box-shadow:0 0 50px oklch(0.72 0.18 45/0.6)}}`}</style>
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: c.textPrimary, fontFamily: FONT }}>Analysis in progress…</h2>
-            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 340, margin: 0, lineHeight: 1.6 }}>Your drawings are being reviewed by AI. Usually takes 1–2 minutes.</p>
+
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>Analysis in progress</h2>
+            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 320, margin: '8px 0 0', lineHeight: 1.6 }}>Crit is reviewing your drawings in detail.<br/>This usually takes 30–50 seconds.</p>
           </>
         ) : (
           <>
@@ -526,7 +588,8 @@ export function AnalysisPage() {
   const pdfPage   = current?.page  ?? 1
   const focusX    = current?.focus?.x ?? 0.5
   const focusY    = current?.focus?.y ?? 0.5
-  const zoomLevel = current?.zoom  ?? 1
+  // Only apply zoom when Claude is pointing at a specific element (threshold > 1.15)
+  const zoomLevel = (current?.zoom ?? 1) > 1.15 ? (current?.zoom ?? 1) : 1
 
   const scoreRings = [
     { label: 'Concept',      score: latestAnalysis.concept_score ?? 0 },
@@ -681,14 +744,28 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           0%,100% { box-shadow: inset 0 0 70px oklch(0.72 0.17 145/0.75), inset 0 0 140px oklch(0.72 0.17 145/0.4), inset 0 0 220px oklch(0.72 0.17 145/0.18); }
           50%     { box-shadow: inset 0 0 24px oklch(0.72 0.17 145/0.2),  inset 0 0 50px oklch(0.72 0.17 145/0.08); }
         }
-        @keyframes focus-ping {
-          0%    { transform: translate(-50%,-50%) scale(1);   opacity: 0.9; }
-          70%   { transform: translate(-50%,-50%) scale(2.4); opacity: 0; }
-          100%  { transform: translate(-50%,-50%) scale(2.4); opacity: 0; }
+        @keyframes focus-enter {
+          0%   { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+          55%  { transform: translate(-50%,-50%) scale(1.35); opacity: 1; }
+          75%  { transform: translate(-50%,-50%) scale(0.88); }
+          90%  { transform: translate(-50%,-50%) scale(1.08); }
+          100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
         }
-        @keyframes focus-dot-pulse {
+        @keyframes focus-wiggle {
+          0%,100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+          20%  { transform: translate(-50%,-50%) scale(1) rotate(-12deg); }
+          40%  { transform: translate(-50%,-50%) scale(1) rotate(10deg); }
+          60%  { transform: translate(-50%,-50%) scale(1) rotate(-6deg); }
+          80%  { transform: translate(-50%,-50%) scale(1) rotate(5deg); }
+        }
+        @keyframes focus-glow {
           0%,100% { box-shadow: 0 0 0 0 oklch(0.72 0.18 45/0.5); }
-          50%     { box-shadow: 0 0 0 6px oklch(0.72 0.18 45/0); }
+          50%     { box-shadow: 0 0 0 7px oklch(0.72 0.18 45/0); }
+        }
+        @keyframes focus-ping {
+          0%    { transform: translate(-50%,-50%) scale(1);   opacity: 0.8; }
+          70%   { transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
+          100%  { transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
         }
       `}</style>
 
@@ -704,15 +781,26 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {/* Voice toggle */}
-          <button
-            onClick={() => setVoiceOn(v => !v)}
-            title={voiceOn ? 'Turn off voice' : 'Turn on AI voice narration'}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: voiceOn ? 'oklch(0.72 0.18 45/0.12)' : c.cardBg, border: `1px solid ${voiceOn ? '#F97316' : c.border}`, color: voiceOn ? '#F97316' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
-          >
-            {speaking ? <Volume2 size={13} style={{ animation: 'pulse-ring 0.8s ease-in-out infinite' }} /> : voiceOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
-            {!isMobile && (voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice')}
-          </button>
+          {/* Voice toggle — Pro only */}
+          {isPro ? (
+            <button
+              onClick={() => setVoiceOn(v => !v)}
+              title={voiceOn ? 'Turn off voice' : 'Turn on AI voice narration'}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: voiceOn ? 'oklch(0.72 0.18 45/0.12)' : c.cardBg, border: `1px solid ${voiceOn ? '#F97316' : c.border}`, color: voiceOn ? '#F97316' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              {speaking ? <Volume2 size={13} style={{ animation: 'pulse-ring 0.8s ease-in-out infinite' }} /> : voiceOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              {!isMobile && (voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice')}
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate({ to: '/pricing' })}
+              title="Voice narration is available on Pro"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s', opacity: 0.7 }}
+            >
+              <VolumeX size={13} />
+              {!isMobile && <span>Voice <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span></span>}
+            </button>
+          )}
           <button
             onClick={() => { setShowReupload(true); setReuploadFile(null); setReuploadError(null) }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
@@ -775,7 +863,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             />
 
             {/* Focus annotation dot — shows exactly where on the drawing Claude is pointing */}
-            {!isSummary && current?.focus && (
+            {!isSummary && current?.focus && zoomLevel > 1 && (
               <div
                 key={`dot-${slideIdx}`}
                 style={{
@@ -786,24 +874,23 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                   zIndex: 10,
                 }}
               >
-                {/* Ping ring */}
+                {/* Ping ring — one big ping on enter, then periodic */}
                 <div style={{
                   position: 'absolute',
                   width: 36, height: 36,
                   borderRadius: '50%',
                   border: '2px solid #F97316',
-                  animation: 'focus-ping 1.8s ease-out infinite',
+                  animation: 'focus-ping 1s ease-out, focus-ping 2.5s ease-out 1.2s infinite',
                 }} />
-                {/* Solid dot */}
+                {/* Solid dot — bounce in, wiggle, then settle to glow pulse */}
                 <div style={{
                   position: 'absolute',
                   width: 14, height: 14,
                   borderRadius: '50%',
                   background: '#F97316',
-                  transform: 'translate(-50%, -50%)',
                   boxShadow: '0 0 12px #F97316, 0 0 24px oklch(0.72 0.18 45/0.6)',
-                  animation: 'focus-dot-pulse 2s ease-in-out infinite',
                   border: '2px solid #fff',
+                  animation: 'focus-enter 0.45s cubic-bezier(0.34,1.56,0.64,1) both, focus-wiggle 0.4s ease-in-out 0.45s 1 both, focus-glow 2.5s ease-in-out 0.9s infinite',
                 }} />
                 {/* Feedback number label */}
                 <div style={{
@@ -941,28 +1028,39 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
 
       {/* ── Footer ── */}
       <div style={{ padding: isMobile ? '8px 14px 12px' : '10px 22px 14px', flexShrink: 0 }}>
-        {/* Caption bar */}
+        {/* Caption bar — shows upgrade prompt for free users */}
         <div style={{ background: c.isDark ? 'oklch(0.15 0.004 270)' : '#f8fafc', border: `1px solid ${speaking ? 'oklch(0.72 0.18 45/0.5)' : c.border}`, borderRadius: 12, padding: '10px 16px', marginBottom: 10, minHeight: 46, display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.3s' }}>
-          <Volume2 size={13} color={speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0, transition: 'color 0.3s' }} />
+          <Volume2 size={13} color={!isPro ? 'oklch(0.72 0.18 45/0.5)' : speaking ? '#F97316' : c.textMuted} style={{ flexShrink: 0, transition: 'color 0.3s' }} />
           <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5, flex: 1, minHeight: '1.5em' }}>
-            {speaking && captionWords.length > 0
-              ? captionWords.map((word, i) => (
+            {!isPro
+              ? <span style={{ color: c.textMuted }}>
+                  Voice narration is available on{' '}
                   <span
-                    key={`${slideIdx}-${i}`}
-                    style={{
-                      color: i === captionWords.length - 1 ? '#F97316' : c.textPrimary,
-                      fontWeight: i === captionWords.length - 1 ? 600 : 400,
-                      transition: 'color 0.15s',
-                    }}
+                    onClick={() => navigate({ to: '/pricing' })}
+                    style={{ color: '#F97316', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                   >
-                    {word}{' '}
+                    Pro
                   </span>
-                ))
-              : isSummary
-                ? <span style={{ color: c.textMuted }}>Analysis complete — {feedbackItems.length} critiques · {avg.toFixed(1)} / 10</span>
-                : current
-                  ? <span style={{ color: c.textMuted }}>{current.title}</span>
-                  : <span style={{ color: c.textMuted }}>Press play to begin</span>
+                  {' '}— use ← → to read critiques below
+                </span>
+              : speaking && captionWords.length > 0
+                ? captionWords.map((word, i) => (
+                    <span
+                      key={`${slideIdx}-${i}`}
+                      style={{
+                        color: i === captionWords.length - 1 ? '#F97316' : c.textPrimary,
+                        fontWeight: i === captionWords.length - 1 ? 600 : 400,
+                        transition: 'color 0.15s',
+                      }}
+                    >
+                      {word}{' '}
+                    </span>
+                  ))
+                : isSummary
+                  ? <span style={{ color: c.textMuted }}>Analysis complete — {feedbackItems.length} critiques · {avg.toFixed(1)} / 10</span>
+                  : current
+                    ? <span style={{ color: c.textMuted }}>{current.title}</span>
+                    : <span style={{ color: c.textMuted }}>Press play to begin</span>
             }
           </p>
         </div>
@@ -976,6 +1074,8 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           >
             ← Previous
           </button>
+          {/* Play button — Pro only; free users see an upgrade button */}
+          {isPro ? (
           <button
             onClick={handlePlayPause}
             title={!audioReady && voiceOn && !isPlaying ? 'Loading audio…' : undefined}
@@ -986,6 +1086,18 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               : isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />
             }
           </button>
+          ) : (
+            <button
+              onClick={() => navigate({ to: '/pricing' })}
+              title="Upgrade to Pro for voice narration"
+              style={{ width: 48, height: 48, borderRadius: '50%', background: c.cardBg, border: `1.5px solid ${c.border}`, color: c.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0, position: 'relative' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
+            >
+              <Play size={17} style={{ marginLeft: 2, opacity: 0.4 }} />
+              <span style={{ position: 'absolute', top: -4, right: -4, fontSize: 8, fontWeight: 800, background: '#F97316', color: '#fff', borderRadius: 4, padding: '1px 4px', lineHeight: 1.4 }}>PRO</span>
+            </button>
+          )}
           <button
             onClick={() => { killAudio(); setSlideIdx(s => Math.min(s + 1, totalSlides - 1)) }}
             disabled={slideIdx >= totalSlides - 1}

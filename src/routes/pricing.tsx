@@ -1,37 +1,50 @@
 import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Check, Lock, X } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
+import { useAuth } from '@/lib/auth'
+import { getPaddle, PRICE_IDS } from '@/lib/paddle'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   const dotColor = theme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.04)'
   return <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`, backgroundSize: '24px 24px' }} />
 }
 
-function PaywallModal({ open, onClose, theme }: { open: boolean; onClose: () => void; theme: 'dark' | 'light' }) {
-  const c = useColors(theme)
-  if (!open) return null
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(4px)' }}>
-      <div style={{ background: c.cardBg, borderRadius: 20, padding: '36px 40px', maxWidth: 420, width: '90%', border: `1px solid ${c.border}`, textAlign: 'center', position: 'relative' }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'oklch(0.72 0.18 45 / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-          <Lock size={22} color="#F97316" />
-        </div>
-        <h3 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 8px', color: c.textPrimary }}>Coming soon</h3>
-        <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 24px' }}>Payments are launching soon. For now, enjoy full access to all features free while we're in beta.</p>
-        <button onClick={onClose} style={{ width: '100%', padding: '12px', borderRadius: 10, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 20px oklch(0.72 0.18 45 / 0.35)' }}>Got it — keep exploring</button>
-      </div>
-    </div>
-  )
-}
-
 export function PricingPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
-  const [paywallOpen, setPaywallOpen] = useState(false)
+  const { user, profile, refreshProfile } = useAuth()
+  const [loadingPlan, setLoadingPlan] = useState<'monthly' | 'yearly' | null>(null)
+
+  const openCheckout = async (plan: 'monthly' | 'yearly') => {
+    if (!user) { navigate({ to: '/login' }); return }
+    setLoadingPlan(plan)
+    try {
+      const paddle = await getPaddle()
+      if (!paddle) throw new Error('Paddle failed to load')
+      paddle.Checkout.open({
+        items: [{ priceId: PRICE_IDS[plan], quantity: 1 }],
+        customer: { email: user.email ?? '' },
+        customData: { userId: user.id },
+        settings: {
+          displayMode: 'overlay',
+          theme: theme === 'dark' ? 'dark' : 'light',
+          successUrl: `${window.location.origin}/dashboard?upgraded=1`,
+        },
+      })
+    } catch (err) {
+      console.error('Paddle checkout error', err)
+    } finally {
+      setLoadingPlan(null)
+    }
+    // Refresh profile after checkout completes (paddle fires onComplete before redirect)
+    void refreshProfile()
+  }
+
+  const isPro = !!profile && profile.plan !== 'free'
 
   const plans = [
     {
@@ -40,14 +53,18 @@ export function PricingPage() {
       cta: 'Continue free', featured: false, action: () => navigate({ to: '/' }),
     },
     {
-      name: 'Monthly', price: '$8', sub: '/mo', cancel: 'Cancel anytime',
-      features: ['Unlimited project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
-      cta: 'Start monthly', featured: true, badge: 'Most popular', action: () => { track.upgradeClicked('pricing_monthly'); setPaywallOpen(true) },
+      name: 'Monthly', price: '$7', sub: '/mo', cancel: 'Cancel anytime',
+      features: ['Full project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
+      cta: isPro ? 'Current plan' : (loadingPlan === 'monthly' ? 'Opening…' : 'Start monthly'),
+      featured: true, badge: 'Most popular',
+      action: () => { if (isPro) return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },
     },
     {
-      name: 'Yearly', price: '$55', sub: '/yr', crossed: '$96', save: 'Save 43%',
+      name: 'Yearly', price: '$45', sub: '/yr', crossed: '$84', save: 'Save 46%',
       features: ['Everything in Monthly', 'Video presentation coach', 'Priority processing', 'Early access to new features'],
-      cta: 'Start yearly', featured: false, badge: 'Best value', action: () => { track.upgradeClicked('pricing_yearly'); setPaywallOpen(true) },
+      cta: isPro ? 'Current plan' : (loadingPlan === 'yearly' ? 'Opening…' : 'Start yearly'),
+      featured: false, badge: 'Best value',
+      action: () => { if (isPro) return; track.upgradeClicked('pricing_yearly'); openCheckout('yearly') },
     },
   ]
 
@@ -105,7 +122,6 @@ export function PricingPage() {
           Questions? <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
         </div>
       </div>
-      <PaywallModal open={paywallOpen} onClose={() => navigate({ to: '/' })} theme={theme} />
     </div>
   )
 }

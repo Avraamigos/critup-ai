@@ -315,12 +315,12 @@ export function LandingPage() {
                 cta:'Start analysing free',
               },
               {
-                name:'Monthly', price:'$8', sub:'/mo', featured:true, badge:'Most popular',
-                features:['Unlimited project analyses','PDF voiceover narration','Jury Q&A practice sessions','Unlimited Crit chat','Full project history'],
+                name:'Monthly', price:'$7', sub:'/mo', featured:true, badge:'Most popular',
+                features:['Full project analyses','PDF voiceover narration','Jury Q&A practice sessions','Crit AI chat','Full project history'],
                 cta:'Start monthly',
               },
               {
-                name:'Yearly', price:'$49', sub:'/yr', crossed:'$96', save:'Save 49%', featured:false, badge:'Best value',
+                name:'Yearly', price:'$45', sub:'/yr', crossed:'$84', save:'Save 46%', featured:false, badge:'Best value',
                 features:['Everything in Monthly','Priority AI processing','Earliest access to new features','Direct support'],
                 cta:'Start yearly',
               },

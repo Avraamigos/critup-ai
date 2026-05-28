@@ -3,7 +3,7 @@ import { Search, ChevronDown, ChevronUp, MessageSquare, BookOpen, Video } from '
 import { useTheme, useColors } from '@/lib/theme'
 
 const FAQS = [
-  { q: 'How many analyses do I get?', a: 'The Free plan includes 1 project analysis. The Monthly plan ($8/mo) and Yearly plan ($49/yr) give you unlimited analyses.' },
+  { q: 'How many analyses do I get?', a: 'The Free plan includes 1 project analysis. The Monthly plan ($7/mo) and Yearly plan ($45/yr) give you generous access — more than enough for any active architecture student.' },
   { q: 'What design disciplines does Critup support?', a: 'Architecture, Interior Architecture, Urban Design, and Landscape Architecture. More disciplines are coming soon.' },
   { q: 'How accurate is the AI scoring?', a: 'Scores are calibrated against common jury rubrics (concept clarity, spatial logic, presentation quality). They are a guide, not a grade — use them to identify weak points to address.' },
   { q: 'Can I re-analyse a project after making changes?', a: 'Yes — just upload the updated PDF from the project page. Each upload creates a new analysis snapshot so you can track improvement over time.' },

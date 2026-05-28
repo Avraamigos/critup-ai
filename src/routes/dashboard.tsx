@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Eye, Plus, ArrowRight, Mic, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import { Eye, Plus, ArrowRight, Mic, TrendingUp, Calendar, Loader2, Sparkles } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -55,9 +55,25 @@ export function DashboardPage() {
   const c = useColors(theme)
   const isMobile = useIsMobile()
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
+
+  // Show upgrade success banner if redirected from Paddle checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('upgraded') === '1') {
+      setShowUpgradeBanner(true)
+      // Clean the URL
+      window.history.replaceState({}, '', '/dashboard')
+      // Refresh profile to pick up new plan
+      void refreshProfile()
+      const t = setTimeout(() => setShowUpgradeBanner(false), 6000)
+      return () => clearTimeout(t)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -120,6 +136,15 @@ export function DashboardPage() {
     <div style={{ padding: isMobile ? '20px 16px' : '28px', maxWidth: 1080, position: 'relative' }}>
       {c.isDark && <div style={{ position: 'fixed', top: 0, right: 0, width: '55%', height: '45%', background: 'radial-gradient(ellipse 60% 40% at 70% 10%, oklch(0.72 0.18 45 / 0.05) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />}
 
+      {/* Upgrade success banner */}
+      {showUpgradeBanner && (
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'linear-gradient(135deg, #F97316, #fb923c)', borderRadius: 14, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px oklch(0.72 0.18 45 / 0.4)', animation: 'slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+          <Sparkles size={18} color="#fff" />
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Welcome to Pro! All features are now unlocked.</span>
+          <style>{`@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
+        </div>
+      )}
+
       {/* Welcome */}
       <div style={{ marginBottom: isMobile ? 20 : 28, position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 6 : 10, marginBottom: 3 }}>
@@ -161,8 +186,8 @@ export function DashboardPage() {
             </div>
             <div style={{ fontSize: 12, color: c.textMuted, fontFamily: FONT }}>
               {analysesUsed >= 1
-                ? <span>Free analysis used — <span style={{ color: '#F97316', fontWeight: 600 }}>upgrade for unlimited</span></span>
-                : '1 free analysis remaining · Jury Practice, unlimited chat & more with Pro'}
+                ? <span>Free analysis used — <span style={{ color: '#F97316', fontWeight: 600 }}>upgrade for full access</span></span>
+                : '1 free analysis remaining · Jury Practice, chat & more with Pro'}
             </div>
           </div>
           <Link to="/pricing" style={{ flexShrink: 0, padding: '7px 16px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)', fontFamily: FONT }}>

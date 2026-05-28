@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
+import * as pdfjsLib from 'pdfjs-dist'
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
@@ -38,6 +40,27 @@ export function NewProjectPage() {
   const [saving, setSaving] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pageCountError, setPageCountError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const isFreeUser = !profile || profile.plan === 'free'
+  const PAGE_LIMIT = isFreeUser ? 10 : 20
+
+  const validateAndSetFile = useCallback(async (file: File) => {
+    setPageCountError(null)
+    if (!file || file.type !== 'application/pdf') return
+    try {
+      const buf = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+      if (pdf.numPages > PAGE_LIMIT) {
+        setPageCountError(`Your PDF has ${pdf.numPages} pages. Please export only your key boards (max ${PAGE_LIMIT} pages).`)
+        return
+      }
+    } catch {
+      // If we can't read page count, let it through — server will handle it
+    }
+    setForm(f => ({ ...f, file }))
+  }, [PAGE_LIMIT])
 
   const totalSteps = 6
   const canNext = [
@@ -60,12 +83,12 @@ export function NewProjectPage() {
     e.preventDefault()
     setDragging(false)
     const file = e.dataTransfer.files[0]
-    if (file && file.type === 'application/pdf') setForm(f => ({ ...f, file }))
-  }, [])
+    if (file) validateAndSetFile(file)
+  }, [validateAndSetFile])
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) setForm(f => ({ ...f, file }))
+    if (file) validateAndSetFile(file)
   }
 
   // Wait for profile to load before rendering — profile arrives async after auth resolves,
@@ -100,8 +123,8 @@ export function NewProjectPage() {
           <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 16, padding: '24px 28px', marginBottom: 28, textAlign: 'left' }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>Pro includes</p>
             {[
-              ['📊', 'Unlimited project analyses'],
-              ['💬', 'Unlimited AI chat sessions'],
+              ['📊', 'Full project analyses'],
+              ['💬', 'AI chat sessions'],
               ['⚖️', 'Jury practice & mock Q&A'],
               ['📄', 'PDF export with your name'],
             ].map(([icon, label]) => (
@@ -366,9 +389,9 @@ export function NewProjectPage() {
               .upload-zone:hover .upload-icon-ring { transform:scale(1.07); }
             `}</style>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
-            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to 10 pages · max 50 MB</p>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · max 50 MB</p>
 
-            {!form.file ? (
+            {!form.file && (
               <div
                 className="upload-zone"
                 onDragOver={e => { e.preventDefault(); setDragging(true) }}
@@ -420,7 +443,7 @@ export function NewProjectPage() {
 
                 {/* Badges row */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {[['📄', 'PDF only'], ['📑', 'Up to 10 pages'], ['💾', 'Max 50 MB']].map(([icon, label]) => (
+                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Max 50 MB']].map(([icon, label]) => (
                     <div key={label} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 11px', borderRadius: 100,
@@ -436,7 +459,28 @@ export function NewProjectPage() {
 
                 <input id="file-input" type="file" accept=".pdf" onChange={onFileChange} style={{ display: 'none' }} />
               </div>
-            ) : (
+            )}
+
+            {/* Page count error */}
+            {pageCountError && (
+              <div style={{
+                marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 10,
+                background: c.isDark ? 'oklch(0.18 0.06 30/0.6)' : '#fff7ed',
+                border: '1.5px solid oklch(0.72 0.18 45/0.5)',
+                borderRadius: 14, padding: '14px 16px',
+              }}>
+                <AlertTriangle size={16} color="#F97316" style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ margin: 0, fontSize: 13, color: c.textPrimary, lineHeight: 1.5 }}>
+                  {pageCountError}
+                  {isFreeUser && (
+                    <> <span style={{ color: '#F97316', fontWeight: 600 }}>Upgrade to Pro</span> for up to 20 pages.</>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Selected file preview */}
+            {!pageCountError && form.file && (
               <div style={{ background: c.isDark ? 'oklch(0.17 0.01 145/0.6)' : '#f0fdf4', border: `1.5px solid oklch(0.72 0.17 145 / 0.5)`, borderRadius: 18, padding: '22px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 0 24px oklch(0.72 0.17 145/0.1)' }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145/0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <FileText size={24} color="oklch(0.65 0.17 145)" />

@@ -3,7 +3,8 @@
     "api/analyze.ts": { "maxDuration": 300 },
     "api/tts.ts":     { "maxDuration": 30  },
     "api/chat.ts":          { "maxDuration": 30  },
-    "api/jury-feedback.ts": { "maxDuration": 30  }
+    "api/jury-feedback.ts":   { "maxDuration": 30  },
+    "api/paddle-webhook.ts":  { "maxDuration": 10  }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

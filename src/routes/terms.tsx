@@ -27,42 +27,46 @@ const sections = [
   },
   {
     title: '6. Subscriptions and Payments',
-    body: `Paid plans are billed in advance on a monthly or annual cycle through our payment processor (Stripe). All fees are stated in USD and are exclusive of any applicable taxes, which are your responsibility. You may cancel at any time from Settings; access continues until the end of the current billing period. We do not offer pro-rated refunds for unused time except where required by applicable law. We reserve the right to change pricing with 30 days' notice.`,
+    body: `Paid plans are billed in advance on a monthly or annual cycle through our payment processor (Paddle). All fees are stated in USD and are exclusive of any applicable taxes, which are your responsibility. You may cancel at any time from Settings; access continues until the end of the current billing period. We reserve the right to change pricing with 30 days' notice.`,
   },
   {
-    title: '7. Service Availability',
+    title: '7. Refund Policy',
+    body: `Monthly plans: We do not offer refunds on monthly subscriptions. You may cancel at any time and your access will continue until the end of the current billing period, after which you will not be charged again.\n\nAnnual plans: If you purchase an annual subscription and have not used the Service (i.e., have not submitted any project for analysis), you may request a full refund within 7 days of the original purchase date by emailing hello@critup.ai. Refund requests made after 7 days, or where the Service has been used, will not be eligible.\n\nProrated refunds are not available for any plan type. Refunds are processed back to the original payment method within 5–10 business days. This policy does not affect any statutory rights you may have under applicable consumer protection law.`,
+  },
+  {
+    title: '8. Service Availability',
     body: `We aim to keep Critup.ai available but make no guarantees of uptime, continuity, or error-free operation. We may suspend, modify, or discontinue the Service or any feature at any time, with or without notice. We are not liable for any loss or inconvenience arising from downtime or service changes.`,
   },
   {
-    title: '8. Disclaimer of Warranties',
+    title: '9. Disclaimer of Warranties',
     body: `THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. WE EXPRESSLY DISCLAIM ALL WARRANTIES INCLUDING, WITHOUT LIMITATION, IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL MEET YOUR REQUIREMENTS OR THAT AI-GENERATED FEEDBACK WILL BE ACCURATE, COMPLETE, OR SUITABLE FOR ANY PURPOSE.`,
   },
   {
-    title: '9. Limitation of Liability',
+    title: '10. Limitation of Liability',
     body: `TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE OPERATORS, THEIR AFFILIATES, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, ACADEMIC OPPORTUNITIES, OR GOODWILL, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF THE SERVICE.\n\nIN ANY CASE, OUR TOTAL AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATING TO THE SERVICE SHALL NOT EXCEED THE TOTAL AMOUNT YOU PAID US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR USD $10, WHICHEVER IS GREATER. FREE-PLAN USERS ACKNOWLEDGE THAT THE SERVICE IS PROVIDED AT NO CHARGE AND THAT THIS LIMITATION IS REASONABLE GIVEN THE CIRCUMSTANCES.`,
   },
   {
-    title: '10. Indemnification',
+    title: '11. Indemnification',
     body: `You agree to indemnify, defend, and hold harmless Critup.ai and the Operators from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable legal fees) arising from: (a) your use of the Service; (b) your violation of these Terms; (c) your uploaded content; or (d) your violation of any third-party rights.`,
   },
   {
-    title: '11. Dispute Resolution',
+    title: '12. Dispute Resolution',
     body: `You agree to contact us at hello@critup.ai and attempt to resolve any dispute informally before initiating formal proceedings. If informal resolution fails within 30 days, disputes shall be resolved by binding arbitration under the rules of the Dubai International Arbitration Centre (DIAC), conducted in English. You waive any right to participate in a class-action lawsuit or class-wide arbitration against Critup.ai.`,
   },
   {
-    title: '12. Governing Law',
+    title: '13. Governing Law',
     body: `These Terms are governed by the laws of the United Arab Emirates and the Emirate of Dubai. To the extent that any matter is not covered by arbitration, you consent to the exclusive jurisdiction of the courts of Dubai, UAE.`,
   },
   {
-    title: '13. Changes to These Terms',
+    title: '14. Changes to These Terms',
     body: `We may update these Terms at any time. Material changes will be communicated by email at least 14 days before taking effect. Your continued use of the Service after the effective date constitutes acceptance of the revised Terms. If you do not agree, you must stop using the Service and cancel any active subscription before the effective date.`,
   },
   {
-    title: '14. Miscellaneous',
+    title: '15. Miscellaneous',
     body: `If any provision of these Terms is found unenforceable, it will be modified to the minimum extent necessary to make it enforceable, with the remaining provisions continuing in full force. These Terms constitute the entire agreement between you and Critup.ai regarding the Service and supersede all prior agreements. Our failure to enforce any right does not constitute a waiver of that right.`,
   },
   {
-    title: '15. Contact',
+    title: '16. Contact',
     body: `For questions about these Terms, email hello@critup.ai. Operator details: Critup.ai — Avraam Valikhan & Adil Kamal Batcha.`,
   },
 ]

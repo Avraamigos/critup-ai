@@ -439,7 +439,7 @@ export function SettingsPage() {
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 6 }}>CURRENT PLAN</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, textTransform: 'capitalize', letterSpacing: '-0.02em' }}>{profile?.plan === 'free' || !profile?.plan ? 'Free' : profile.plan}</div>
-                    <div style={{ fontSize: 13, color: c.textMuted, marginTop: 4 }}>{profile?.analyses_used ?? 0} analyses used · {profile?.plan === 'free' || !profile?.plan ? '1 included free' : 'Unlimited'}</div>
+                    <div style={{ fontSize: 13, color: c.textMuted, marginTop: 4 }}>{profile?.analyses_used ?? 0} analyses used · {profile?.plan === 'free' || !profile?.plan ? '1 included free' : 'Full access'}</div>
                   </div>
                   <button
                     onClick={() => navigate({ to: '/pricing' })}

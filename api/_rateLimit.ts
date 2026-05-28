@@ -6,8 +6,8 @@
  *   • Chat msgs: 10 ever
  *   • Jury      : blocked entirely (upgrade required)
  *
- * Pro plan limits (daily abuse protection — resets every 24 h):
- *   • Analyses : 10 / day
+ * Pro plan limits (abuse protection — silent caps, not shown in UI):
+ *   • Analyses : 30 / month  (rolling 30-day window)
  *   • Chat msgs: 100 / day
  *   • Jury      : 20 / day
  *
@@ -59,8 +59,8 @@ export async function checkAnalyzeLimit(
       }
     }
 
-    // Pro: 10 analyses per 24 h (abuse protection)
-    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    // Pro: 30 analyses per rolling 30-day window (silent abuse protection — not shown in UI)
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
     const { count, error } = await supabase
       .from('analyses')
       .select('id', { count: 'exact', head: true })
@@ -70,16 +70,16 @@ export async function checkAnalyzeLimit(
 
     if (error) {
       console.error('[rateLimit] analyze count error:', error)
-      return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 }
+      return { allowed: true, limit: 30, used: 0, remaining: 30, resetInSeconds: 0 }
     }
 
     const used = count ?? 0
     return {
-      allowed: used < 10,
-      limit: 10,
+      allowed: used < 30,
+      limit: 30,
       used,
-      remaining: Math.max(0, 10 - used),
-      resetInSeconds: 24 * 3600,
+      remaining: Math.max(0, 30 - used),
+      resetInSeconds: 30 * 24 * 3600,
     }
   } catch (e) {
     console.error('[rateLimit] checkAnalyzeLimit threw:', e)
