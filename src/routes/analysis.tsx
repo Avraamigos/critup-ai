@@ -757,29 +757,6 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           0%,100% { box-shadow: inset 0 0 70px oklch(0.72 0.17 145/0.75), inset 0 0 140px oklch(0.72 0.17 145/0.4), inset 0 0 220px oklch(0.72 0.17 145/0.18); }
           50%     { box-shadow: inset 0 0 24px oklch(0.72 0.17 145/0.2),  inset 0 0 50px oklch(0.72 0.17 145/0.08); }
         }
-        @keyframes focus-enter {
-          0%   { transform: translate(-50%,-50%) scale(0); opacity: 0; }
-          55%  { transform: translate(-50%,-50%) scale(1.35); opacity: 1; }
-          75%  { transform: translate(-50%,-50%) scale(0.88); }
-          90%  { transform: translate(-50%,-50%) scale(1.08); }
-          100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
-        }
-        @keyframes focus-wiggle {
-          0%,100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
-          20%  { transform: translate(-50%,-50%) scale(1) rotate(-12deg); }
-          40%  { transform: translate(-50%,-50%) scale(1) rotate(10deg); }
-          60%  { transform: translate(-50%,-50%) scale(1) rotate(-6deg); }
-          80%  { transform: translate(-50%,-50%) scale(1) rotate(5deg); }
-        }
-        @keyframes focus-glow {
-          0%,100% { box-shadow: 0 0 0 0 oklch(0.72 0.18 45/0.5); }
-          50%     { box-shadow: 0 0 0 7px oklch(0.72 0.18 45/0); }
-        }
-        @keyframes focus-ping {
-          0%    { transform: translate(-50%,-50%) scale(1);   opacity: 0.8; }
-          70%   { transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
-          100%  { transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
-        }
       `}</style>
 
       {/* ── Header ── */}
@@ -875,51 +852,6 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               }}
             />
 
-            {/* Focus annotation dot — shows exactly where on the drawing Claude is pointing */}
-            {!isSummary && current?.focus && zoomLevel > 1 && (
-              <div
-                key={`dot-${slideIdx}`}
-                style={{
-                  position: 'absolute',
-                  left: `${focusX * 100}%`,
-                  top:  `${focusY * 100}%`,
-                  pointerEvents: 'none',
-                  zIndex: 10,
-                }}
-              >
-                {/* Ping ring — one big ping on enter, then periodic */}
-                <div style={{
-                  position: 'absolute',
-                  width: 36, height: 36,
-                  borderRadius: '50%',
-                  border: '2px solid #F97316',
-                  animation: 'focus-ping 1s ease-out, focus-ping 2.5s ease-out 1.2s infinite',
-                }} />
-                {/* Solid dot — bounce in, wiggle, then settle to glow pulse */}
-                <div style={{
-                  position: 'absolute',
-                  width: 14, height: 14,
-                  borderRadius: '50%',
-                  background: '#F97316',
-                  boxShadow: '0 0 12px #F97316, 0 0 24px oklch(0.72 0.18 45/0.6)',
-                  border: '2px solid #fff',
-                  animation: 'focus-enter 0.45s cubic-bezier(0.34,1.56,0.64,1) both, focus-wiggle 0.4s ease-in-out 0.45s 1 both, focus-glow 2.5s ease-in-out 0.9s infinite',
-                }} />
-                {/* Feedback number label */}
-                <div style={{
-                  position: 'absolute',
-                  left: 14, top: -18,
-                  background: '#F97316',
-                  color: '#fff',
-                  fontSize: 10, fontWeight: 800,
-                  padding: '2px 7px', borderRadius: 100,
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 2px 8px oklch(0.72 0.18 45/0.4)',
-                }}>
-                  {(current?.n ?? slideIdx + 1)}
-                </div>
-              </div>
-            )}
 
             {/* Slide badge */}
             {!isSummary && (

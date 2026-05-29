@@ -417,10 +417,44 @@ export default async function handler(
       return res.status(500).json({ error: 'AI returned invalid response, please try again' })
     }
 
-    // 7. Validate scores
-    const concept_score = Math.min(10, Math.max(0, Number(result.concept_score) || 0))
-    const spatial_score = Math.min(10, Math.max(0, Number(result.spatial_score) || 0))
-    const presentation_score = Math.min(10, Math.max(0, Number(result.presentation_score) || 0))
+    // 7. Haiku validator — cheap sanity check that the JSON structure is correct
+    //    before we save anything to the DB. Catches hallucinated or malformed output.
+    let validatedResult = result
+    try {
+      const haiku = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: `You are a JSON validator. Check if this JSON has ALL required fields:
+- concept_score (number 0-10)
+- spatial_score (number 0-10)
+- presentation_score (number 0-10)
+- feedback (array with at least 1 item, each having: title, text, suggestion, page, focus {x,y}, zoom)
+- jury_questions (array with at least 1 string)
+
+Reply with ONLY "VALID" or "INVALID: <reason>".
+
+JSON:
+${JSON.stringify(result).slice(0, 2000)}`,
+        }],
+      })
+      const verdict = haiku.content[0].type === 'text' ? haiku.content[0].text.trim() : 'VALID'
+      if (verdict.startsWith('INVALID')) {
+        console.error('[analyze] Haiku validator rejected output:', verdict)
+        await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+        return res.status(500).json({ error: 'AI returned incomplete response, please try again' })
+      }
+      validatedResult = result
+    } catch (e) {
+      // Validator failed — fail open, use the result as-is
+      console.warn('[analyze] Haiku validator error (failing open):', e)
+    }
+
+    // 8. Extract scores
+    const concept_score = Math.min(10, Math.max(0, Number(validatedResult.concept_score) || 0))
+    const spatial_score = Math.min(10, Math.max(0, Number(validatedResult.spatial_score) || 0))
+    const presentation_score = Math.min(10, Math.max(0, Number(validatedResult.presentation_score) || 0))
 
     // 8. Write results to DB immediately — status='complete' triggers the client
     //    realtime update right away so users see their results as fast as possible.
@@ -431,8 +465,8 @@ export default async function handler(
         concept_score,
         spatial_score,
         presentation_score,
-        feedback: result.feedback || [],
-        jury_questions: result.jury_questions || [],
+        feedback: validatedResult.feedback || [],
+        jury_questions: validatedResult.jury_questions || [],
       })
       .eq('id', analysisId)
 
@@ -544,8 +578,8 @@ export default async function handler(
     //    results are already saved. The client-side prefetch + tts.ts on-demand fallback
     //    handle the case where audio isn't ready yet.
     const elevenLabsKey = process.env.ELEVENLABS_API_KEY || ''
-    if (elevenLabsKey && result.feedback?.length) {
-      generateAllAudio(analysisId, result.feedback, elevenLabsKey, supabase)
+    if (elevenLabsKey && (validatedResult.feedback as unknown[])?.length) {
+      generateAllAudio(analysisId, validatedResult.feedback as Array<{ title: string; text: string; suggestion: string }>, elevenLabsKey, supabase)
         .catch(e => console.error('[analyze] background audio pre-gen failed:', e))
     }
 
