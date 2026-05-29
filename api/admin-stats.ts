@@ -63,6 +63,7 @@ export default async function handler(
       .eq('status', 'complete')
       .order('created_at', { ascending: false })
       .limit(20),
+    // failed analyses for error log (fetched separately below)
     supabase.from('profiles')
       .select('id, plan, discipline, full_name, created_at')
       .order('created_at', { ascending: false })
@@ -95,6 +96,33 @@ export default async function handler(
       } catch { /* skip */ }
     })
   )
+
+  // Fetch failed analyses separately (small set, full details)
+  const { data: failedAnalysesRaw } = await supabase
+    .from('analyses')
+    .select('id, created_at, user_id, projects(name)')
+    .eq('status', 'failed')
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  const failedRows = (failedAnalysesRaw ?? []) as { id: string; created_at: string; user_id: string; projects: { name: string } | null }[]
+
+  // Fetch emails for failed analysis users if not already in emailMap
+  await Promise.all(
+    failedRows
+      .filter(a => !emailMap[a.user_id])
+      .map(async (a) => {
+        try {
+          const { data } = await supabase.auth.admin.getUserById(a.user_id)
+          if (data?.user?.email) emailMap[a.user_id] = data.user.email
+        } catch { /* skip */ }
+      })
+  )
+
+  const failedAnalyses = failedRows.map(a => ({
+    ...a,
+    email: emailMap[a.user_id] ?? null,
+  }))
 
   // Plan distribution
   const planCounts: Record<string, number> = {}
@@ -157,6 +185,7 @@ export default async function handler(
     planBreakdown: planCounts,
     disciplineBreakdown: discCounts,
     recentAnalyses,
+    failedAnalyses,
     recentSignups,
     signupsChart,
     analysesChart,

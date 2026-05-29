@@ -45,15 +45,20 @@ interface AdminStats {
     projects: { name: string } | null; email: string | null
     concept_score: number | null; spatial_score: number | null; presentation_score: number | null
   }>
+  failedAnalyses: Array<{
+    id: string; created_at: string; email: string | null
+    projects: { name: string } | null; user_id: string
+  }>
   recentSignups: Array<{
     id: string; plan: string; discipline: string | null
     full_name: string | null; email: string | null; created_at: string
+    analyses_used?: number
   }>
   signupsChart: DayPoint[]
   analysesChart: DayPoint[]
 }
 
-type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'expenses'
+type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses'
 
 // ─── Small components ─────────────────────────────────────────────────────────
 
@@ -190,25 +195,69 @@ export function AdminPage() {
     }
   }
 
+  async function getJwt() {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token ?? ''
+  }
+
   async function togglePlan(userId: string, currentPlan: string) {
     const newPlan = currentPlan === 'free' ? 'monthly' : 'free'
-    setTogglingId(userId)
+    setTogglingId(userId + ':plan')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const jwt = session?.access_token
       const res = await fetch('/api/admin-set-plan', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${await getJwt()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, plan: newPlan }),
       })
       if (!res.ok) throw new Error(await res.text())
-      // Update local state immediately
       setStats(s => s ? {
         ...s,
         recentSignups: s.recentSignups.map(u => u.id === userId ? { ...u, plan: newPlan } : u),
       } : s)
     } catch (e) {
       alert('Failed to update plan: ' + e)
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  async function resetAnalyses(userId: string) {
+    setTogglingId(userId + ':reset')
+    try {
+      const res = await fetch('/api/admin-actions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${await getJwt()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset_analyses', userId }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setStats(s => s ? {
+        ...s,
+        recentSignups: s.recentSignups.map(u => u.id === userId ? { ...u, analyses_used: 0 } : u),
+      } : s)
+    } catch (e) {
+      alert('Failed to reset: ' + e)
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  async function deleteUser(userId: string, email: string | null) {
+    if (!confirm(`Delete user ${email ?? userId}?\n\nThis removes their account, all projects, and all analyses. Cannot be undone.`)) return
+    setTogglingId(userId + ':delete')
+    try {
+      const res = await fetch('/api/admin-actions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${await getJwt()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_user', userId }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      setStats(s => s ? {
+        ...s,
+        recentSignups: s.recentSignups.filter(u => u.id !== userId),
+        users: { ...s.users, total: s.users.total - 1, free: s.users.free - 1 },
+      } : s)
+    } catch (e) {
+      alert('Failed to delete: ' + e)
     } finally {
       setTogglingId(null)
     }
@@ -239,11 +288,12 @@ export function AdminPage() {
   const fixedMonthly = FIXED_COSTS.reduce((s, c) => s + (c.period === 'month' ? c.cost : c.cost / 12), 0)
   const totalEstimated = fixedMonthly + costSonnet + costHaiku + costTTS
 
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: { id: Tab; label: string; alert?: boolean }[] = [
     { id: 'overview',  label: 'Overview'  },
     { id: 'analytics', label: 'Analytics' },
     { id: 'users',     label: `Users${stats ? ` (${stats.users.total})` : ''}` },
     { id: 'analyses',  label: `Analyses${stats ? ` (${stats.analyses.total})` : ''}` },
+    { id: 'errors',    label: `Errors${stats?.analyses.failed ? ` (${stats.analyses.failed})` : ''}`, alert: (stats?.analyses.failed ?? 0) > 0 },
     { id: 'expenses',  label: 'Expenses'  },
   ]
 
@@ -277,7 +327,7 @@ export function AdminPage() {
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: '8px 16px', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-            color: tab === t.id ? '#F97316' : c.textMuted,
+            color: tab === t.id ? '#F97316' : t.alert ? '#f87171' : c.textMuted,
             borderBottom: `2px solid ${tab === t.id ? '#F97316' : 'transparent'}`,
             marginBottom: -1, transition: 'all 0.15s',
           }}>{t.label}</button>
@@ -341,36 +391,58 @@ export function AdminPage() {
               <TH c={c}>Plan</TH>
               <TH c={c}>Discipline</TH>
               <TH c={c}>Signed up</TH>
-              <TH c={c}>Access</TH>
+              <TH c={c}>Actions</TH>
             </tr></thead>
             <tbody>
-              {stats.recentSignups.map((u, i) => (
-                <tr key={u.id} style={rowStyle(i, stats.recentSignups.length)}>
-                  <td style={{ padding: '11px 16px', fontSize: 13, color: c.textPrimary, fontWeight: 500 }}>{u.email ?? '—'}</td>
-                  <td style={{ padding: '11px 16px', fontSize: 13, color: c.textMuted }}>{u.full_name ?? '—'}</td>
-                  <td style={{ padding: '11px 16px' }}><PlanBadge plan={u.plan} c={c} /></td>
-                  <td style={{ padding: '11px 16px', fontSize: 13, color: c.textMuted, textTransform: 'capitalize' }}>{u.discipline?.replace(/-/g, ' ') ?? '—'}</td>
-                  <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(u.created_at)}</td>
-                  <td style={{ padding: '11px 16px' }}>
-                    {u.email !== 'ibro12345@icloud.com' && (
-                      <button
-                        onClick={() => togglePlan(u.id, u.plan)}
-                        disabled={togglingId === u.id}
-                        style={{
-                          fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, cursor: 'pointer',
-                          background: u.plan === 'free' ? 'oklch(0.72 0.18 45/0.12)' : 'oklch(0.65 0.18 25/0.10)',
-                          color: u.plan === 'free' ? '#F97316' : '#f87171',
-                          border: u.plan === 'free' ? '1px solid oklch(0.72 0.18 45/0.3)' : '1px solid oklch(0.65 0.18 25/0.3)',
-                          opacity: togglingId === u.id ? 0.5 : 1,
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {togglingId === u.id ? '…' : u.plan === 'free' ? '→ Pro' : '→ Free'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {stats.recentSignups.map((u, i) => {
+                const busy = togglingId?.startsWith(u.id)
+                const isMe = u.email === 'ibro12345@icloud.com'
+                return (
+                  <tr key={u.id} style={rowStyle(i, stats.recentSignups.length)}>
+                    <td style={{ padding: '11px 16px', fontSize: 13, color: c.textPrimary, fontWeight: 500 }}>{u.email ?? '—'}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, color: c.textMuted }}>{u.full_name ?? '—'}</td>
+                    <td style={{ padding: '11px 16px' }}><PlanBadge plan={u.plan} c={c} /></td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, color: c.textMuted, textTransform: 'capitalize' }}>{u.discipline?.replace(/-/g, ' ') ?? '—'}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(u.created_at)}</td>
+                    <td style={{ padding: '11px 16px' }}>
+                      {!isMe && (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {/* Plan toggle */}
+                          <button onClick={() => togglePlan(u.id, u.plan)} disabled={!!busy} style={{
+                            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, cursor: 'pointer',
+                            background: u.plan === 'free' ? 'oklch(0.72 0.18 45/0.12)' : 'oklch(0.65 0.18 25/0.10)',
+                            color: u.plan === 'free' ? '#F97316' : '#f87171',
+                            border: u.plan === 'free' ? '1px solid oklch(0.72 0.18 45/0.3)' : '1px solid oklch(0.65 0.18 25/0.3)',
+                            opacity: busy ? 0.5 : 1, transition: 'all 0.15s',
+                          }}>
+                            {togglingId === u.id + ':plan' ? '…' : u.plan === 'free' ? '→ Pro' : '→ Free'}
+                          </button>
+                          {/* Reset analyses */}
+                          {u.plan === 'free' && (
+                            <button onClick={() => resetAnalyses(u.id)} disabled={!!busy} title="Reset free analysis counter to 0" style={{
+                              fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, cursor: 'pointer',
+                              background: 'oklch(0.56 0.18 250/0.12)', color: '#60a5fa',
+                              border: '1px solid oklch(0.56 0.18 250/0.3)',
+                              opacity: busy ? 0.5 : 1, transition: 'all 0.15s',
+                            }}>
+                              {togglingId === u.id + ':reset' ? '…' : 'Reset'}
+                            </button>
+                          )}
+                          {/* Delete */}
+                          <button onClick={() => deleteUser(u.id, u.email)} disabled={!!busy} title="Delete user and all their data" style={{
+                            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, cursor: 'pointer',
+                            background: 'oklch(0.65 0.18 25/0.10)', color: '#f87171',
+                            border: '1px solid oklch(0.65 0.18 25/0.25)',
+                            opacity: busy ? 0.5 : 1, transition: 'all 0.15s',
+                          }}>
+                            {togglingId === u.id + ':delete' ? '…' : 'Delete'}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -403,6 +475,44 @@ export function AdminPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── ERRORS ── */}
+      {!loading && stats && tab === 'errors' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {stats.failedAnalyses.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: c.textMuted, fontSize: 14 }}>
+              <AlertTriangle size={28} color="#22c55e" style={{ marginBottom: 10 }} />
+              <div style={{ fontWeight: 600 }}>No failed analyses — all clear</div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'oklch(0.18 0.02 10/0.45)', border: '1px solid oklch(0.3 0.06 10)', borderRadius: 10, fontSize: 13 }}>
+                <AlertTriangle size={14} color="#f87171" />
+                <span style={{ color: '#f87171', fontWeight: 600 }}>{stats.failedAnalyses.length} failed analyses</span>
+                <span style={{ color: c.textMuted }}>— shown newest first (max 20)</span>
+              </div>
+              <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>
+                    <TH c={c}>Project</TH>
+                    <TH c={c}>User</TH>
+                    <TH c={c}>Date</TH>
+                  </tr></thead>
+                  <tbody>
+                    {stats.failedAnalyses.map((a, i) => (
+                      <tr key={a.id} style={rowStyle(i, stats.failedAnalyses.length)}>
+                        <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 500, color: c.textPrimary }}>{a.projects?.name ?? 'Untitled'}</td>
+                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{a.email ?? a.user_id}</td>
+                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(a.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
 
