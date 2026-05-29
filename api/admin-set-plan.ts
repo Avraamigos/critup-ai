@@ -31,7 +31,7 @@ export default async function handler(
 
   const { userId, plan } = req.body
   if (!userId || !plan) return res.status(400).json({ error: 'userId and plan required' })
-  if (!['free', 'pro', 'monthly', 'yearly'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' })
+  if (!['free', 'monthly', 'yearly'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' })
 
   const supabase = createClient(supabaseUrl, serviceKey)
   const { error } = await supabase.from('profiles').update({ plan }).eq('id', userId)

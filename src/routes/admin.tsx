@@ -191,7 +191,7 @@ export function AdminPage() {
   }
 
   async function togglePlan(userId: string, currentPlan: string) {
-    const newPlan = currentPlan === 'free' ? 'pro' : 'free'
+    const newPlan = currentPlan === 'free' ? 'monthly' : 'free'
     setTogglingId(userId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
