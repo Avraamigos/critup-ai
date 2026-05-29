@@ -38,7 +38,7 @@ export default async function handler(
     { count: totalUsers },
     { count: proUsers },
     { count: totalAnalyses },
-    { count: failedAnalyses },
+    { count: failedCount },
     { count: analyses7d },
     { count: analyses30d },
     { count: newUsers7d },
@@ -178,7 +178,7 @@ export default async function handler(
     },
     analyses: {
       total: totalAnalyses ?? 0,
-      failed: failedAnalyses ?? 0,
+      failed: failedCount ?? 0,
       last7d: analyses7d ?? 0,
       last30d: analyses30d ?? 0,
     },
