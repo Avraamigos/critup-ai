@@ -25,8 +25,8 @@ const ANTHROPIC_INPUT_PER_MTOK  = 3.00   // claude-sonnet-4-6
 const ANTHROPIC_OUTPUT_PER_MTOK = 15.00
 const AVG_INPUT_TOKENS  = 55_000  // ~50K PDF + prompts
 const AVG_OUTPUT_TOKENS = 2_500
-const HAIKU_INPUT_PER_MTOK  = 0.80
-const HAIKU_OUTPUT_PER_MTOK = 4.00
+const HAIKU_INPUT_PER_MTOK  = 1.00   // claude-haiku-4-5 (verified Jan 2026)
+const HAIKU_OUTPUT_PER_MTOK = 5.00
 const AVG_HAIKU_INPUT  = 2_000
 const AVG_HAIKU_OUTPUT = 100
 // ElevenLabs: ~2100 chars per analysis (7 items × 300 chars avg)
