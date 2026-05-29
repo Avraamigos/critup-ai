@@ -56,7 +56,7 @@ function BarRow({ label, value, max, color }: { label: string; value: number; ma
 }
 
 export function AdminPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { theme } = useTheme()
   const c = useColors(theme)
@@ -69,10 +69,11 @@ export function AdminPage() {
   const isAdmin = user && ADMIN_EMAILS.includes(user.email ?? '')
 
   useEffect(() => {
+    if (authLoading) return                          // wait for session to load
     if (!user) { navigate({ to: '/login' }); return }
     if (!isAdmin) { navigate({ to: '/' }); return }
     fetchStats()
-  }, [user])
+  }, [user, authLoading])
 
   async function fetchStats() {
     setRefreshing(true)
@@ -96,6 +97,7 @@ export function AdminPage() {
     }
   }
 
+  if (authLoading) return null
   if (!isAdmin) return null
 
   const conversionRate = stats
