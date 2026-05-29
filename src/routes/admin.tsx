@@ -275,18 +275,36 @@ export function AdminPage() {
     : '0'
 
   // Cost calculations
-  const analysisCount = stats?.analyses.total ?? 0
-  const costSonnet = analysisCount * (
-    (AVG_INPUT_TOKENS  / 1_000_000) * ANTHROPIC_INPUT_PER_MTOK +
-    (AVG_OUTPUT_TOKENS / 1_000_000) * ANTHROPIC_OUTPUT_PER_MTOK
-  )
-  const costHaiku = analysisCount * (
-    (AVG_HAIKU_INPUT  / 1_000_000) * HAIKU_INPUT_PER_MTOK +
-    (AVG_HAIKU_OUTPUT / 1_000_000) * HAIKU_OUTPUT_PER_MTOK
-  )
-  const costTTS = analysisCount * (AVG_TTS_CHARS / 1000) * ELEVENLABS_PER_1K_CHARS
-  const fixedMonthly = FIXED_COSTS.reduce((s, c) => s + (c.period === 'month' ? c.cost : c.cost / 12), 0)
+  const analysisCount    = stats?.analyses.total   ?? 0
+  const analysisCount30d = stats?.analyses.last30d ?? 0
+
+  const perAnalysisSonnet = (AVG_INPUT_TOKENS  / 1_000_000) * ANTHROPIC_INPUT_PER_MTOK +
+                            (AVG_OUTPUT_TOKENS / 1_000_000) * ANTHROPIC_OUTPUT_PER_MTOK
+  const perAnalysisHaiku  = (AVG_HAIKU_INPUT  / 1_000_000) * HAIKU_INPUT_PER_MTOK +
+                            (AVG_HAIKU_OUTPUT / 1_000_000) * HAIKU_OUTPUT_PER_MTOK
+  const perAnalysisTTS    = (AVG_TTS_CHARS / 1000) * ELEVENLABS_PER_1K_CHARS
+
+  const costSonnet = analysisCount    * perAnalysisSonnet
+  const costHaiku  = analysisCount    * perAnalysisHaiku
+  const costTTS    = analysisCount    * perAnalysisTTS
+  const fixedMonthly   = FIXED_COSTS.reduce((s, fc) => s + (fc.period === 'month' ? fc.cost : fc.cost / 12), 0)
   const totalEstimated = fixedMonthly + costSonnet + costHaiku + costTTS
+
+  // 30-day view
+  const variable30d  = analysisCount30d * (perAnalysisSonnet + perAnalysisHaiku + perAnalysisTTS)
+  const totalCost30d = fixedMonthly + variable30d
+
+  // Revenue estimate
+  const subsMonthly  = stats?.planBreakdown?.['monthly'] ?? 0
+  const subsYearly   = stats?.planBreakdown?.['yearly']  ?? 0
+  const mrrGross     = subsMonthly * 7 + subsYearly * (45 / 12)
+  // Paddle fee: 5% + $0.50 per transaction. Yearly fee amortised monthly.
+  const paddleFees   = subsMonthly * (7 * 0.05 + 0.50) + subsYearly * ((45 * 0.05 + 0.50) / 12)
+  const mrrNet       = mrrGross - paddleFees
+  const netMargin30d = mrrNet - totalCost30d
+  // How many monthly subs needed to break even on current monthly costs
+  const netPerSub    = 7 * 0.95 - 0.50   // ~$6.15 after Paddle
+  const breakEven    = netPerSub > 0 ? Math.ceil(totalCost30d / netPerSub) : 0
 
   const tabs: { id: Tab; label: string; alert?: boolean }[] = [
     { id: 'overview',  label: 'Overview'  },
@@ -520,12 +538,34 @@ export function AdminPage() {
       {!loading && tab === 'expenses' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Summary cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 12 }}>
-            <StatCard label="Fixed / month"    value={`$${fixedMonthly.toFixed(2)}`}         sub="recurring costs"                      icon={DollarSign} c={c} />
-            <StatCard label="Claude API (est)" value={`$${(costSonnet + costHaiku).toFixed(2)}`} sub={`${analysisCount} analyses total`} icon={Zap}        c={c} />
-            <StatCard label="ElevenLabs (est)" value={`$${costTTS.toFixed(2)}`}               sub="TTS across all analyses"              icon={Zap}        c={c} />
-            <StatCard label="Total spend (est)"value={`$${totalEstimated.toFixed(2)}`}        sub="fixed + variable (all time)"          icon={TrendingUp} accent c={c} />
+          {/* ── This month ── */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 2px' }}>
+            This month — {analysisCount30d} analyses
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+            <StatCard label="Fixed costs"     value={`$${fixedMonthly.toFixed(2)}`}      sub="recurring"                            icon={DollarSign} c={c} />
+            <StatCard label="Variable costs"  value={`$${variable30d.toFixed(2)}`}       sub={`${analysisCount30d} analyses`}       icon={Zap}        c={c} />
+            <StatCard label="Total spend"     value={`$${totalCost30d.toFixed(2)}`}      sub="fixed + variable"                     icon={TrendingUp} c={c} />
+            <StatCard label="MRR (est)"       value={`$${mrrNet.toFixed(2)}`}            sub={`${subsMonthly}mo · ${subsYearly}yr subs`} icon={Crown} accent={mrrNet > 0} c={c} />
+            <StatCard
+              label="Net margin"
+              value={`${netMargin30d >= 0 ? '+' : ''}$${netMargin30d.toFixed(2)}`}
+              sub={netMargin30d >= 0 ? 'profitable' : `need ${breakEven} subs to break even`}
+              icon={TrendingUp}
+              accent={netMargin30d >= 0}
+              warn={netMargin30d < 0}
+              c={c}
+            />
+          </div>
+
+          {/* ── All-time ── */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 2px 0' }}>
+            All time — {analysisCount} analyses
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+            <StatCard label="Claude API"      value={`$${(costSonnet + costHaiku).toFixed(2)}`} sub="Sonnet + Haiku" icon={Zap} c={c} />
+            <StatCard label="ElevenLabs TTS"  value={`$${costTTS.toFixed(2)}`}              sub="all analyses"                         icon={Zap}        c={c} />
+            <StatCard label="Total variable"  value={`$${totalEstimated.toFixed(2)}`}       sub="fixed + variable (all time)"          icon={TrendingUp} c={c} />
           </div>
 
           {/* Fixed costs table */}
@@ -561,49 +601,49 @@ export function AdminPage() {
             </table>
           </div>
 
-          {/* Variable costs */}
+          {/* Variable costs per analysis */}
           <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 14, overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}`, fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Variable costs — estimated based on {analysisCount} total analyses
+              Variable costs — per analysis breakdown
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr>
                 <TH c={c}>Service</TH>
                 <TH c={c}>Rate</TH>
-                <TH c={c}>Usage</TH>
-                <TH c={c}>Total (est)</TH>
                 <TH c={c}>Per analysis</TH>
+                <TH c={c}>30-day total</TH>
+                <TH c={c}>All-time total</TH>
               </tr></thead>
               <tbody>
                 {[
                   {
                     service: 'Anthropic (Sonnet)',
                     rate: `$${ANTHROPIC_INPUT_PER_MTOK}/MTok in · $${ANTHROPIC_OUTPUT_PER_MTOK}/MTok out`,
-                    usage: `~${(analysisCount * AVG_INPUT_TOKENS / 1_000_000).toFixed(2)}M in / ${(analysisCount * AVG_OUTPUT_TOKENS / 1_000_000).toFixed(2)}M out`,
-                    total: `$${costSonnet.toFixed(3)}`,
-                    perAnalysis: `~$${((AVG_INPUT_TOKENS / 1_000_000 * ANTHROPIC_INPUT_PER_MTOK) + (AVG_OUTPUT_TOKENS / 1_000_000 * ANTHROPIC_OUTPUT_PER_MTOK)).toFixed(3)}`,
+                    perAnalysis: perAnalysisSonnet,
+                    total30d: analysisCount30d * perAnalysisSonnet,
+                    totalAll: costSonnet,
                   },
                   {
-                    service: 'Anthropic (Haiku validator)',
+                    service: 'Anthropic (Haiku)',
                     rate: `$${HAIKU_INPUT_PER_MTOK}/MTok in · $${HAIKU_OUTPUT_PER_MTOK}/MTok out`,
-                    usage: `~${(analysisCount * AVG_HAIKU_INPUT / 1_000_000).toFixed(4)}M in / ${(analysisCount * AVG_HAIKU_OUTPUT / 1_000_000).toFixed(4)}M out`,
-                    total: `$${costHaiku.toFixed(4)}`,
-                    perAnalysis: `~$${((AVG_HAIKU_INPUT / 1_000_000 * HAIKU_INPUT_PER_MTOK) + (AVG_HAIKU_OUTPUT / 1_000_000 * HAIKU_OUTPUT_PER_MTOK)).toFixed(4)}`,
+                    perAnalysis: perAnalysisHaiku,
+                    total30d: analysisCount30d * perAnalysisHaiku,
+                    totalAll: costHaiku,
                   },
                   {
                     service: 'ElevenLabs TTS',
                     rate: `$${ELEVENLABS_PER_1K_CHARS}/1K chars`,
-                    usage: `~${(analysisCount * AVG_TTS_CHARS / 1000).toFixed(1)}K chars`,
-                    total: `$${costTTS.toFixed(3)}`,
-                    perAnalysis: `~$${(AVG_TTS_CHARS / 1000 * ELEVENLABS_PER_1K_CHARS).toFixed(3)}`,
+                    perAnalysis: perAnalysisTTS,
+                    total30d: analysisCount30d * perAnalysisTTS,
+                    totalAll: costTTS,
                   },
                 ].map((row, i, arr) => (
                   <tr key={row.service} style={rowStyle(i, arr.length)}>
                     <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 600, color: c.textPrimary }}>{row.service}</td>
                     <td style={{ padding: '11px 16px', fontSize: 11, color: c.textMuted, fontFamily: 'monospace' }}>{row.rate}</td>
-                    <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{row.usage}</td>
-                    <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 700, color: c.textPrimary }}>{row.total}</td>
-                    <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{row.perAnalysis}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 700, color: c.textPrimary }}>~${row.perAnalysis.toFixed(4)}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, color: c.textPrimary }}>${row.total30d.toFixed(3)}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>${row.totalAll.toFixed(3)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -611,7 +651,7 @@ export function AdminPage() {
           </div>
 
           <div style={{ fontSize: 12, color: c.textMuted, padding: '0 4px' }}>
-            * Variable costs are estimates based on average token/character usage. Actual billing may differ. Check Anthropic and ElevenLabs dashboards for exact figures. Update the constants at the top of <code style={{ fontFamily: 'monospace', background: c.isDark ? 'oklch(0.24 0.004 270)' : '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>src/routes/admin.tsx</code> when costs change.
+            * Estimates based on average token/character usage. MRR deducts Paddle fees (5% + $0.50/transaction). Update pricing constants at the top of <code style={{ fontFamily: 'monospace', background: c.isDark ? 'oklch(0.24 0.004 270)' : '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>src/routes/admin.tsx</code> when costs change.
           </div>
         </div>
       )}
