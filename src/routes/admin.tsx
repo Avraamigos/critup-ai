@@ -65,8 +65,56 @@ type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expense
 
 interface AdminNote { id: string; text: string; createdAt: string }
 const NOTES_KEY = 'critup_admin_notes'
+const NOTES_SEEDED_KEY = 'critup_admin_notes_seeded'
+
+const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
+  {
+    text: '🔒 Supabase Pro ($25/mo) → enable "Leaked password protection" in Auth → Attack Protection.\nCurrently unavailable on free plan — 1 warning left in Security Advisor.',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '🎙️ ElevenLabs — create a separate API workspace for production.\nCurrently using the ElevenCreative personal workspace. Should have a dedicated workspace so personal and production credits are separate.',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '💳 Paddle KYC — approval still pending (1–3 business days).\nPayments will not process until approved. Check Paddle dashboard.',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '📧 Welcome email — not built yet.\nWhen a user signs up, send a transactional welcome email via Resend. Use the Resend Claude Code plugin to build it.',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '📊 Real revenue in admin — MRR is currently estimated from subscriber count × price.\nTo show actual revenue, connect Paddle server API (separate from webhook secret / client token).',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '🔍 SEO / meta tags — not set up.\nAdd og:image, og:title, og:description, twitter:card to index.html for proper social sharing previews.',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '🗄️ Supabase Data API change — Oct 30, 2026.\nFrom that date, new tables in existing projects need explicit GRANT to be accessible via the API.\nSQL to run for any new table:\nGRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO anon, authenticated;',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+  {
+    text: '🎙️ ElevenLabs Starter plan — 60k chars/mo (Flash/Turbo) ≈ 28 analyses/mo before overage.\nIf monthly analysis volume grows past ~25/mo consistently, upgrade to Creator ($22/mo → 440k chars).',
+    createdAt: new Date('2026-05-29').toISOString(),
+  },
+]
+
 function loadNotes(): AdminNote[] {
-  try { return JSON.parse(localStorage.getItem(NOTES_KEY) ?? '[]') } catch { return [] }
+  try {
+    const existing = JSON.parse(localStorage.getItem(NOTES_KEY) ?? '[]') as AdminNote[]
+    // Seed default notes once on first load
+    if (!localStorage.getItem(NOTES_SEEDED_KEY)) {
+      const seeded: AdminNote[] = DEFAULT_NOTES.map(n => ({ ...n, id: crypto.randomUUID() }))
+      const merged = [...seeded, ...existing]
+      localStorage.setItem(NOTES_KEY, JSON.stringify(merged))
+      localStorage.setItem(NOTES_SEEDED_KEY, '1')
+      return merged
+    }
+    return existing
+  } catch { return [] }
 }
 function saveNotes(notes: AdminNote[]) {
   localStorage.setItem(NOTES_KEY, JSON.stringify(notes))
