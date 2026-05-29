@@ -5,7 +5,8 @@
     "api/chat.ts":          { "maxDuration": 30  },
     "api/jury-feedback.ts":   { "maxDuration": 30  },
     "api/paddle-webhook.ts":  { "maxDuration": 10  },
-    "api/admin-stats.ts":     { "maxDuration": 15  }
+    "api/admin-stats.ts":     { "maxDuration": 15  },
+    "api/admin-set-plan.ts":  { "maxDuration": 10  }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

@@ -47,6 +47,8 @@ export default async function handler(
     { data: profilesRaw },
     { data: planBreakdown },
     { data: disciplineBreakdown },
+    { data: signups30dRaw },
+    { data: analyses30dRaw },
   ] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).neq('plan', 'free'),
@@ -67,6 +69,10 @@ export default async function handler(
       .limit(50),
     supabase.from('profiles').select('plan'),
     supabase.from('profiles').select('discipline'),
+    // Daily signups for chart
+    supabase.from('profiles').select('created_at').gte('created_at', last30),
+    // Daily analyses for chart
+    supabase.from('analyses').select('created_at').eq('status', 'complete').gte('created_at', last30),
   ])
 
   // Fetch emails for all profiles via auth.admin API
@@ -117,6 +123,23 @@ export default async function handler(
       : null,
   }))
 
+  // Build last-30-days chart data — one entry per day
+  const dayMap = (rows: { created_at: string }[]) => {
+    const counts: Record<string, number> = {}
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 3600 * 1000)
+      counts[d.toISOString().slice(0, 10)] = 0
+    }
+    for (const r of rows) {
+      const day = r.created_at.slice(0, 10)
+      if (counts[day] !== undefined) counts[day]++
+    }
+    return Object.entries(counts).map(([date, count]) => ({ date, count }))
+  }
+
+  const signupsChart   = dayMap((signups30dRaw   ?? []) as { created_at: string }[])
+  const analysesChart  = dayMap((analyses30dRaw  ?? []) as { created_at: string }[])
+
   return res.json({
     users: {
       total: totalUsers ?? 0,
@@ -135,5 +158,7 @@ export default async function handler(
     disciplineBreakdown: discCounts,
     recentAnalyses,
     recentSignups,
+    signupsChart,
+    analysesChart,
   })
 }
