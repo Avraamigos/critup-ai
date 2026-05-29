@@ -22,6 +22,7 @@ import { TermsPage } from '@/routes/terms'
 import { MeetCritPage } from '@/routes/meet-crit'
 import { NotFoundPage } from '@/routes/not-found'
 import { ResetPasswordPage } from '@/routes/reset-password'
+import { AdminPage } from '@/routes/admin'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -64,7 +65,8 @@ const analysisRoute = createRoute({ getParentRoute: () => appRoute, path: '/anal
 const juryRoute = createRoute({ getParentRoute: () => appRoute, path: '/jury', component: JuryPage })
 const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/assistant', component: AssistantPage })
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: SettingsPage })
-const helpRoute = createRoute({ getParentRoute: () => appRoute, path: '/help', component: HelpPage })
+const helpRoute  = createRoute({ getParentRoute: () => appRoute, path: '/help',  component: HelpPage })
+const adminRoute = createRoute({ getParentRoute: () => appRoute, path: '/admin', component: AdminPage })
 
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
@@ -75,6 +77,7 @@ const routeTree = rootRoute.addChildren([
     assistantRoute,
     settingsRoute,
     helpRoute,
+    adminRoute,
   ]),
   landingRoute,
   loginRoute,
