@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()
-  const isPro = profile?.plan !== 'free'
+  const isPro = profile?.plan !== 'free' || isAdmin  // admin always has pro access
   const avatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
 
   const sidebarW = sidebarOpen ? 240 : 72

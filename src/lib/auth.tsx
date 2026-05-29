@@ -19,6 +19,17 @@ interface AuthContext extends AuthState {
   refreshProfile: () => Promise<void>
 }
 
+const ADMIN_EMAILS = ['ibro12345@icloud.com']
+
+// Ensure admin accounts always have full Pro access regardless of DB state
+function applyAdminOverride(user: User | null, profile: Profile | null): Profile | null {
+  if (!profile || !user) return profile
+  if (ADMIN_EMAILS.includes(user.email ?? '')) {
+    return { ...profile, plan: 'monthly' as Profile['plan'] }
+  }
+  return profile
+}
+
 const Ctx = createContext<AuthContext | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -82,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch profile OUTSIDE the auth lock via .then() — never blocks lock
         const sessionUser = session.user
         fetchProfile(sessionUser).then(profile => {
-          setState(s => ({ ...s, profile }))
+          setState(s => ({ ...s, profile: applyAdminOverride(sessionUser, profile) }))
         })
       } else {
         setState(s => ({ ...s, profile: null }))
@@ -129,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     if (state.user) {
       const profile = await fetchProfile(state.user)
-      setState(s => ({ ...s, profile: profile ?? null }))
+      setState(s => ({ ...s, profile: applyAdminOverride(state.user, profile ?? null) }))
     }
   }
 
