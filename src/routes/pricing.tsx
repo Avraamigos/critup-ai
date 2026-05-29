@@ -18,7 +18,6 @@ export function PricingPage() {
   const navigate = useNavigate()
   const { user, profile, refreshProfile } = useAuth()
   const [loadingPlan, setLoadingPlan] = useState<'monthly' | 'yearly' | null>(null)
-  const [coupon, setCoupon] = useState('')
 
   const openCheckout = async (plan: 'monthly' | 'yearly') => {
     if (!user) { navigate({ to: '/login' }); return }
@@ -30,7 +29,6 @@ export function PricingPage() {
         items: [{ priceId: PRICE_IDS[plan], quantity: 1 }],
         customer: { email: user.email ?? '' },
         customData: { userId: user.id },
-        discountCode: coupon.trim() || undefined,
         settings: {
           displayMode: 'overlay',
           theme: theme === 'dark' ? 'dark' : 'light',
@@ -115,30 +113,6 @@ export function PricingPage() {
             </div>
           ))}
         </div>
-
-        {/* Coupon code */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28, gap: 8 }}>
-          <input
-            value={coupon}
-            onChange={e => setCoupon(e.target.value.toUpperCase())}
-            placeholder="Have a coupon code?"
-            style={{
-              background: c.isDark ? 'oklch(0.22 0.004 270)' : '#f9fafb',
-              border: `1px solid ${coupon ? '#F97316' : c.border}`,
-              borderRadius: 100, padding: '9px 16px',
-              fontSize: 13, color: c.textPrimary,
-              outline: 'none', width: 220,
-              letterSpacing: coupon ? '0.08em' : 0,
-              fontWeight: coupon ? 600 : 400,
-              transition: 'border-color 0.15s',
-            }}
-          />
-        </div>
-        {coupon && (
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#F97316', marginTop: 6, fontWeight: 600 }}>
-            Code "{coupon}" will be applied at checkout
-          </div>
-        )}
 
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button onClick={() => navigate({ to: '/' })} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>Continue with free →</button>
