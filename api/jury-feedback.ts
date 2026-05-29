@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
-import { checkJuryLimit } from './_rateLimit'
+import { checkJuryLimit } from './rateLimit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

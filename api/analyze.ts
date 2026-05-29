@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { checkAnalyzeLimit, checkIpLimit } from './_rateLimit'
+import { checkAnalyzeLimit, checkIpLimit } from './rateLimit'
 
 // Strip markdown that makes ElevenLabs produce glitchy output
 function cleanForTTS(raw: string): string {
