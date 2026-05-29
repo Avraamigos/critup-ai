@@ -4,7 +4,7 @@
 -- and re-uploading doesn't reset the free tier limit.
 
 create or replace function public.increment_analyses_used()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if new.status = 'complete' and (old.status is distinct from 'complete') then
     update public.profiles set analyses_used = analyses_used + 1 where id = new.user_id;

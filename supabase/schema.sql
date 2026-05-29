@@ -41,7 +41,7 @@ create table public.profiles (
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.profiles (id, full_name)
   values (
@@ -108,7 +108,7 @@ create index jury_sessions_user_id_idx on public.jury_sessions(user_id);
 
 -- ─── Helper Function ────────────────────────────────────────
 create or replace function public.increment_analyses_used(uid uuid)
-returns void language plpgsql security definer as $$
+returns void language plpgsql security definer set search_path = '' as $$
 begin
   update public.profiles
   set analyses_used = analyses_used + 1,
@@ -119,7 +119,7 @@ $$;
 
 -- ─── Updated_at Trigger ─────────────────────────────────────
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at = now();
   return new;
