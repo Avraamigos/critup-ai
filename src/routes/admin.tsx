@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Users, BarChart2, TrendingUp, Zap, Crown, RefreshCw,
-  ShieldCheck, AlertTriangle, DollarSign, ExternalLink,
+  ShieldCheck, AlertTriangle, DollarSign, ExternalLink, StickyNote, Trash2, Plus,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useTheme, useColors } from '@/lib/theme'
@@ -61,7 +61,16 @@ interface AdminStats {
   analysesChart: DayPoint[]
 }
 
-type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses'
+type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses' | 'notes'
+
+interface AdminNote { id: string; text: string; createdAt: string }
+const NOTES_KEY = 'critup_admin_notes'
+function loadNotes(): AdminNote[] {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) ?? '[]') } catch { return [] }
+}
+function saveNotes(notes: AdminNote[]) {
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes))
+}
 
 // ─── Small components ─────────────────────────────────────────────────────────
 
@@ -170,6 +179,8 @@ export function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [tab, setTab]           = useState<Tab>('overview')
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [notes, setNotes]       = useState<AdminNote[]>(loadNotes)
+  const [newNote, setNewNote]   = useState('')
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email ?? '')
 
@@ -266,6 +277,21 @@ export function AdminPage() {
     }
   }
 
+  function addNote() {
+    const text = newNote.trim()
+    if (!text) return
+    const updated = [{ id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }, ...notes]
+    setNotes(updated)
+    saveNotes(updated)
+    setNewNote('')
+  }
+
+  function deleteNote(id: string) {
+    const updated = notes.filter(n => n.id !== id)
+    setNotes(updated)
+    saveNotes(updated)
+  }
+
   if (authLoading) return null
   if (!isAdmin) return null
 
@@ -321,6 +347,7 @@ export function AdminPage() {
     { id: 'analyses',  label: `Analyses${stats ? ` (${stats.analyses.total})` : ''}` },
     { id: 'errors',    label: `Errors${stats?.analyses.failed ? ` (${stats.analyses.failed})` : ''}`, alert: (stats?.analyses.failed ?? 0) > 0 },
     { id: 'expenses',  label: 'Expenses'  },
+    { id: 'notes',     label: `Notes${notes.length ? ` (${notes.length})` : ''}` },
   ]
 
   const rowStyle = (i: number, total: number) => ({
@@ -661,6 +688,71 @@ export function AdminPage() {
           <div style={{ fontSize: 12, color: c.textMuted, padding: '0 4px' }}>
             * Estimates based on average token/character usage. MRR deducts Paddle fees (5% + $0.50/transaction). Update pricing constants at the top of <code style={{ fontFamily: 'monospace', background: c.isDark ? 'oklch(0.24 0.004 270)' : '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>src/routes/admin.tsx</code> when costs change.
           </div>
+        </div>
+      )}
+
+      {/* ── NOTES ── */}
+      {tab === 'notes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Add note */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <textarea
+              value={newNote}
+              onChange={e => setNewNote(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote() }}
+              placeholder="Add a note… (⌘+Enter to save)"
+              rows={3}
+              style={{
+                flex: 1, borderRadius: 10, padding: '10px 14px',
+                fontSize: 13, fontFamily: "'Inter', sans-serif",
+                background: c.cardBg, border: `1px solid ${c.border}`,
+                color: c.textPrimary, resize: 'vertical', outline: 'none',
+              }}
+            />
+            <button onClick={addNote} style={{
+              alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 6,
+              background: '#F97316', border: 'none', borderRadius: 10,
+              color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 16px',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+              <Plus size={14} /> Add
+            </button>
+          </div>
+
+          {/* Note list */}
+          {notes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: c.textMuted, fontSize: 14 }}>
+              <StickyNote size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+              <div style={{ fontWeight: 600 }}>No notes yet</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Use this to track things to fix, ideas, reminders</div>
+            </div>
+          ) : (
+            notes.map(note => (
+              <div key={note.id} style={{
+                background: c.cardBg, border: `1px solid ${c.border}`,
+                borderRadius: 12, padding: '14px 16px',
+                display: 'flex', gap: 12, alignItems: 'flex-start',
+              }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: c.textPrimary, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{note.text}</p>
+                  <span style={{ fontSize: 11, color: c.textMuted, marginTop: 6, display: 'block' }}>
+                    {new Date(note.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <button onClick={() => deleteNote(note.id)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: c.textMuted, padding: 4, borderRadius: 6, flexShrink: 0,
+                  transition: 'color 0.15s',
+                }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f87171'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = c.textMuted}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
