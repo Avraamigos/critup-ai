@@ -16,7 +16,7 @@ const FIXED_COSTS: { service: string; cost: number; period: 'month' | 'year'; ur
   { service: 'Supabase',    cost: 0,   period: 'month', url: 'https://supabase.com',        note: 'Free tier' },
   { service: 'Domain',      cost: 15,  period: 'year',  url: 'https://domains.google',      note: 'critup.ai/yr' },
   { service: 'Resend',      cost: 0,   period: 'month', url: 'https://resend.com',          note: 'Free up to 3k emails/mo' },
-  { service: 'ElevenLabs',  cost: 0,   period: 'month', url: 'https://elevenlabs.io',       note: 'Check your plan' },
+  { service: 'ElevenLabs',  cost: 5,   period: 'month', url: 'https://elevenlabs.io',       note: 'Starter — 60k chars/mo (Turbo)' },
   { service: 'Plausible',   cost: 9,   period: 'month', url: 'https://plausible.io',        note: 'Growth plan — 14-day trial' },
   { service: 'Paddle',      cost: 0,   period: 'month', url: 'https://paddle.com',          note: '5% + $0.50 per transaction' },
 ]
@@ -30,7 +30,10 @@ const HAIKU_OUTPUT_PER_MTOK = 4.00
 const AVG_HAIKU_INPUT  = 2_000
 const AVG_HAIKU_OUTPUT = 100
 // ElevenLabs: ~2100 chars per analysis (7 items × 300 chars avg)
-const ELEVENLABS_PER_1K_CHARS = 0.30
+// Starter plan: $5/mo includes 60k chars (Flash/Turbo). Overage rate: $0.08/1K chars.
+// Cost below is the OVERAGE rate — first ~28 analyses/mo are covered by the subscription.
+const ELEVENLABS_PER_1K_CHARS = 0.08   // overage rate on Starter, Flash/Turbo model
+const ELEVENLABS_INCLUDED_CHARS = 60_000  // chars included in Starter plan (Flash/Turbo)
 const AVG_TTS_CHARS = 2100
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -284,14 +287,19 @@ export function AdminPage() {
                             (AVG_HAIKU_OUTPUT / 1_000_000) * HAIKU_OUTPUT_PER_MTOK
   const perAnalysisTTS    = (AVG_TTS_CHARS / 1000) * ELEVENLABS_PER_1K_CHARS
 
-  const costSonnet = analysisCount    * perAnalysisSonnet
-  const costHaiku  = analysisCount    * perAnalysisHaiku
-  const costTTS    = analysisCount    * perAnalysisTTS
+  const costSonnet = analysisCount * perAnalysisSonnet
+  const costHaiku  = analysisCount * perAnalysisHaiku
+  // TTS: only chars beyond the monthly included allowance cost anything
+  const totalTTSChars   = analysisCount * AVG_TTS_CHARS
+  const overageTTSChars = Math.max(0, totalTTSChars - ELEVENLABS_INCLUDED_CHARS)
+  const costTTS = (overageTTSChars / 1000) * ELEVENLABS_PER_1K_CHARS
   const fixedMonthly   = FIXED_COSTS.reduce((s, fc) => s + (fc.period === 'month' ? fc.cost : fc.cost / 12), 0)
   const totalEstimated = fixedMonthly + costSonnet + costHaiku + costTTS
 
-  // 30-day view
-  const variable30d  = analysisCount30d * (perAnalysisSonnet + perAnalysisHaiku + perAnalysisTTS)
+  // 30-day view — TTS overage only for chars beyond monthly included
+  const ttsChars30d   = analysisCount30d * AVG_TTS_CHARS
+  const ttsCost30d    = (Math.max(0, ttsChars30d - ELEVENLABS_INCLUDED_CHARS) / 1000) * ELEVENLABS_PER_1K_CHARS
+  const variable30d   = analysisCount30d * (perAnalysisSonnet + perAnalysisHaiku) + ttsCost30d
   const totalCost30d = fixedMonthly + variable30d
 
   // Revenue estimate
@@ -631,10 +639,10 @@ export function AdminPage() {
                     totalAll: costHaiku,
                   },
                   {
-                    service: 'ElevenLabs TTS',
-                    rate: `$${ELEVENLABS_PER_1K_CHARS}/1K chars`,
+                    service: `ElevenLabs TTS (overage only — ${Math.round(ELEVENLABS_INCLUDED_CHARS / AVG_TTS_CHARS)} analyses free/mo)`,
+                    rate: `$${ELEVENLABS_PER_1K_CHARS}/1K chars overage · Turbo model`,
                     perAnalysis: perAnalysisTTS,
-                    total30d: analysisCount30d * perAnalysisTTS,
+                    total30d: ttsCost30d,
                     totalAll: costTTS,
                   },
                 ].map((row, i, arr) => (
