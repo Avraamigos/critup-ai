@@ -121,6 +121,15 @@ export function PricingPage() {
         <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: c.isDark ? 'oklch(0.45 0.004 270)' : '#9ca3af' }}>
           Questions? <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
         </div>
+        <div style={{
+          textAlign: 'center', marginTop: 28,
+          fontSize: 12, color: c.textMuted,
+          borderTop: `1px solid ${c.border}`, paddingTop: 20,
+          lineHeight: 1.6,
+        }}>
+          <strong style={{ color: c.textPrimary }}>14-day refund policy</strong> — Not satisfied? Contact us within 14 days of purchase for a full refund, no questions asked.{' '}
+          <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
+        </div>
       </div>
     </div>
   )
