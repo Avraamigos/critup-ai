@@ -74,6 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigate({ to: '/landing' })
   }
 
+  const isAdmin = user?.email === 'ibro12345@icloud.com'
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()
   const isPro = profile?.plan !== 'free' || isAdmin  // admin always has pro access
@@ -87,7 +88,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ? localStorage.getItem('critup_last_analysis_id')
     : null
   const analysisTo = lastAnalysisId ? `/analysis/${lastAnalysisId}` : '/projects'
-  const isAdmin = user?.email === 'ibro12345@icloud.com'
   const NAV_ITEMS: NavDef[] = [
     { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'Dashboard' },
     { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'Projects'  },
