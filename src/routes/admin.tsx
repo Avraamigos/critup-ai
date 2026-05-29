@@ -17,7 +17,7 @@ const FIXED_COSTS: { service: string; cost: number; period: 'month' | 'year'; ur
   { service: 'Domain',      cost: 15,  period: 'year',  url: 'https://domains.google',      note: 'critup.ai/yr' },
   { service: 'Resend',      cost: 0,   period: 'month', url: 'https://resend.com',          note: 'Free up to 3k emails/mo' },
   { service: 'ElevenLabs',  cost: 0,   period: 'month', url: 'https://elevenlabs.io',       note: 'Check your plan' },
-  { service: 'Plausible',   cost: 0,   period: 'month', url: 'https://plausible.io',        note: 'Not set up yet' },
+  { service: 'Plausible',   cost: 9,   period: 'month', url: 'https://plausible.io',        note: 'Growth plan — 14-day trial' },
   { service: 'Paddle',      cost: 0,   period: 'month', url: 'https://paddle.com',          note: '5% + $0.50 per transaction' },
 ]
 // Anthropic pricing (per million tokens, as of 2025)
