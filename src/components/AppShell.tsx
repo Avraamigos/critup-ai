@@ -3,7 +3,7 @@ import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
   LayoutGrid, Folder, CircleDot, Mic,
   Settings, HelpCircle, ChevronLeft, ChevronRight,
-  Sun, Moon, LogOut, Star, TrendingUp, User,
+  Sun, Moon, LogOut, Star, TrendingUp, User, ShieldCheck,
 } from 'lucide-react'
 import { CritupLogo } from './CritupLogo'
 import { AIOrb } from './AIOrb'
@@ -87,11 +87,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ? localStorage.getItem('critup_last_analysis_id')
     : null
   const analysisTo = lastAnalysisId ? `/analysis/${lastAnalysisId}` : '/projects'
+  const isAdmin = user?.email === 'ibro12345@icloud.com'
   const NAV_ITEMS: NavDef[] = [
-    { to: '/',          activePath: '/',          icon: LayoutGrid, label: 'Dashboard' },
-    { to: '/projects',  activePath: '/projects',  icon: Folder,     label: 'Projects'  },
-    { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,  label: 'Analysis'  },
-    { to: '/jury',      activePath: '/jury',      icon: Mic,        label: 'Jury'      },
+    { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'Dashboard' },
+    { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'Projects'  },
+    { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'Analysis'  },
+    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'Jury'      },
+    ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'Admin' }] : []),
   ]
 
   // Use activePath (not `to`) for highlight detection
