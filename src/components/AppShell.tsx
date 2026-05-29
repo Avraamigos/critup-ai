@@ -265,7 +265,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {[
                     { icon: User, label: 'Profile', to: '/settings' },
                     { icon: TrendingUp, label: 'My Projects', to: '/projects' },
-                    { icon: Star, label: 'Upgrade to Pro', to: '/pricing', orange: true },
+                    ...(!isPro ? [{ icon: Star, label: 'Upgrade to Pro', to: '/pricing', orange: true }] : []),
+                    ...(profile?.plan === 'monthly' ? [{ icon: Star, label: 'Upgrade to Yearly', to: '/pricing', orange: true }] : []),
                   ].map(({ icon: Icon, label, to, orange }) => (
                     <Link key={label} to={to} onClick={() => setAccountOpen(false)} style={{
                       display: 'flex', alignItems: 'center', gap: 10,

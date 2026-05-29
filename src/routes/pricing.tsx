@@ -43,27 +43,28 @@ export function PricingPage() {
     void refreshProfile()
   }
 
-  const isPro = !!profile && profile.plan !== 'free'
+  const currentPlan = profile?.plan ?? 'free'
 
   const plans = [
     {
       name: 'Free', price: '$0', sub: '',
       features: ['1 complete AI critique', 'Concept, Spatial & Presentation scores', 'PDF upload (up to 50 pages)', 'Basic jury questions'],
-      cta: 'Continue free', featured: false, action: () => navigate({ to: '/' }),
+      cta: currentPlan === 'free' ? 'Current plan' : 'Continue free',
+      featured: false, action: () => navigate({ to: '/' }),
     },
     {
       name: 'Monthly', price: '$7', sub: '/mo', cancel: 'Cancel anytime',
       features: ['Full project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
-      cta: isPro ? 'Current plan' : (loadingPlan === 'monthly' ? 'Opening…' : 'Start monthly'),
+      cta: currentPlan === 'monthly' ? 'Current plan' : (loadingPlan === 'monthly' ? 'Opening…' : 'Start monthly'),
       featured: true, badge: 'Most popular',
-      action: () => { if (isPro) return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },
+      action: () => { if (currentPlan === 'monthly') return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },
     },
     {
       name: 'Yearly', price: '$45', sub: '/yr', crossed: '$84', save: 'Save 46%',
       features: ['Everything in Monthly', 'Video presentation coach', 'Priority processing', 'Early access to new features'],
-      cta: isPro ? 'Current plan' : (loadingPlan === 'yearly' ? 'Opening…' : 'Start yearly'),
+      cta: currentPlan === 'yearly' ? 'Current plan' : (loadingPlan === 'yearly' ? 'Opening…' : 'Start yearly'),
       featured: false, badge: 'Best value',
-      action: () => { if (isPro) return; track.upgradeClicked('pricing_yearly'); openCheckout('yearly') },
+      action: () => { if (currentPlan === 'yearly') return; track.upgradeClicked('pricing_yearly'); openCheckout('yearly') },
     },
   ]
 
