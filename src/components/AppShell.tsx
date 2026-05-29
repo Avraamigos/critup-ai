@@ -164,7 +164,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {BOTTOM_ITEMS.map(item => <NavItem key={item.to} {...item} />)}
           </div>
 
-          {sidebarOpen && !isPro && (
+          {sidebarOpen && !isPro && !isAdmin && (
             <div style={{ margin: '10px 10px 8px', padding: '14px', borderRadius: 12, background: c.isDark ? 'oklch(0.225 0.004 270)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45 / 0.3)', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.08)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 8, letterSpacing: '0.04em', fontFamily: FONT }}>FREE PLAN</div>
               {/* Analyses usage bar */}
