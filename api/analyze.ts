@@ -1,6 +1,39 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { checkAnalyzeLimit, checkIpLimit } from './_lib/rateLimit'
+
+// ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
+
+async function checkAnalyzeLimit(userId: string, plan: string, supabase: SupabaseClient<any, any, any>) {
+  try {
+    if (plan === 'free') {
+      const { data, error } = await supabase.from('profiles').select('analyses_used').eq('id', userId).single()
+      if (error) return { allowed: true, limit: 1, used: 0, remaining: 1, resetInSeconds: 0 }
+      const used = (data as any)?.analyses_used ?? 0
+      return { allowed: used < 1, limit: 1, used, remaining: Math.max(0, 1 - used), resetInSeconds: 0, upgradeRequired: used >= 1 }
+    }
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase.from('analyses').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['complete', 'processing']).gte('created_at', since)
+    if (error) return { allowed: true, limit: 30, used: 0, remaining: 30, resetInSeconds: 0 }
+    const used = count ?? 0
+    return { allowed: used < 30, limit: 30, used, remaining: Math.max(0, 30 - used), resetInSeconds: 30 * 24 * 3600 }
+  } catch { return { allowed: true, limit: 1, used: 0, remaining: 1, resetInSeconds: 0 } }
+}
+
+async function checkIpLimit(ip: string, endpoint: string, supabase: SupabaseClient<any, any, any>) {
+  const LIMIT = 5
+  try {
+    const windowStart = new Date(Date.now() - 3600 * 1000).toISOString()
+    const { data, error } = await supabase.from('rate_limit_ip').select('window_start, count').eq('ip', ip).eq('endpoint', endpoint).single()
+    if (error || !data || (data as any).window_start < windowStart) {
+      await supabase.from('rate_limit_ip').upsert({ ip, endpoint, window_start: new Date().toISOString(), count: 1 })
+      return { allowed: true, limit: LIMIT, used: 1, remaining: LIMIT - 1, resetInSeconds: 3600 }
+    }
+    const rec = data as { window_start: string; count: number }
+    if (rec.count >= LIMIT) return { allowed: false, limit: LIMIT, used: rec.count, remaining: 0, resetInSeconds: 3600 }
+    await supabase.from('rate_limit_ip').update({ count: rec.count + 1 }).eq('ip', ip).eq('endpoint', endpoint)
+    return { allowed: true, limit: LIMIT, used: rec.count + 1, remaining: LIMIT - rec.count - 1, resetInSeconds: 3600 }
+  } catch { return { allowed: true, limit: LIMIT, used: 0, remaining: LIMIT, resetInSeconds: 0 } }
+}
 
 // Strip markdown that makes ElevenLabs produce glitchy output
 function cleanForTTS(raw: string): string {

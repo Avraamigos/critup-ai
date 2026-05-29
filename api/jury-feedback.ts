@@ -1,6 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@supabase/supabase-js'
-import { checkJuryLimit } from './_lib/rateLimit'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+// ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
+
+async function checkJuryLimit(userId: string, plan: string, supabase: SupabaseClient<any, any, any>) {
+  if (plan === 'free') return { allowed: false, limit: 0, used: 0, remaining: 0, resetInSeconds: 0, upgradeRequired: true }
+  try {
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase.from('jury_sessions').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', since)
+    if (error) return { allowed: true, limit: 20, used: 0, remaining: 20, resetInSeconds: 24 * 3600 }
+    const used = count ?? 0
+    return { allowed: used < 20, limit: 20, used, remaining: Math.max(0, 20 - used), resetInSeconds: 24 * 3600 }
+  } catch { return { allowed: true, limit: 20, used: 0, remaining: 20, resetInSeconds: 0 } }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

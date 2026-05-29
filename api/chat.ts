@@ -1,6 +1,23 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@supabase/supabase-js'
-import { checkChatLimit } from './_lib/rateLimit'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+// ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
+
+async function checkChatLimit(userId: string, plan: string, supabase: SupabaseClient<any, any, any>) {
+  try {
+    if (plan === 'free') {
+      const { count, error } = await supabase.from('chat_messages').select('id', { count: 'exact', head: true }).eq('user_id', userId)
+      if (error) return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 }
+      const used = count ?? 0
+      return { allowed: used < 10, limit: 10, used, remaining: Math.max(0, 10 - used), resetInSeconds: 0, upgradeRequired: used >= 10 }
+    }
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count, error } = await supabase.from('chat_messages').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', since)
+    if (error) return { allowed: true, limit: 100, used: 0, remaining: 100, resetInSeconds: 0 }
+    const used = count ?? 0
+    return { allowed: used < 100, limit: 100, used, remaining: Math.max(0, 100 - used), resetInSeconds: 24 * 3600 }
+  } catch { return { allowed: true, limit: 10, used: 0, remaining: 10, resetInSeconds: 0 } }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
