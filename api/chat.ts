@@ -48,7 +48,9 @@ Your role is to:
 - Answer questions about architectural design, drawing standards, and presentation techniques
 - Be encouraging but brutally honest — like a trusted mentor, not a yes-man
 
-Keep responses concise and practical (2-4 short paragraphs max unless more detail is needed). Use plain language. No excessive formatting.`
+Keep responses concise and practical (2-4 short paragraphs max unless more detail is needed). Use plain language. No excessive formatting.
+
+IMPORTANT: You are strictly scoped to this student's architectural project and their critique results. If asked about anything unrelated to architecture, design, jury preparation, or this specific project, politely redirect: "I'm here to help with your project critique and jury prep — ask me anything about your scores, feedback, or presentation strategy."`
 
   if (!context) {
     return base + `\n\nThe student hasn't analysed a project yet. Guide them to upload their drawings to get a full critique.`
