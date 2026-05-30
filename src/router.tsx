@@ -24,6 +24,7 @@ import { NotFoundPage } from '@/routes/not-found'
 import { ResetPasswordPage } from '@/routes/reset-password'
 import { AdminPage } from '@/routes/admin'
 import { PostPage } from '@/routes/post'
+import { FeedPage } from '@/routes/feed'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -65,6 +66,7 @@ const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', 
 const projectsRoute = createRoute({ getParentRoute: () => appRoute, path: '/projects', component: ProjectsPage })
 const analysisRoute = createRoute({ getParentRoute: () => appRoute, path: '/analysis/$projectId', component: AnalysisPage })
 const juryRoute = createRoute({ getParentRoute: () => appRoute, path: '/jury', component: JuryPage })
+const feedRoute = createRoute({ getParentRoute: () => appRoute, path: '/feed', component: FeedPage })
 const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/assistant', component: AssistantPage })
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: SettingsPage })
 const helpRoute  = createRoute({ getParentRoute: () => appRoute, path: '/help',  component: HelpPage })
@@ -76,6 +78,7 @@ const routeTree = rootRoute.addChildren([
     projectsRoute,
     analysisRoute,
     juryRoute,
+    feedRoute,
     assistantRoute,
     settingsRoute,
     helpRoute,

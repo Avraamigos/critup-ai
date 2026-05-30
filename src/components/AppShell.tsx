@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
-  LayoutGrid, Folder, CircleDot, Mic,
+  LayoutGrid, Folder, CircleDot, Mic, Users,
   Settings, HelpCircle, ChevronLeft, ChevronRight,
   Sun, Moon, LogOut, Star, TrendingUp, User, ShieldCheck,
 } from 'lucide-react'
@@ -93,6 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'Projects'  },
     { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'Analysis'  },
     { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'Jury'      },
+    { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'Community' },
     ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'Admin' }] : []),
   ]
 
