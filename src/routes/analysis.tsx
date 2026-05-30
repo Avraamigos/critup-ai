@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText } from 'lucide-react'
+import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText, Link, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { PDFViewer } from '@/components/PDFViewer'
 import { useTheme, useColors } from '@/lib/theme'
@@ -91,6 +91,10 @@ export function AnalysisPage() {
 
   // ── Analysis progress bar state ──
   const [progress, setProgress] = useState(0)
+
+  // ── Share state ──
+  const [sharing,   setSharing]   = useState(false)
+  const [shareDone, setShareDone] = useState(false)
 
   // ── Re-upload (new version) state ──
   const [showReupload,    setShowReupload]    = useState(false)
@@ -740,6 +744,26 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
     setTimeout(() => w.print(), 400)
   }
 
+  const handleShare = async () => {
+    if (!latestAnalysis || sharing) return
+    setSharing(true)
+    try {
+      await supabase.from('analyses').update({ is_public: true }).eq('id', latestAnalysis.id)
+      const url = `${window.location.origin}/p/${latestAnalysis.id}`
+      await navigator.clipboard.writeText(url)
+      setShareDone(true)
+      setTimeout(() => setShareDone(false), 2500)
+    } catch {
+      // fallback: just copy the link without the DB update
+      const url = `${window.location.origin}/p/${latestAnalysis.id}`
+      try { await navigator.clipboard.writeText(url) } catch { /* ignore */ }
+      setShareDone(true)
+      setTimeout(() => setShareDone(false), 2500)
+    } finally {
+      setSharing(false)
+    }
+  }
+
   return (
     <div style={{ height: 'calc(100vh - 54px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter',sans-serif", background: c.bg }}>
       <style>{`
@@ -807,6 +831,12 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               <Download size={13} /> Export PDF
             </button>
           )}
+          <button
+            onClick={handleShare}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: shareDone ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${shareDone ? 'oklch(0.72 0.17 145)' : c.border}`, color: shareDone ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
+          >
+            {shareDone ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Share'}</>}
+          </button>
         </div>
       </div>
 
