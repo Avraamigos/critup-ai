@@ -409,15 +409,27 @@ export default async function handler(
     // 6. Parse JSON response
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
 
-    // Strip markdown code fences if present
+    // Try multiple extraction strategies in order:
+    // 1. Strip markdown fences and parse directly
+    // 2. Extract the first {...} JSON block from anywhere in the text
     const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
     let result: Record<string, unknown>
     try {
       result = JSON.parse(clean)
     } catch {
-      console.error('[analyze] JSON parse failed. Raw response:', raw.slice(0, 500))
-      await supabase.from('analyses').update({ status: 'failed', error_message: 'AI returned invalid JSON response' }).eq('id', analysisId)
-      return res.status(500).json({ error: 'AI returned invalid response, please try again' })
+      // Fallback: find the outermost { ... } block in the response
+      const jsonMatch = raw.match(/\{[\s\S]*\}/)
+      try {
+        if (!jsonMatch) throw new Error('no JSON block found')
+        result = JSON.parse(jsonMatch[0])
+      } catch {
+        console.error('[analyze] JSON parse failed. Raw response:', raw.slice(0, 800))
+        await supabase.from('analyses').update({
+          status: 'failed',
+          error_message: `Invalid JSON from AI. Response started: ${raw.slice(0, 200)}`,
+        }).eq('id', analysisId)
+        return res.status(500).json({ error: 'AI returned invalid response, please try again' })
+      }
     }
 
     // 7. Haiku validator — cheap sanity check that the JSON structure is correct
