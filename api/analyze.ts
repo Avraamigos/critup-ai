@@ -334,15 +334,34 @@ export default async function handler(
   const ip = (Array.isArray(rawIp) ? rawIp[0] : rawIp ?? 'unknown').split(',')[0].trim()
 
   try {
-    // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
+    // 1. Fetch analysis + project info.
+    //    NOTE: do NOT embed profiles() here. analyses.user_id has no declared FK to
+    //    public.profiles, so PostgREST can fail the whole .single() on that join —
+    //    which returned a silent 404 ("Analysis not found") and never reached Claude.
+    //    The profile (plan/discipline) is fetched separately below, non-fatally.
     const { data: analysis, error: fetchErr } = await supabase
       .from('analyses')
-      .select('id, pdf_path, status, user_id, projects(id, name, stage, focus_areas, brief_text), profiles(plan, discipline)')
+      .select('id, pdf_path, status, user_id, projects(id, name, stage, focus_areas, brief_text)')
       .eq('id', analysisId)
       .single()
 
     if (fetchErr || !analysis) {
+      console.error('[analyze] row fetch failed for', analysisId, '-', fetchErr?.message ?? 'no row')
+      // Best-effort: mark failed so the client doesn't spin forever if the row exists.
+      await supabase.from('analyses').update({ status: 'failed', error_message: 'Could not load analysis record. Please try re-uploading your PDF.' }).eq('id', analysisId)
       return res.status(404).json({ error: 'Analysis not found' })
+    }
+
+    // Fetch the user's profile separately (plan + discipline). Non-fatal — defaults
+    // to the free plan if it can't be read, so analysis never blocks on this.
+    let profileData: { plan?: string; discipline?: string | null } | null = null
+    if (analysis.user_id) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('plan, discipline')
+        .eq('id', analysis.user_id as string)
+        .maybeSingle()
+      profileData = prof as { plan?: string; discipline?: string | null } | null
     }
 
     if (analysis.status === 'complete') {
@@ -351,8 +370,7 @@ export default async function handler(
 
     // 2. Rate limit check (skip if already processing — retry is fine)
     if (analysis.status !== 'processing' && analysis.user_id) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const plan = ((analysis as any).profiles as { plan?: string } | null)?.plan ?? 'free'
+      const plan = profileData?.plan ?? 'free'
       // Fetch user email to bypass rate limits for admin/owner
       const { data: authUser } = await supabase.auth.admin.getUserById(analysis.user_id as string)
       const isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
@@ -423,11 +441,9 @@ export default async function handler(
     }
     const pdfBase64 = Buffer.from(pdfBuffer).toString('base64')
 
-    // 4. Build context from project info
+    // 4. Build context from project info (profileData fetched separately above)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const project = (analysis as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const profileData = (analysis as any).profiles as { plan?: string; discipline?: string | null } | null
     const disciplineLabel: Record<string, string> = {
       architecture:          'Architecture',
       'interior-architecture': 'Interior Architecture',

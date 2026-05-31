@@ -145,7 +145,11 @@ export function AnalysisPage() {
 
   // ── Progress bar: exponential fill, survives page reloads via localStorage ──
   useEffect(() => {
-    const isPending = project?.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
+    // Don't touch the start-time key while data is still loading — `project` is
+    // null during the initial fetch on every reload, and clearing it here would
+    // wipe the start time and reset the bar to zero before we know the real status.
+    if (!project) return
+    const isPending = project.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
     if (!isPending) {
       localStorage.removeItem(`critup_analysis_start_${params.projectId}`)
       return
