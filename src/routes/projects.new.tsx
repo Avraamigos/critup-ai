@@ -47,9 +47,14 @@ export function NewProjectPage() {
   const isFreeUser = !profile || profile.plan === 'free'
   const PAGE_LIMIT = 50
 
+  const SIZE_LIMIT_MB = 30
   const validateAndSetFile = useCallback(async (file: File) => {
     setPageCountError(null)
     if (!file || file.type !== 'application/pdf') return
+    if (file.size > SIZE_LIMIT_MB * 1024 * 1024) {
+      setPageCountError(`Your PDF is ${(file.size / 1024 / 1024).toFixed(0)} MB. Please compress it or export fewer pages (max ${SIZE_LIMIT_MB} MB).`)
+      return
+    }
     try {
       const buf = await file.arrayBuffer()
       const lib = await import('pdfjs-dist')
@@ -452,7 +457,7 @@ export function NewProjectPage() {
               .upload-zone:hover .upload-icon-ring { transform:scale(1.07); }
             `}</style>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
-            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · max 50 MB</p>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · max 30 MB</p>
 
             {!form.file && (
               <div
@@ -506,7 +511,7 @@ export function NewProjectPage() {
 
                 {/* Badges row */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Max 50 MB']].map(([icon, label]) => (
+                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Max 30 MB']].map(([icon, label]) => (
                     <div key={label} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 11px', borderRadius: 100,

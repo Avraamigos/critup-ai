@@ -51,6 +51,7 @@ interface AdminStats {
   failedAnalyses: Array<{
     id: string; created_at: string; email: string | null
     projects: { name: string } | null; user_id: string
+    error_message: string | null
   }>
   recentSignups: Array<{
     id: string; plan: string; discipline: string | null
@@ -617,6 +618,7 @@ export function AdminPage() {
                   <thead><tr>
                     <TH c={c}>Project</TH>
                     <TH c={c}>User</TH>
+                    <TH c={c}>Error</TH>
                     <TH c={c}>Date</TH>
                     <TH c={c}> </TH>
                   </tr></thead>
@@ -625,7 +627,8 @@ export function AdminPage() {
                       <tr key={a.id} style={rowStyle(i, activeErrors.length)}>
                         <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 500, color: c.textPrimary }}>{a.projects?.name ?? 'Untitled'}</td>
                         <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{a.email ?? a.user_id}</td>
-                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(a.created_at)}</td>
+                        <td style={{ padding: '11px 16px', fontSize: 12, color: '#f87171', maxWidth: 320 }}>{a.error_message ?? '—'}</td>
+                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted, whiteSpace: 'nowrap' }}>{formatDate(a.created_at)}</td>
                         <td style={{ padding: '11px 16px' }}>
                           <button onClick={() => dismissOne(a.id)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '3px 10px', fontSize: 11, fontWeight: 600, color: c.textMuted, cursor: 'pointer' }}>
                             Dismiss

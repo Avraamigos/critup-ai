@@ -100,12 +100,12 @@ export default async function handler(
   // Fetch failed analyses separately (small set, full details)
   const { data: failedAnalysesRaw } = await supabase
     .from('analyses')
-    .select('id, created_at, user_id, projects(name)')
+    .select('id, created_at, user_id, error_message, projects(name)')
     .eq('status', 'failed')
     .order('created_at', { ascending: false })
     .limit(20)
 
-  const failedRows = (failedAnalysesRaw ?? []) as { id: string; created_at: string; user_id: string; projects: { name: string } | null }[]
+  const failedRows = (failedAnalysesRaw ?? []) as { id: string; created_at: string; user_id: string; error_message: string | null; projects: { name: string } | null }[]
 
   // Fetch emails for failed analysis users if not already in emailMap
   await Promise.all(

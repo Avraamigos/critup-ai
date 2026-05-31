@@ -326,7 +326,7 @@ export default async function handler(
       const rl = isAdmin ? { allowed: true } : await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
       if (!rl.allowed) {
         // Mark failed so the UI doesn't spin forever
-        await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+        await supabase.from('analyses').update({ status: 'failed', error_message: 'Rate limit reached' }).eq('id', analysisId)
         return res.status(429).json({
           error: 'limit_reached',
           feature: 'analyses',
@@ -348,7 +348,7 @@ export default async function handler(
 
     // 3. Download PDF from storage and convert to base64
     if (!analysis.pdf_path) {
-      await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+      await supabase.from('analyses').update({ status: 'failed', error_message: 'No PDF attached to this analysis' }).eq('id', analysisId)
       return res.status(400).json({ error: 'No PDF attached to this analysis' })
     }
 
@@ -357,7 +357,7 @@ export default async function handler(
       .download(analysis.pdf_path)
 
     if (dlErr || !fileData) {
-      await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+      await supabase.from('analyses').update({ status: 'failed', error_message: `Failed to download PDF: ${dlErr?.message ?? 'unknown'}` }).eq('id', analysisId)
       return res.status(500).json({ error: 'Failed to download PDF' })
     }
 
@@ -416,7 +416,7 @@ export default async function handler(
       result = JSON.parse(clean)
     } catch {
       console.error('[analyze] JSON parse failed. Raw response:', raw.slice(0, 500))
-      await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+      await supabase.from('analyses').update({ status: 'failed', error_message: 'AI returned invalid JSON response' }).eq('id', analysisId)
       return res.status(500).json({ error: 'AI returned invalid response, please try again' })
     }
 
@@ -445,7 +445,7 @@ ${JSON.stringify(result).slice(0, 2000)}`,
       const verdict = haiku.content[0].type === 'text' ? haiku.content[0].text.trim() : 'VALID'
       if (verdict.startsWith('INVALID')) {
         console.error('[analyze] Haiku validator rejected output:', verdict)
-        await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
+        await supabase.from('analyses').update({ status: 'failed', error_message: `AI output validation failed: ${verdict}` }).eq('id', analysisId)
         return res.status(500).json({ error: 'AI returned incomplete response, please try again' })
       }
       validatedResult = result
@@ -593,7 +593,7 @@ ${JSON.stringify(result).slice(0, 2000)}`,
     // Mark as failed so UI doesn't spin forever
     await supabase
       .from('analyses')
-      .update({ status: 'failed' })
+      .update({ status: 'failed', error_message: String(err) })
       .eq('id', analysisId)
     return res.status(500).json({ error: 'Analysis failed', detail: String(err) })
   }
