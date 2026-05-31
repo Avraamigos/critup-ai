@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
+import { ImageCarousel } from '@/components/ImageCarousel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -22,6 +23,7 @@ type Post = {
   project_discipline: string | null
   owner_name: string | null
   caption: string | null
+  slides: string[]
   pdf_url: string | null
 }
 
@@ -100,7 +102,11 @@ function PostCard({
       </div>
 
       {/* ── Slides ── */}
-      {post.pdf_url ? (
+      {post.slides.length > 0 ? (
+        <div style={{ padding: '0 12px' }}>
+          <ImageCarousel images={post.slides} aspect={0.7} />
+        </div>
+      ) : post.pdf_url ? (
         <div style={{ padding: '0 12px' }}>
           <SlideCarousel url={post.pdf_url} aspect={0.7} renderScale={1.5} />
         </div>
@@ -190,7 +196,7 @@ export function FeedPage() {
       const query = supabase
         .from('analyses')
         .select(`
-          id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path,
+          id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path, slide_count,
           projects ( name, stage, discipline )
         `)
         .eq('is_public', true)
@@ -219,13 +225,20 @@ export function FeedPage() {
         profs?.forEach(p => { if (p.full_name) nameById[p.id] = p.full_name })
       }
 
-      // Batch-sign PDF paths (bucket is private; storage RLS allows public-post reads)
-      const paths = rows.map(r => r.pdf_path).filter(Boolean) as string[]
+      // Pre-rendered slides are public images — only fall back to signing the
+      // raw PDF for legacy posts that have no rendered slides yet.
+      const fallbackPaths = rows
+        .filter(r => !(r.slide_count > 0) && r.pdf_path)
+        .map(r => r.pdf_path) as string[]
       const urlByPath: Record<string, string> = {}
-      if (paths.length) {
-        const { data: signed } = await supabase.storage.from('project-pdfs').createSignedUrls(paths, 7200)
+      if (fallbackPaths.length) {
+        const { data: signed } = await supabase.storage.from('project-pdfs').createSignedUrls(fallbackPaths, 7200)
         signed?.forEach(s => { if (s.path && s.signedUrl) urlByPath[s.path] = s.signedUrl })
       }
+
+      const slideUrls = (id: string, count: number) =>
+        Array.from({ length: count }, (_, i) =>
+          supabase.storage.from('post-slides').getPublicUrl(`${id}/${i}.jpg`).data.publicUrl)
 
       let mapped: Post[] = rows.map(row => ({
         id: row.id,
@@ -238,6 +251,7 @@ export function FeedPage() {
         project_discipline: row.projects?.discipline ?? null,
         owner_name: nameById[row.user_id] ?? null,
         caption: row.caption ?? null,
+        slides: row.slide_count > 0 ? slideUrls(row.id, row.slide_count) : [],
         pdf_url: row.pdf_path ? (urlByPath[row.pdf_path] ?? null) : null,
       }))
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, AlertCircle, Heart, Send } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
+import { ImageCarousel } from '@/components/ImageCarousel'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -32,6 +33,7 @@ type PostData = {
   }
   owner_name: string | null
   caption: string | null
+  slides: string[]
   pdf_url: string | null
 }
 
@@ -94,7 +96,7 @@ export function PostPage() {
         .from('analyses')
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score,
-          feedback, jury_questions, created_at, caption, pdf_path,
+          feedback, jury_questions, created_at, caption, pdf_path, slide_count,
           projects ( name, stage )
         `)
         .eq('id', analysisId)
@@ -108,6 +110,8 @@ export function PostPage() {
       const proj = (data as any).projects as { name: string; stage: string } | null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfPath = (data as any).pdf_path as string | null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const slideCount = Number((data as any).slide_count) || 0
 
       // Author name fetched separately (no FK from analyses → profiles)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,8 +122,14 @@ export function PostPage() {
         ownerName = prof?.full_name ?? null
       }
 
+      // Pre-rendered slides are public; only sign the raw PDF for legacy posts.
+      const slides = slideCount > 0
+        ? Array.from({ length: slideCount }, (_, i) =>
+            supabase.storage.from('post-slides').getPublicUrl(`${data.id}/${i}.jpg`).data.publicUrl)
+        : []
+
       let pdfUrl: string | null = null
-      if (pdfPath) {
+      if (pdfPath && slideCount === 0) {
         const { data: signed } = await supabase.storage.from('project-pdfs').createSignedUrl(pdfPath, 7200)
         pdfUrl = signed?.signedUrl ?? null
       }
@@ -135,6 +145,7 @@ export function PostPage() {
         project: { name: proj?.name ?? 'Untitled Project', stage: proj?.stage ?? '' },
         owner_name: ownerName,
         caption: (data as { caption?: string | null }).caption ?? null,
+        slides,
         pdf_url: pdfUrl,
       })
       setLoading(false)
@@ -268,11 +279,15 @@ export function PostPage() {
         </div>
 
         {/* ── Slides ── */}
-        {post.pdf_url && (
+        {post.slides.length > 0 ? (
+          <div style={{ marginBottom: 24 }}>
+            <ImageCarousel images={post.slides} aspect={0.72} />
+          </div>
+        ) : post.pdf_url ? (
           <div style={{ marginBottom: 24 }}>
             <SlideCarousel url={post.pdf_url} aspect={0.72} maxPages={20} />
           </div>
-        )}
+        ) : null}
 
         {/* ── Like bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>

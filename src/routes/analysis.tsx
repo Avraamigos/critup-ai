@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/database.types'
 import { track } from '@/lib/analytics'
+import { renderPdfToJpegBlobs } from '@/lib/pdfSlides'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ export function AnalysisPage() {
   const [showPostModal, setShowPostModal] = useState(false)
   const [showUnpublishModal, setShowUnpublishModal] = useState(false)
   const [postCaption, setPostCaption] = useState('')
+  const [slideProgress, setSlideProgress] = useState<{ done: number; total: number } | null>(null)
 
   // ── Re-upload (new version) state ──
   const [showReupload,    setShowReupload]    = useState(false)
@@ -783,27 +785,61 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
   }
 
   // Publish to the community feed with an optional caption.
+  // Pre-renders the PDF pages to static images so the feed loads instantly.
   const handleConfirmPost = async () => {
     if (!latestAnalysis || sharing) return
+    const analysisId = latestAnalysis.id
     setSharing(true)
     try {
       const caption = postCaption.trim().slice(0, 280) || null
+
+      // 1. Render slides to JPEGs and upload them to the public bucket.
+      //    Best-effort: if this fails we still publish (feed falls back to PDF).
+      let slideCount = 0
+      try {
+        let srcUrl = pdfUrl
+        if (!srcUrl && latestAnalysis.pdf_path) {
+          const { data } = await supabase.storage.from('project-pdfs').createSignedUrl(latestAnalysis.pdf_path, 600)
+          srcUrl = data?.signedUrl ?? null
+        }
+        if (srcUrl) {
+          setSlideProgress({ done: 0, total: 1 })
+          const blobs = await renderPdfToJpegBlobs(srcUrl, {
+            maxPages: 12,
+            onProgress: (done, total) => setSlideProgress({ done, total }),
+          })
+          for (let i = 0; i < blobs.length; i++) {
+            const { error: upErr } = await supabase.storage
+              .from('post-slides')
+              .upload(`${analysisId}/${i}.jpg`, blobs[i], { contentType: 'image/jpeg', upsert: true })
+            if (upErr) throw upErr
+          }
+          slideCount = blobs.length
+        }
+      } catch (e) {
+        console.warn('slide pre-render failed, falling back to live PDF', e)
+        slideCount = 0
+      }
+
+      // 2. Publish the analysis.
       const { error: pubErr } = await supabase
         .from('analyses')
-        .update({ is_public: true, caption })
-        .eq('id', latestAnalysis.id)
+        .update({ is_public: true, caption, slide_count: slideCount })
+        .eq('id', analysisId)
       if (pubErr) throw pubErr
+
       // Reflect immediately in local state so the UI flips to "Posted" without a refetch.
       setProject(p => p && ({
         ...p,
-        analyses: p.analyses.map(a => a.id === latestAnalysis.id ? { ...a, is_public: true, caption } : a),
+        analyses: p.analyses.map(a => a.id === analysisId ? { ...a, is_public: true, caption } : a),
       }))
-      track.postedToCommunity(latestAnalysis.id)
+      track.postedToCommunity(analysisId)
       setShowPostModal(false)
     } catch {
       window.alert('Could not post to the community. Please try again.')
     } finally {
       setSharing(false)
+      setSlideProgress(null)
     }
   }
 
@@ -1315,7 +1351,9 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 style={{ padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 0 16px oklch(0.72 0.18 45/0.35)', opacity: sharing ? 0.7 : 1 }}
               >
                 {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
-                {sharing ? 'Posting…' : 'Post to Community'}
+                {sharing
+                  ? (slideProgress ? `Preparing slides ${slideProgress.done}/${slideProgress.total}…` : 'Posting…')
+                  : 'Post to Community'}
               </button>
             </div>
           </div>

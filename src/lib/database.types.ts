@@ -99,6 +99,7 @@ export interface Database {
           pdf_path: string | null
           is_public: boolean
           caption: string | null
+          slide_count: number
           error_message: string | null
           created_at: string
           updated_at: string
@@ -116,6 +117,7 @@ export interface Database {
           pdf_path?: string | null
           is_public?: boolean
           caption?: string | null
+          slide_count?: number
           error_message?: string | null
           created_at?: string
           updated_at?: string
@@ -129,6 +131,7 @@ export interface Database {
           jury_questions?: Json | null
           is_public?: boolean
           caption?: string | null
+          slide_count?: number
           error_message?: string | null
           updated_at?: string
         }
