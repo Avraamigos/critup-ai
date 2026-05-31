@@ -85,9 +85,11 @@ export function NewProjectPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setBriefPdfLoading(true)
+    setError(null)
     try {
       const arrayBuffer = await file.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise
       let text = ''
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
@@ -97,9 +99,14 @@ export function NewProjectPage() {
         text += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n'
       }
       const cleaned = text.replace(/\s{3,}/g, '\n\n').trim()
-      setForm(f => ({ ...f, briefText: cleaned }))
-    } catch {
-      // silently fail — user can paste manually
+      if (!cleaned) {
+        setError('Could not extract text from this PDF — it may be scanned/image-based. Please paste the brief manually.')
+      } else {
+        setForm(f => ({ ...f, briefText: cleaned }))
+      }
+    } catch (err) {
+      console.error('Brief PDF parse error:', err)
+      setError('Failed to read the PDF. Please paste your brief manually.')
     } finally {
       setBriefPdfLoading(false)
       if (briefPdfRef.current) briefPdfRef.current.value = ''
