@@ -229,6 +229,9 @@ export function AdminPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [notes, setNotes]       = useState<AdminNote[]>(loadNotes)
   const [newNote, setNewNote]   = useState('')
+  const [dismissedErrors, setDismissedErrors] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('critup_dismissed_errors') ?? '[]') } catch { return [] }
+  })
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email ?? '')
 
@@ -393,7 +396,7 @@ export function AdminPage() {
     { id: 'analytics', label: 'Analytics' },
     { id: 'users',     label: `Users${stats ? ` (${stats.users.total})` : ''}` },
     { id: 'analyses',  label: `Analyses${stats ? ` (${stats.analyses.total})` : ''}` },
-    { id: 'errors',    label: `Errors${stats?.analyses.failed ? ` (${stats.analyses.failed})` : ''}`, alert: (stats?.analyses.failed ?? 0) > 0 },
+    { id: 'errors',    label: `Errors${stats?.analyses.failed ? ` (${Math.max(0, stats.analyses.failed - dismissedErrors.length)})` : ''}`, alert: (stats?.analyses.failed ?? 0) > dismissedErrors.length },
     { id: 'expenses',  label: 'Expenses'  },
     { id: 'notes',     label: `Notes${notes.length ? ` (${notes.length})` : ''}` },
   ]
@@ -580,42 +583,64 @@ export function AdminPage() {
       )}
 
       {/* ── ERRORS ── */}
-      {!loading && stats && tab === 'errors' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {stats.failedAnalyses.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: c.textMuted, fontSize: 14 }}>
-              <AlertTriangle size={28} color="#22c55e" style={{ marginBottom: 10 }} />
-              <div style={{ fontWeight: 600 }}>No failed analyses — all clear</div>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'oklch(0.18 0.02 10/0.45)', border: '1px solid oklch(0.3 0.06 10)', borderRadius: 10, fontSize: 13 }}>
-                <AlertTriangle size={14} color="#f87171" />
-                <span style={{ color: '#f87171', fontWeight: 600 }}>{stats.failedAnalyses.length} failed analyses</span>
-                <span style={{ color: c.textMuted }}>— shown newest first (max 20)</span>
+      {!loading && stats && tab === 'errors' && (() => {
+        const activeErrors = stats.failedAnalyses.filter(a => !dismissedErrors.includes(a.id))
+        const dismissAll = () => {
+          const ids = stats.failedAnalyses.map(a => a.id)
+          setDismissedErrors(ids)
+          localStorage.setItem('critup_dismissed_errors', JSON.stringify(ids))
+        }
+        const dismiss = (id: string) => {
+          const next = [...dismissedErrors, id]
+          setDismissedErrors(next)
+          localStorage.setItem('critup_dismissed_errors', JSON.stringify(next))
+        }
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {activeErrors.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: c.textMuted, fontSize: 14 }}>
+                <AlertTriangle size={28} color="#22c55e" style={{ marginBottom: 10 }} />
+                <div style={{ fontWeight: 600 }}>No failed analyses — all clear</div>
               </div>
-              <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>
-                    <TH c={c}>Project</TH>
-                    <TH c={c}>User</TH>
-                    <TH c={c}>Date</TH>
-                  </tr></thead>
-                  <tbody>
-                    {stats.failedAnalyses.map((a, i) => (
-                      <tr key={a.id} style={rowStyle(i, stats.failedAnalyses.length)}>
-                        <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 500, color: c.textPrimary }}>{a.projects?.name ?? 'Untitled'}</td>
-                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{a.email ?? a.user_id}</td>
-                        <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(a.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'oklch(0.18 0.02 10/0.45)', border: '1px solid oklch(0.3 0.06 10)', borderRadius: 10, fontSize: 13 }}>
+                  <AlertTriangle size={14} color="#f87171" />
+                  <span style={{ color: '#f87171', fontWeight: 600 }}>{activeErrors.length} failed {activeErrors.length === 1 ? 'analysis' : 'analyses'}</span>
+                  <span style={{ color: c.textMuted }}>— shown newest first (max 20)</span>
+                  <button onClick={dismissAll} style={{ marginLeft: 'auto', background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '3px 10px', fontSize: 11, fontWeight: 600, color: c.textMuted, cursor: 'pointer' }}>
+                    Dismiss all
+                  </button>
+                </div>
+                <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr>
+                      <TH c={c}>Project</TH>
+                      <TH c={c}>User</TH>
+                      <TH c={c}>Date</TH>
+                      <TH c={c}></TH>
+                    </tr></thead>
+                    <tbody>
+                      {activeErrors.map((a, i) => (
+                        <tr key={a.id} style={rowStyle(i, activeErrors.length)}>
+                          <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 500, color: c.textPrimary }}>{a.projects?.name ?? 'Untitled'}</td>
+                          <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{a.email ?? a.user_id}</td>
+                          <td style={{ padding: '11px 16px', fontSize: 12, color: c.textMuted }}>{formatDate(a.created_at)}</td>
+                          <td style={{ padding: '11px 16px' }}>
+                            <button onClick={() => dismiss(a.id)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '3px 10px', fontSize: 11, fontWeight: 600, color: c.textMuted, cursor: 'pointer' }}>
+                              Dismiss
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── EXPENSES ── */}
       {!loading && tab === 'expenses' && (
