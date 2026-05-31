@@ -895,25 +895,27 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               <Download size={13} /> Export PDF
             </button>
           )}
-          {/* Copy a private link — does not publish */}
-          <button
-            onClick={handleCopyLink}
-            title="Copy a private link to this critique"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: linkCopied ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${linkCopied ? 'oklch(0.72 0.17 145)' : c.border}`, color: linkCopied ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
-          >
-            {linkCopied ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Copy link'}</>}
-          </button>
-
-          {/* Post to / manage in the community feed */}
+          {/* Post to / manage in the community feed. The shareable link only
+              works once published (the /p/ page requires is_public=true), so
+              Copy link is shown only after the project has been posted. */}
           {isPublished ? (
-            <button
-              onClick={handleUnpublish}
-              title="Posted to the Community feed — click to remove"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145)', color: 'oklch(0.72 0.17 145)', fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
-            >
-              {sharing ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={13} />}
-              {!isMobile && (sharing ? ' Removing…' : ' Posted')}
-            </button>
+            <>
+              <button
+                onClick={handleUnpublish}
+                title="Posted to the Community feed — click to remove"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145)', color: 'oklch(0.72 0.17 145)', fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
+              >
+                {sharing ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={13} />}
+                {!isMobile && (sharing ? ' Removing…' : ' Posted')}
+              </button>
+              <button
+                onClick={handleCopyLink}
+                title="Copy the public link to this critique"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: linkCopied ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${linkCopied ? 'oklch(0.72 0.17 145)' : c.border}`, color: linkCopied ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+              >
+                {linkCopied ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Copy link'}</>}
+              </button>
+            </>
           ) : (
             <button
               onClick={openPostModal}

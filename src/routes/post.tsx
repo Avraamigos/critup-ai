@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, AlertCircle } from 'lucide-react'
+import { ArrowRight, AlertCircle, Heart, Send } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
+import { SlideCarousel } from '@/components/SlideCarousel'
 import { CritupLogo } from '@/components/CritupLogo'
+import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FeedbackItem = { title: string; text: string; suggestion: string }
+
+type Comment = {
+  id: string
+  body: string
+  created_at: string
+  author_name: string | null
+}
 
 type PostData = {
   id: string
@@ -23,6 +32,7 @@ type PostData = {
   }
   owner_name: string | null
   caption: string | null
+  pdf_url: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -36,6 +46,19 @@ const STAGE_LABELS: Record<string, string> = {
 
 const scoreColor = (s: number) =>
   s >= 8 ? 'oklch(0.72 0.17 145)' : s >= 6 ? '#F97316' : 'oklch(0.65 0.18 25)'
+
+const AVATAR_COLORS = ['#F97316', 'oklch(0.6 0.18 250)', 'oklch(0.62 0.17 160)', 'oklch(0.62 0.2 320)', 'oklch(0.65 0.18 25)']
+
+function avatarColor(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).slice(0, 2)
+  return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+}
 
 function DotGrid() {
   return (
@@ -52,9 +75,16 @@ function DotGrid() {
 export function PostPage() {
   const { analysisId } = useParams({ from: '/p/$analysisId' })
   const navigate = useNavigate()
+  const { user, profile: myProfile } = useAuth()
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+
+  const [likeCount, setLikeCount] = useState(0)
+  const [liked, setLiked]         = useState(false)
+  const [comments, setComments]   = useState<Comment[]>([])
+  const [commentBody, setCommentBody] = useState('')
+  const [posting, setPosting]     = useState(false)
 
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
@@ -64,7 +94,7 @@ export function PostPage() {
         .from('analyses')
         .select(`
           id, concept_score, spatial_score, presentation_score,
-          feedback, jury_questions, created_at, caption,
+          feedback, jury_questions, created_at, caption, pdf_path,
           projects ( name, stage ),
           profiles ( full_name )
         `)
@@ -79,6 +109,14 @@ export function PostPage() {
       const proj = (data as any).projects as { name: string; stage: string } | null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profile = (data as any).profiles as { full_name?: string | null } | null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfPath = (data as any).pdf_path as string | null
+
+      let pdfUrl: string | null = null
+      if (pdfPath) {
+        const { data: signed } = await supabase.storage.from('project-pdfs').createSignedUrl(pdfPath, 7200)
+        pdfUrl = signed?.signedUrl ?? null
+      }
 
       setPost({
         id: data.id,
@@ -91,11 +129,58 @@ export function PostPage() {
         project: { name: proj?.name ?? 'Untitled Project', stage: proj?.stage ?? '' },
         owner_name: profile?.full_name ?? null,
         caption: (data as { caption?: string | null }).caption ?? null,
+        pdf_url: pdfUrl,
       })
       setLoading(false)
+
+      // Likes + comments
+      const [{ data: likes }, { data: cmts }] = await Promise.all([
+        supabase.from('post_likes').select('user_id').eq('analysis_id', analysisId),
+        supabase.from('post_comments')
+          .select('id, body, created_at, profiles ( full_name )')
+          .eq('analysis_id', analysisId)
+          .order('created_at', { ascending: true }),
+      ])
+      setLikeCount(likes?.length ?? 0)
+      setLiked(!!(user && likes?.some(l => l.user_id === user.id)))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setComments((cmts as any[] ?? []).map(r => ({
+        id: r.id, body: r.body, created_at: r.created_at,
+        author_name: r.profiles?.full_name ?? null,
+      })))
     }
     load()
-  }, [analysisId])
+  }, [analysisId, user])
+
+  const handleToggleLike = async () => {
+    if (!user) { navigate({ to: '/login' }); return }
+    const was = liked
+    setLiked(!was)
+    setLikeCount(n => Math.max(0, n + (was ? -1 : 1)))
+    const { error } = was
+      ? await supabase.from('post_likes').delete().eq('analysis_id', analysisId).eq('user_id', user.id)
+      : await supabase.from('post_likes').insert({ analysis_id: analysisId, user_id: user.id })
+    if (error) { setLiked(was); setLikeCount(n => Math.max(0, n + (was ? 1 : -1))) }
+  }
+
+  const handleAddComment = async () => {
+    const body = commentBody.trim()
+    if (!body) return
+    if (!user) { navigate({ to: '/login' }); return }
+    setPosting(true)
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({ analysis_id: analysisId, user_id: user.id, body: body.slice(0, 1000) })
+      .select('id, created_at')
+      .single()
+    setPosting(false)
+    if (error || !data) return
+    setComments(prev => [...prev, {
+      id: data.id, body: body.slice(0, 1000), created_at: data.created_at,
+      author_name: myProfile?.full_name ?? null,
+    }])
+    setCommentBody('')
+  }
 
   // ── Loading ──
   if (loading) {
@@ -176,6 +261,28 @@ export function PostPage() {
           )}
         </div>
 
+        {/* ── Slides ── */}
+        {post.pdf_url && (
+          <div style={{ marginBottom: 24 }}>
+            <SlideCarousel url={post.pdf_url} aspect={0.72} maxPages={20} />
+          </div>
+        )}
+
+        {/* ── Like bar ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+          <button
+            onClick={handleToggleLike}
+            aria-label={liked ? 'Unlike' : 'Like'}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 100, border: `1px solid ${liked ? 'oklch(0.65 0.22 20 / 0.5)' : 'oklch(0.22 0.004 270)'}`, background: liked ? 'oklch(0.65 0.22 20 / 0.12)' : 'transparent', color: liked ? 'oklch(0.7 0.2 20)' : 'oklch(0.65 0.004 270)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            <Heart size={17} fill={liked ? 'oklch(0.7 0.2 20)' : 'none'} />
+            {likeCount > 0 ? likeCount : 'Like'}
+          </button>
+          <div style={{ fontSize: 13, color: 'oklch(0.55 0.004 270)' }}>
+            {comments.length > 0 ? `${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'Be the first to comment'}
+          </div>
+        </div>
+
         {/* ── Score rings ── */}
         <div style={{ background: 'oklch(0.14 0.004 270)', border: '1px solid oklch(0.22 0.004 270)', borderRadius: 20, padding: '28px 24px', marginBottom: 24 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 20 }}>AI Critique Scores</div>
@@ -236,6 +343,72 @@ export function PostPage() {
             </div>
           </div>
         )}
+
+        {/* ── Comments ── */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 12 }}>
+            Comments {comments.length > 0 && `(${comments.length})`}
+          </div>
+
+          {/* Add comment */}
+          {user ? (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: comments.length ? 20 : 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: avatarColor(myProfile?.full_name ?? '?'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                {initials(myProfile?.full_name ?? '?')}
+              </div>
+              <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+                <input
+                  value={commentBody}
+                  onChange={e => setCommentBody(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment() } }}
+                  maxLength={1000}
+                  placeholder="Add a comment…"
+                  style={{ flex: 1, background: 'oklch(0.14 0.004 270)', border: '1px solid oklch(0.22 0.004 270)', borderRadius: 12, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none', fontFamily: FONT }}
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={posting || !commentBody.trim()}
+                  aria-label="Post comment"
+                  style={{ flexShrink: 0, width: 40, borderRadius: 12, border: 'none', background: commentBody.trim() ? '#F97316' : 'oklch(0.22 0.004 270)', color: '#fff', cursor: commentBody.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Send size={15} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate({ to: '/login' })}
+              style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px dashed oklch(0.28 0.004 270)', background: 'transparent', color: 'oklch(0.6 0.004 270)', fontSize: 13, cursor: 'pointer', marginBottom: comments.length ? 20 : 0 }}
+            >
+              Log in to join the conversation
+            </button>
+          )}
+
+          {/* Thread */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {comments.map(cm => {
+              const cname = cm.author_name ?? 'Anonymous'
+              return (
+                <div key={cm.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                    {initials(cname)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: '#fff' }}>
+                      <span style={{ fontWeight: 700 }}>{cname}</span>
+                      <span style={{ color: 'oklch(0.45 0.004 270)', fontSize: 11, marginLeft: 8 }}>
+                        {new Date(cm.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'oklch(0.78 0.004 270)', lineHeight: 1.5, marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {cm.body}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
         {/* ── CTA ── */}
         <div style={{ background: 'linear-gradient(135deg, oklch(0.72 0.18 45 / 0.1), oklch(0.72 0.18 45 / 0.04))', border: '1px solid oklch(0.72 0.18 45 / 0.2)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' }}>

@@ -134,6 +134,42 @@ export interface Database {
         }
         Relationships: []
       }
+      post_likes: {
+        Row: {
+          analysis_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          analysis_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          created_at?: string
+        }
+        Relationships: []
+      }
+      post_comments: {
+        Row: {
+          id: string
+          analysis_id: string
+          user_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          analysis_id: string
+          user_id: string
+          body: string
+          created_at?: string
+        }
+        Update: {
+          body?: string
+        }
+        Relationships: []
+      }
       jury_sessions: {
         Row: {
           id: string

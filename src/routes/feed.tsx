@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { TrendingUp, Clock, ExternalLink, Copy, Check } from 'lucide-react'
+import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
+import { SlideCarousel } from '@/components/SlideCarousel'
 import { useTheme, useColors } from '@/lib/theme'
+import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,6 +22,7 @@ type Post = {
   project_discipline: string | null
   owner_name: string | null
   caption: string | null
+  pdf_url: string | null
 }
 
 const DISCIPLINE_TABS: { v: Discipline; label: string; emoji: string }[] = [
@@ -36,93 +39,131 @@ const STAGE_LABELS: Record<string, string> = {
   'jury-prep':        'Jury Prep',
 }
 
+const AVATAR_COLORS = ['#F97316', 'oklch(0.6 0.18 250)', 'oklch(0.62 0.17 160)', 'oklch(0.62 0.2 320)', 'oklch(0.65 0.18 25)']
+
+function avatarColor(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).slice(0, 2)
+  return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+}
+
 // ─── Post card ────────────────────────────────────────────────────────────────
 
-function PostCard({ post, c, theme, onCopy }: { post: Post; c: ReturnType<typeof useColors>; theme: 'dark' | 'light'; onCopy: (id: string) => void }) {
+function PostCard({
+  post, c, theme, liked, likeCount, commentCount, onToggleLike, onCopy,
+}: {
+  post: Post
+  c: ReturnType<typeof useColors>
+  theme: 'dark' | 'light'
+  liked: boolean
+  likeCount: number
+  commentCount: number
+  onToggleLike: (id: string) => void
+  onCopy: (id: string) => void
+}) {
   const navigate = useNavigate()
-  const avg = ((post.concept_score + post.spatial_score + post.presentation_score) / 3)
-  const scoreColor = (s: number) => s >= 8 ? 'oklch(0.72 0.17 145)' : s >= 6 ? '#F97316' : 'oklch(0.65 0.18 25)'
   const stageLabel = STAGE_LABELS[post.project_stage] ?? post.project_stage
-  const dateStr = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const dateStr = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const name = post.owner_name ?? 'Anonymous'
 
   return (
     <div style={{
       background: c.cardBg,
       border: `1px solid ${c.border}`,
       borderRadius: 18,
-      padding: '20px 22px',
+      padding: 0,
       display: 'flex',
       flexDirection: 'column',
-      gap: 16,
-      transition: 'border-color 0.15s',
-      cursor: 'default',
-    }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = '#F97316')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = c.border)}
-    >
-      {/* Top row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      overflow: 'hidden',
+    }}>
+      {/* ── Author header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 12px' }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+          background: avatarColor(name), color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700,
+        }}>{initials(name)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {stageLabel && (
-            <div style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#F97316', background: 'oklch(0.72 0.18 45 / 0.1)', padding: '3px 10px', borderRadius: 100, marginBottom: 8 }}>
-              {stageLabel}
-            </div>
-          )}
-          <div style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary, lineHeight: 1.3, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {post.project_name}
-          </div>
-          <div style={{ fontSize: 12, color: c.textMuted }}>
-            {post.owner_name ?? 'Anonymous'} · {dateStr}
+          <div style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ fontSize: 11.5, color: c.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.project_name}</span>
+            {stageLabel && <span style={{ color: '#F97316' }}>· {stageLabel}</span>}
           </div>
         </div>
-        {/* Overall score badge */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: scoreColor(avg), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-            {avg.toFixed(1)}
-          </div>
-          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: c.textMuted }}>Overall</div>
-        </div>
+        <div style={{ fontSize: 11.5, color: c.textMuted, flexShrink: 0 }}>{dateStr}</div>
       </div>
 
-      {/* Caption */}
-      {post.caption && (
-        <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {post.caption}
+      {/* ── Slides ── */}
+      {post.pdf_url ? (
+        <div style={{ padding: '0 12px' }}>
+          <SlideCarousel url={post.pdf_url} aspect={0.7} />
+        </div>
+      ) : (
+        <div style={{ margin: '0 12px', borderRadius: 14, height: 160, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted, fontSize: 12 }}>
+          Drawings unavailable
         </div>
       )}
 
-      {/* Score rings */}
-      <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+      {/* ── Score row ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-around', padding: '14px 16px 6px' }}>
         {[
           { label: 'Concept',      score: post.concept_score },
           { label: 'Spatial',      score: post.spatial_score },
           { label: 'Presentation', score: post.presentation_score },
         ].map(r => (
-          <ScoreRing key={r.label} score={r.score} label={r.label} size={68} theme={theme} animated={false} />
+          <ScoreRing key={r.label} score={r.score} label={r.label} size={58} theme={theme} animated={false} />
         ))}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: `1px solid ${c.border}` }}>
+      {/* ── Caption ── */}
+      {post.caption && (
+        <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, padding: '4px 16px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <span style={{ fontWeight: 700 }}>{name}</span> {post.caption}
+        </div>
+      )}
+
+      {/* ── Social bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 12px 14px' }}>
+        <button
+          onClick={() => onToggleLike(post.id)}
+          aria-label={liked ? 'Unlike' : 'Like'}
+          style={socialBtn(liked ? 'oklch(0.65 0.22 20)' : c.textMuted)}
+        >
+          <Heart size={18} fill={liked ? 'oklch(0.65 0.22 20)' : 'none'} />
+          {likeCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{likeCount}</span>}
+        </button>
         <button
           onClick={() => navigate({ to: `/p/${post.id}` })}
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
+          aria-label="Comments"
+          style={socialBtn(c.textMuted)}
         >
-          <ExternalLink size={12} /> View post
+          <MessageCircle size={18} />
+          {commentCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{commentCount}</span>}
         </button>
         <button
           onClick={() => onCopy(post.id)}
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
+          aria-label="Share"
+          style={{ ...socialBtn(c.textMuted), marginLeft: 'auto' }}
         >
-          <Copy size={12} /> Copy link
+          <Share2 size={18} />
         </button>
       </div>
     </div>
   )
+}
+
+function socialBtn(color: string): React.CSSProperties {
+  return {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '6px 8px', borderRadius: 100, border: 'none',
+    background: 'transparent', color, cursor: 'pointer',
+  }
 }
 
 // ─── Feed page ────────────────────────────────────────────────────────────────
@@ -130,6 +171,7 @@ function PostCard({ post, c, theme, onCopy }: { post: Post; c: ReturnType<typeof
 export function FeedPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { user } = useAuth()
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
   const [posts, setPosts]           = useState<Post[]>([])
@@ -138,13 +180,17 @@ export function FeedPage() {
   const [discipline, setDiscipline] = useState<Discipline>('all')
   const [copiedId, setCopiedId]     = useState<string | null>(null)
 
+  const [likeCounts, setLikeCounts]       = useState<Record<string, number>>({})
+  const [likedByMe, setLikedByMe]         = useState<Set<string>>(new Set())
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+
   useEffect(() => {
     async function load() {
       setLoading(true)
       const query = supabase
         .from('analyses')
         .select(`
-          id, concept_score, spatial_score, presentation_score, created_at, caption,
+          id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path,
           projects ( name, stage, discipline ),
           profiles ( full_name )
         `)
@@ -162,7 +208,17 @@ export function FeedPage() {
       if (!data) { setLoading(false); return }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let mapped: Post[] = (data as any[]).map(row => ({
+      const rows = data as any[]
+
+      // Batch-sign PDF paths (bucket is private; storage RLS allows public-post reads)
+      const paths = rows.map(r => r.pdf_path).filter(Boolean) as string[]
+      const urlByPath: Record<string, string> = {}
+      if (paths.length) {
+        const { data: signed } = await supabase.storage.from('project-pdfs').createSignedUrls(paths, 7200)
+        signed?.forEach(s => { if (s.path && s.signedUrl) urlByPath[s.path] = s.signedUrl })
+      }
+
+      let mapped: Post[] = rows.map(row => ({
         id: row.id,
         concept_score: Number(row.concept_score) || 0,
         spatial_score: Number(row.spatial_score) || 0,
@@ -173,9 +229,9 @@ export function FeedPage() {
         project_discipline: row.projects?.discipline ?? null,
         owner_name: row.profiles?.full_name ?? null,
         caption: row.caption ?? null,
+        pdf_url: row.pdf_path ? (urlByPath[row.pdf_path] ?? null) : null,
       }))
 
-      // Filter by discipline tab
       if (discipline !== 'all') {
         mapped = mapped.filter(p => p.project_discipline === discipline)
       }
@@ -190,9 +246,55 @@ export function FeedPage() {
 
       setPosts(mapped)
       setLoading(false)
+
+      // Batch-load like & comment counts for the visible posts
+      const ids = mapped.map(p => p.id)
+      if (ids.length) {
+        const [{ data: likes }, { data: comments }] = await Promise.all([
+          supabase.from('post_likes').select('analysis_id, user_id').in('analysis_id', ids),
+          supabase.from('post_comments').select('analysis_id').in('analysis_id', ids),
+        ])
+        const lc: Record<string, number> = {}
+        const mine = new Set<string>()
+        likes?.forEach(l => {
+          lc[l.analysis_id] = (lc[l.analysis_id] ?? 0) + 1
+          if (user && l.user_id === user.id) mine.add(l.analysis_id)
+        })
+        const cc: Record<string, number> = {}
+        comments?.forEach(cm => { cc[cm.analysis_id] = (cc[cm.analysis_id] ?? 0) + 1 })
+        setLikeCounts(lc)
+        setLikedByMe(mine)
+        setCommentCounts(cc)
+      }
     }
     load()
-  }, [sort, discipline])
+  }, [sort, discipline, user])
+
+  const handleToggleLike = async (id: string) => {
+    if (!user) return
+    const isLiked = likedByMe.has(id)
+    // Optimistic
+    setLikedByMe(prev => {
+      const next = new Set(prev)
+      if (isLiked) next.delete(id); else next.add(id)
+      return next
+    })
+    setLikeCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (isLiked ? -1 : 1)) }))
+
+    const { error } = isLiked
+      ? await supabase.from('post_likes').delete().eq('analysis_id', id).eq('user_id', user.id)
+      : await supabase.from('post_likes').insert({ analysis_id: id, user_id: user.id })
+
+    if (error) {
+      // Revert on failure
+      setLikedByMe(prev => {
+        const next = new Set(prev)
+        if (isLiked) next.add(id); else next.delete(id)
+        return next
+      })
+      setLikeCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (isLiked ? 1 : -1)) }))
+    }
+  }
 
   const handleCopy = async (id: string) => {
     const url = `${window.location.origin}/p/${id}`
@@ -270,13 +372,17 @@ export function FeedPage() {
             <div style={{ fontSize: 13, color: c.textMuted }}>Be the first to share your project critique with the community.</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20, maxWidth: 1100, margin: '0 auto' }}>
             {posts.map(post => (
               <PostCard
                 key={post.id}
                 post={post}
                 c={c}
                 theme={theme}
+                liked={likedByMe.has(post.id)}
+                likeCount={likeCounts[post.id] ?? 0}
+                commentCount={commentCounts[post.id] ?? 0}
+                onToggleLike={handleToggleLike}
                 onCopy={handleCopy}
               />
             ))}
