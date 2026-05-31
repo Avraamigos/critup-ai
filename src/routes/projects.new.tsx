@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
