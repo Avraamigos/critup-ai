@@ -46,28 +46,85 @@ export function NewProjectPage() {
 
   const isFreeUser = !profile || profile.plan === 'free'
   const PAGE_LIMIT = 50
+  const COMPRESS_THRESHOLD_MB = 20 // compress if over this size
+  const MAX_SIZE_MB = 50 // hard cap (after compression attempt)
 
-  const SIZE_LIMIT_MB = 30
+  // Compress a PDF by re-rendering each page as JPEG at reduced DPI
+  const compressPdf = async (file: File, onProgress: (msg: string) => void): Promise<File> => {
+    const buf = await file.arrayBuffer()
+    const lib = await import('pdfjs-dist')
+    lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
+    const pdfDoc = await lib.getDocument({ data: new Uint8Array(buf) }).promise
+    const numPages = pdfDoc.numPages
+
+    const { jsPDF } = await import('jspdf')
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    let outPdf: InstanceType<typeof jsPDF> | null = null
+
+    for (let i = 1; i <= numPages; i++) {
+      onProgress(`Compressing PDF… (${i}/${numPages})`)
+      const page = await pdfDoc.getPage(i)
+      const viewport = page.getViewport({ scale: 1.5 }) // ~108 DPI — clear enough for AI analysis
+      canvas.width  = viewport.width
+      canvas.height = viewport.height
+      // pdfjs v5: render takes canvas element directly, not canvasContext
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await page.render({ canvasContext: ctx, viewport, canvas } as any).promise
+
+      const jpegData = canvas.toDataURL('image/jpeg', 0.82)
+      const imgW = viewport.width  * 0.264583 // px → mm (72dpi base)
+      const imgH = viewport.height * 0.264583
+
+      if (!outPdf) {
+        outPdf = new jsPDF({ orientation: imgW > imgH ? 'landscape' : 'portrait', unit: 'mm', format: [imgW, imgH] })
+      } else {
+        outPdf.addPage([imgW, imgH], imgW > imgH ? 'landscape' : 'portrait')
+      }
+      outPdf.addImage(jpegData, 'JPEG', 0, 0, imgW, imgH, undefined, 'FAST')
+    }
+
+    const blob = outPdf!.output('blob')
+    return new File([blob], file.name, { type: 'application/pdf' })
+  }
+
   const validateAndSetFile = useCallback(async (file: File) => {
     setPageCountError(null)
     if (!file || file.type !== 'application/pdf') return
-    if (file.size > SIZE_LIMIT_MB * 1024 * 1024) {
-      setPageCountError(`Your PDF is ${(file.size / 1024 / 1024).toFixed(0)} MB. Please compress it or export fewer pages (max ${SIZE_LIMIT_MB} MB).`)
-      return
+
+    let finalFile = file
+
+    // Auto-compress large PDFs instead of rejecting them
+    if (file.size > COMPRESS_THRESHOLD_MB * 1024 * 1024) {
+      try {
+        setPageCountError(`Compressing PDF… (0/?)`)
+        finalFile = await compressPdf(file, (msg) => setPageCountError(msg))
+        setPageCountError(null)
+        // If compression didn't help enough, warn
+        if (finalFile.size > MAX_SIZE_MB * 1024 * 1024) {
+          setPageCountError(`PDF is still ${(finalFile.size / 1024 / 1024).toFixed(0)} MB after compression. Try exporting fewer pages.`)
+          return
+        }
+      } catch {
+        setPageCountError(null) // compression failed — proceed with original and let server handle it
+        finalFile = file
+      }
     }
+
     try {
-      const buf = await file.arrayBuffer()
+      const buf = await finalFile.arrayBuffer()
       const lib = await import('pdfjs-dist')
       lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
       const pdf = await lib.getDocument({ data: new Uint8Array(buf) }).promise
       if (pdf.numPages > PAGE_LIMIT) {
-        setPageCountError(`Your PDF has ${pdf.numPages} pages. Please export only your key boards (max ${PAGE_LIMIT} pages).`)
+        setPageCountError(`Your PDF has ${pdf.numPages} pages. Please export only the key boards (max ${PAGE_LIMIT} pages).`)
         return
       }
     } catch {
-      // If we can't read page count, let it through — server will handle it
+      // can't read page count — let it through
     }
-    setForm(f => ({ ...f, file }))
+    setForm(f => ({ ...f, file: finalFile }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [PAGE_LIMIT])
 
   const totalSteps = 6
@@ -457,7 +514,7 @@ export function NewProjectPage() {
               .upload-zone:hover .upload-icon-ring { transform:scale(1.07); }
             `}</style>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
-            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · max 30 MB</p>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · large files auto-compressed</p>
 
             {!form.file && (
               <div
@@ -511,7 +568,7 @@ export function NewProjectPage() {
 
                 {/* Badges row */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Max 30 MB']].map(([icon, label]) => (
+                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Large files auto-compressed']].map(([icon, label]) => (
                     <div key={label} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 11px', borderRadius: 100,
