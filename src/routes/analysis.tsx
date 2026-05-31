@@ -207,6 +207,8 @@ export function AnalysisPage() {
   const latestAnalysis   = sortedComplete[0]
   const previousAnalysis = sortedComplete[1] ?? null   // second-most-recent, for score delta
 
+  const latestFailed = !latestAnalysis && project?.analyses?.some(a => a.status === 'failed')
+
   // Keep analysisId ref in sync so speakSlide can read it without re-creating
   useEffect(() => { analysisIdRef.current = latestAnalysis?.id ?? null }, [latestAnalysis?.id])
 
@@ -582,6 +584,15 @@ export function AnalysisPage() {
 
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>Analysis in progress</h2>
             <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 320, margin: '8px 0 0', lineHeight: 1.6 }}>Crit is reviewing your drawings in detail.<br/>This usually takes 1–2 minutes.</p>
+          </>
+        ) : latestFailed ? (
+          <>
+            <div style={{ fontSize: 48 }}>⚠️</div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.textPrimary }}>Analysis failed</h2>
+            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 300, textAlign: 'center', lineHeight: 1.6, margin: '4px 0 0' }}>Something went wrong while processing your drawings. Please try uploading again.</p>
+            <button onClick={() => navigate({ to: '/projects/new' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <Plus size={15} /> Try again
+            </button>
           </>
         ) : (
           <>
