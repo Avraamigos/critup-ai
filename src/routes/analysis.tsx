@@ -93,7 +93,14 @@ export function AnalysisPage() {
   const [audioReady,    setAudioReady]   = useState(false)   // true once slide 0 is in cache
 
   // ── Analysis progress bar state ──
-  const [progress, setProgress] = useState(0)
+  // Lazy init from localStorage so a page reload resumes at the correct position
+  // instead of flashing from 0 and showing "Receiving your drawings…" again.
+  const [progress, setProgress] = useState(() => {
+    const stored = localStorage.getItem(`critup_analysis_start_${params.projectId}`)
+    if (!stored) return 0
+    const elapsed = (Date.now() - parseInt(stored, 10)) / 1000
+    return Math.min(85, (elapsed / 240) * 97)
+  })
 
   // ── Share / post state ──
   const [sharing,     setSharing]     = useState(false)  // in-flight for post/unpublish
