@@ -33,6 +33,7 @@ type AnalysisData = {
   pdf_path: string | null
   is_public: boolean | null
   caption: string | null
+  error_message: string | null
   created_at: string
 }
 
@@ -180,13 +181,28 @@ export function AnalysisPage() {
     const load = async () => {
       const { data, error: err } = await supabase
         .from('projects')
-        .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, created_at)')
+        .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, error_message, created_at)')
         .eq('id', params.projectId)
         .single()
       if (err || !data) { setError('Project not found.'); setLoading(false); return }
       const proj = data as unknown as ProjectData
       setProject(proj)
       setLoading(false)
+
+      // If the server marked the latest attempt as failed, surface its real reason
+      // immediately instead of letting the client spin until the 7-min timeout.
+      const hasComplete = proj.analyses?.some(a => a.status === 'complete')
+      const failed = proj.analyses
+        ?.filter(a => a.status === 'failed')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+      if (failed && !hasComplete) {
+        if (pollTimer) clearTimeout(pollTimer)
+        if (timeoutTimer) clearTimeout(timeoutTimer)
+        localStorage.removeItem(`critup_analysis_start_${params.projectId}`)
+        setError(failed.error_message || 'Analysis failed. Please try re-uploading your PDF.')
+        return
+      }
+
       const stillPending = proj.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
       if (stillPending) {
         pollTimer = setTimeout(load, 4000)
@@ -253,14 +269,19 @@ export function AnalysisPage() {
 
       const newId = (newAnalysis as { id: string }).id
 
-      // 3. Trigger analysis (fire-and-forget — polling handles the rest)
+      // 3. Reset timeout clock so the 7-min window starts fresh for this attempt
+      const startKey = `critup_analysis_start_${params.projectId}`
+      localStorage.removeItem(startKey)
+      localStorage.setItem(startKey, String(Date.now()))
+
+      // 4. Trigger analysis (fire-and-forget — polling handles the rest)
       fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisId: newId }),
       }).catch(console.error)
 
-      // 4. Update active project context for Crit chat
+      // 5. Update active project context for Crit chat
       localStorage.setItem('critup_last_analysis_id', newId)
 
       // 5. Close modal — existing realtime subscription picks up status changes automatically

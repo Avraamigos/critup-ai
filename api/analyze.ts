@@ -330,20 +330,8 @@ export default async function handler(
 
   const supabase = createClient(supabaseUrl, serviceKey)
 
-  // ── IP rate limit: 5 requests / hour per IP (blocks competitor scraping) ──
   const rawIp = req.headers['x-forwarded-for']
   const ip = (Array.isArray(rawIp) ? rawIp[0] : rawIp ?? 'unknown').split(',')[0].trim()
-  try {
-    const ipCheck = await checkIpLimit(ip, 'analyze', supabase)
-    if (!ipCheck.allowed) {
-      return res.status(429).json({
-        error: 'Too many requests',
-        message: 'Too many analysis requests from this IP. Try again in an hour.',
-      })
-    }
-  } catch {
-    // Fail open — don't block users on IP check errors
-  }
 
   try {
     // 1. Fetch analysis + project info (include user_id + profile plan for rate limiting)
@@ -365,9 +353,29 @@ export default async function handler(
     if (analysis.status !== 'processing' && analysis.user_id) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const plan = ((analysis as any).profiles as { plan?: string } | null)?.plan ?? 'free'
-      // Fetch user email to bypass rate limit for admin
+      // Fetch user email to bypass rate limits for admin/owner
       const { data: authUser } = await supabase.auth.admin.getUserById(analysis.user_id as string)
       const isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+
+      // ── IP rate limit: 5 requests / hour per IP (blocks competitor scraping) ──
+      // Skip for admin so the owner is never locked out while testing. On block we
+      // MARK THE ROW FAILED — otherwise it hangs on 'pending' and the client spins
+      // for 7 minutes with no idea why.
+      if (!isAdmin) {
+        try {
+          const ipCheck = await checkIpLimit(ip, 'analyze', supabase)
+          if (!ipCheck.allowed) {
+            await supabase.from('analyses').update({ status: 'failed', error_message: 'Too many analysis requests from your network in the last hour. Please wait an hour and try again.' }).eq('id', analysisId)
+            return res.status(429).json({
+              error: 'Too many requests',
+              message: 'Too many analysis requests from this IP. Try again in an hour.',
+            })
+          }
+        } catch {
+          // Fail open — don't block users on IP check errors
+        }
+      }
+
       const rl = isAdmin ? { allowed: true } : await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
       if (!rl.allowed) {
         // Mark failed so the UI doesn't spin forever
