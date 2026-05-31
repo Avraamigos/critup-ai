@@ -92,14 +92,20 @@ export function NewProjectPage() {
       const uint8Array = new Uint8Array(arrayBuffer)
       const lib = await import('pdfjs-dist')
       lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
-      const pdf = await lib.getDocument({ data: uint8Array }).promise
+      const loadingTask = lib.getDocument({ data: uint8Array, useSystemFonts: true })
+      const pdf = await loadingTask.promise
       let text = ''
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const content = await page.getTextContent()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        text += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n'
+        const stream = page.streamTextContent({ includeMarkedContent: false })
+        const reader = stream.getReader()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          text += (value as any).items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + ' '
+        }
+        text += '\n'
       }
       const cleaned = text.replace(/\s{3,}/g, '\n\n').trim()
       if (!cleaned) {
