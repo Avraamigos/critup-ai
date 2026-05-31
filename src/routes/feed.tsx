@@ -190,9 +190,8 @@ export function FeedPage() {
       const query = supabase
         .from('analyses')
         .select(`
-          id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path,
-          projects ( name, stage, discipline ),
-          profiles ( full_name )
+          id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path,
+          projects ( name, stage, discipline )
         `)
         .eq('is_public', true)
         .eq('status', 'complete')
@@ -204,11 +203,21 @@ export function FeedPage() {
         query.order('concept_score', { ascending: false })
       }
 
-      const { data } = await query
+      const { data, error } = await query
+      if (error) console.warn('feed query error', error)
       if (!data) { setLoading(false); return }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = data as any[]
+
+      // Author names: fetched separately (no FK from analyses → profiles, so we
+      // can't embed it). Batched into one query keyed by user_id.
+      const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
+      const nameById: Record<string, string> = {}
+      if (userIds.length) {
+        const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', userIds)
+        profs?.forEach(p => { if (p.full_name) nameById[p.id] = p.full_name })
+      }
 
       // Batch-sign PDF paths (bucket is private; storage RLS allows public-post reads)
       const paths = rows.map(r => r.pdf_path).filter(Boolean) as string[]
@@ -227,7 +236,7 @@ export function FeedPage() {
         project_name: row.projects?.name ?? 'Untitled',
         project_stage: row.projects?.stage ?? '',
         project_discipline: row.projects?.discipline ?? null,
-        owner_name: row.profiles?.full_name ?? null,
+        owner_name: nameById[row.user_id] ?? null,
         caption: row.caption ?? null,
         pdf_url: row.pdf_path ? (urlByPath[row.pdf_path] ?? null) : null,
       }))

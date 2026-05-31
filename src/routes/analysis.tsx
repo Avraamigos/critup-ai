@@ -98,6 +98,7 @@ export function AnalysisPage() {
   const [sharing,     setSharing]     = useState(false)  // in-flight for post/unpublish
   const [linkCopied,  setLinkCopied]  = useState(false)  // "Copied!" on the Copy-link button
   const [showPostModal, setShowPostModal] = useState(false)
+  const [showUnpublishModal, setShowUnpublishModal] = useState(false)
   const [postCaption, setPostCaption] = useState('')
 
   // ── Re-upload (new version) state ──
@@ -809,7 +810,6 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
   // Take the project back down from the community feed.
   const handleUnpublish = async () => {
     if (!latestAnalysis || sharing) return
-    if (!window.confirm('Remove this project from the Community feed? Anyone with the link will no longer see it.')) return
     setSharing(true)
     try {
       const { error: unErr } = await supabase
@@ -821,6 +821,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
         ...p,
         analyses: p.analyses.map(a => a.id === latestAnalysis.id ? { ...a, is_public: false } : a),
       }))
+      setShowUnpublishModal(false)
     } catch {
       window.alert('Could not remove the post. Please try again.')
     } finally {
@@ -901,7 +902,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           {isPublished ? (
             <>
               <button
-                onClick={handleUnpublish}
+                onClick={() => { if (!sharing) setShowUnpublishModal(true) }}
                 title="Posted to the Community feed — click to remove"
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145)', color: 'oklch(0.72 0.17 145)', fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
               >
@@ -1315,6 +1316,39 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               >
                 {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
                 {sharing ? 'Posting…' : 'Post to Community'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Remove from Community modal ── */}
+      {showUnpublishModal && latestAnalysis && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget && !sharing) setShowUnpublishModal(false) }}
+        >
+          <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 420, border: `1px solid ${c.border}`, boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'oklch(0.65 0.18 25/0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AlertCircle size={18} color="oklch(0.65 0.18 25)" />
+              </div>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Remove from Community?</h2>
+            </div>
+            <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.55, margin: 0 }}>
+              This takes <strong style={{ color: c.textPrimary }}>{project.name}</strong> off the Community feed. Anyone with the link will no longer be able to see it. You can post it again anytime.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+              <button onClick={() => { if (!sharing) setShowUnpublishModal(false) }} disabled={sharing} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: sharing ? 'default' : 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleUnpublish}
+                disabled={sharing}
+                style={{ padding: '10px 24px', borderRadius: 100, background: 'oklch(0.65 0.18 25)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7, opacity: sharing ? 0.7 : 1 }}
+              >
+                {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                {sharing ? 'Removing…' : 'Remove post'}
               </button>
             </div>
           </div>

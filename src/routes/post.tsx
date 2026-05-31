@@ -93,10 +93,9 @@ export function PostPage() {
       const { data, error } = await supabase
         .from('analyses')
         .select(`
-          id, concept_score, spatial_score, presentation_score,
+          id, user_id, concept_score, spatial_score, presentation_score,
           feedback, jury_questions, created_at, caption, pdf_path,
-          projects ( name, stage ),
-          profiles ( full_name )
+          projects ( name, stage )
         `)
         .eq('id', analysisId)
         .eq('is_public', true)
@@ -108,9 +107,16 @@ export function PostPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const proj = (data as any).projects as { name: string; stage: string } | null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const profile = (data as any).profiles as { full_name?: string | null } | null
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfPath = (data as any).pdf_path as string | null
+
+      // Author name fetched separately (no FK from analyses → profiles)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ownerId = (data as any).user_id as string | null
+      let ownerName: string | null = null
+      if (ownerId) {
+        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', ownerId).maybeSingle()
+        ownerName = prof?.full_name ?? null
+      }
 
       let pdfUrl: string | null = null
       if (pdfPath) {
@@ -127,7 +133,7 @@ export function PostPage() {
         jury_questions: (data.jury_questions as string[]) || [],
         created_at: data.created_at,
         project: { name: proj?.name ?? 'Untitled Project', stage: proj?.stage ?? '' },
-        owner_name: profile?.full_name ?? null,
+        owner_name: ownerName,
         caption: (data as { caption?: string | null }).caption ?? null,
         pdf_url: pdfUrl,
       })
