@@ -253,6 +253,51 @@ Rules:
 - Scores: be honest and realistic. Most student work scores 5.0-8.0. Reserve 8.5+ for exceptional work. Never inflate.
 - If a course brief was provided, evaluate explicitly against those requirements — note what's missing or unresolved`
 
+// Best-effort recovery of a JSON object from a possibly-truncated model response.
+// If the response was cut off mid-array, this cuts back to the last fully-closed
+// object and re-balances the open brackets — so a long critique is never wasted.
+function salvageJson(raw: string): Record<string, unknown> | null {
+  const start = raw.indexOf('{')
+  if (start === -1) return null
+  const s = raw.slice(start)
+  try { return JSON.parse(s) as Record<string, unknown> } catch { /* fall through to repair */ }
+
+  // Find the index of the last '}' that is NOT inside a string.
+  let inStr = false, esc = false, lastObjClose = -1
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === '}') lastObjClose = i
+  }
+  if (lastObjClose === -1) return null
+
+  // Keep up to the last complete object, drop a dangling comma, then close open brackets.
+  let cut = s.slice(0, lastObjClose + 1)
+  const open: string[] = []
+  inStr = false; esc = false
+  for (let i = 0; i < cut.length; i++) {
+    const ch = cut[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === '{' || ch === '[') open.push(ch)
+    else if (ch === '}' || ch === ']') open.pop()
+  }
+  cut = cut.replace(/,\s*$/, '')
+  while (open.length) cut += open.pop() === '{' ? '}' : ']'
+  try { return JSON.parse(cut) as Record<string, unknown> } catch { return null }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -394,7 +439,7 @@ export default async function handler(
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8096,
+      max_tokens: 16000,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -413,70 +458,72 @@ export default async function handler(
       ],
     })
 
-    // 6. Parse JSON response
-    if (message.stop_reason === 'max_tokens') {
-      console.error('[analyze] Response truncated at max_tokens')
-      await supabase.from('analyses').update({ status: 'failed', error_message: 'AI response was truncated (too long). Try with fewer focus areas.' }).eq('id', analysisId)
-      return res.status(500).json({ error: 'AI response truncated, please try again' })
-    }
+    // 6. Parse JSON response (with salvage for truncated output — a response that
+    //    hit the token ceiling still has plenty of complete feedback we can recover).
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
-
-    // Try multiple extraction strategies in order:
-    // 1. Strip markdown fences and parse directly
-    // 2. Extract the first {...} JSON block from anywhere in the text
     const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    let result: Record<string, unknown>
+    let result: Record<string, unknown> | null = null
     try {
-      result = JSON.parse(clean)
+      result = JSON.parse(clean) as Record<string, unknown>
     } catch {
-      // Fallback: find the outermost { ... } block in the response
+      // Fallback 1: first {...} block anywhere in the text
       const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      try {
-        if (!jsonMatch) throw new Error('no JSON block found')
-        result = JSON.parse(jsonMatch[0])
-      } catch {
-        console.error('[analyze] JSON parse failed. Raw response:', raw.slice(0, 800))
-        await supabase.from('analyses').update({
-          status: 'failed',
-          error_message: `Invalid JSON from AI. Response started: ${raw.slice(0, 200)}`,
-        }).eq('id', analysisId)
-        return res.status(500).json({ error: 'AI returned invalid response, please try again' })
-      }
+      if (jsonMatch) { try { result = JSON.parse(jsonMatch[0]) as Record<string, unknown> } catch { /* try salvage */ } }
+    }
+    // Fallback 2: rebuild a truncated/cut-off object from its last complete item
+    if (!result) result = salvageJson(raw)
+    if (!result) {
+      console.error('[analyze] JSON parse failed. stop_reason:', message.stop_reason, 'raw:', raw.slice(0, 800))
+      await supabase.from('analyses').update({
+        status: 'failed',
+        error_message: message.stop_reason === 'max_tokens'
+          ? 'AI response was too long and got cut off. Please try again.'
+          : `Invalid JSON from AI. Response started: ${raw.slice(0, 200)}`,
+      }).eq('id', analysisId)
+      return res.status(500).json({ error: 'AI returned invalid response, please try again' })
     }
 
-    // 7. Haiku validator — cheap sanity check that the JSON structure is correct
-    //    before we save anything to the DB. Catches hallucinated or malformed output.
-    let validatedResult = result
-    try {
-      const haiku = await anthropic.messages.create({
-        model: 'claude-haiku-4-5',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: `You are a JSON validator. Check if this JSON has ALL required fields:
-- concept_score (number 0-10)
-- spatial_score (number 0-10)
-- presentation_score (number 0-10)
-- feedback (array with at least 1 item, each having: title, text, suggestion, page, focus {x,y}, zoom)
-- jury_questions (array with at least 1 string)
+    // 7. Deterministic validation + repair (replaces the old Haiku AI validator,
+    //    which was fed only the first 2000 chars of the JSON and therefore falsely
+    //    rejected long-but-valid responses as "truncated"). Validating in code is
+    //    reliable, instant, free, and repairs minor gaps instead of failing the
+    //    whole analysis over one incomplete feedback item.
+    const num = (v: unknown, def = 0) => { const n = Number(v); return Number.isFinite(n) ? n : def }
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
-Reply with ONLY "VALID" or "INVALID: <reason>".
-
-JSON:
-${JSON.stringify(result).slice(0, 2000)}`,
-        }],
+    // Keep feedback items that have real content; fill any missing optional fields.
+    const rawFeedback = Array.isArray(result.feedback) ? (result.feedback as Record<string, unknown>[]) : []
+    const feedback = rawFeedback
+      .filter(fb => fb && typeof fb === 'object' && typeof fb.title === 'string' && typeof fb.text === 'string' && fb.title.trim() && fb.text.trim())
+      .map((fb, i) => {
+        const focus = (fb.focus && typeof fb.focus === 'object') ? fb.focus as Record<string, unknown> : {}
+        return {
+          n: i + 1,
+          title: String(fb.title).trim(),
+          text: String(fb.text).trim(),
+          suggestion: typeof fb.suggestion === 'string' ? fb.suggestion.trim() : '',
+          page: Math.max(1, Math.round(num(fb.page, 1))),
+          focus: { x: clamp(num(focus.x, 0.5), 0, 1), y: clamp(num(focus.y, 0.5), 0, 1) },
+          zoom: clamp(num(fb.zoom, 1), 1, 3),
+        }
       })
-      const verdict = haiku.content[0].type === 'text' ? haiku.content[0].text.trim() : 'VALID'
-      if (verdict.startsWith('INVALID')) {
-        console.error('[analyze] Haiku validator rejected output:', verdict)
-        await supabase.from('analyses').update({ status: 'failed', error_message: `AI output validation failed: ${verdict}` }).eq('id', analysisId)
-        return res.status(500).json({ error: 'AI returned incomplete response, please try again' })
-      }
-      validatedResult = result
-    } catch (e) {
-      // Validator failed — fail open, use the result as-is
-      console.warn('[analyze] Haiku validator error (failing open):', e)
+
+    // Keep non-empty jury questions only.
+    const rawQuestions = Array.isArray(result.jury_questions) ? (result.jury_questions as unknown[]) : []
+    const jury_questions = rawQuestions
+      .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+      .map(q => q.trim())
+
+    // Only hard-fail when the response is genuinely unusable (no feedback AND no scores).
+    const hasScores = ['concept_score', 'spatial_score', 'presentation_score']
+      .some(k => Number.isFinite(Number(result![k])))
+    if (feedback.length === 0 && !hasScores) {
+      console.error('[analyze] Unusable AI output:', JSON.stringify(result).slice(0, 500))
+      await supabase.from('analyses').update({ status: 'failed', error_message: 'AI returned no usable feedback or scores. Please try again.' }).eq('id', analysisId)
+      return res.status(500).json({ error: 'AI returned incomplete response, please try again' })
     }
+
+    const validatedResult: Record<string, unknown> = { ...result, feedback, jury_questions }
 
     // 8. Extract scores
     const concept_score = Math.min(10, Math.max(0, Number(validatedResult.concept_score) || 0))
