@@ -458,6 +458,12 @@ export default async function handler(
       ],
     })
 
+    // Log token usage so Vercel logs and Anthropic Console both show per-analysis cost.
+    const tokIn  = message.usage?.input_tokens  ?? 0
+    const tokOut = message.usage?.output_tokens ?? 0
+    const costUSD = (tokIn / 1_000_000 * 3) + (tokOut / 1_000_000 * 15)
+    console.log(`[analyze] tokens — in:${tokIn} out:${tokOut} cost:$${costUSD.toFixed(4)}`)
+
     // 6. Parse JSON response (with salvage for truncated output — a response that
     //    hit the token ceiling still has plenty of complete feedback we can recover).
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
