@@ -52,7 +52,9 @@ export function NewProjectPage() {
 
   // Compress a PDF by re-rendering each page as JPEG at reduced DPI
   // scale: 1.0 = 72 DPI, 1.2 = 86 DPI, 1.5 = 108 DPI
-  const compressPdf = async (file: File, onProgress: (msg: string) => void, scale = 1.2, quality = 0.75): Promise<File> => {
+  // maxWidth caps the longest page edge in pixels — prevents OOM on large-format
+  // architecture sheets regardless of the PDF's original DPI or page size.
+  const compressPdf = async (file: File, onProgress: (msg: string) => void, maxWidth = 1400, quality = 0.82): Promise<File> => {
     const buf = await file.arrayBuffer()
     const lib = await import('pdfjs-dist')
     lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
@@ -67,15 +69,21 @@ export function NewProjectPage() {
     for (let i = 1; i <= numPages; i++) {
       onProgress(`Compressing PDF… (${i}/${numPages})`)
       const page = await pdfDoc.getPage(i)
+      const base = page.getViewport({ scale: 1 })
+      // Fit within maxWidth — shrinks large pages, leaves small pages alone
+      const scale = Math.min(maxWidth / base.width, maxWidth / base.height, 2)
       const viewport = page.getViewport({ scale })
-      canvas.width  = viewport.width
-      canvas.height = viewport.height
+      canvas.width  = Math.round(viewport.width)
+      canvas.height = Math.round(viewport.height)
+      // White background so architectural drawings don't go black under JPEG
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await page.render({ canvasContext: ctx, viewport } as any).promise
 
       const jpegData = canvas.toDataURL('image/jpeg', quality)
-      const imgW = viewport.width  * 0.264583 // px → mm (72dpi base)
-      const imgH = viewport.height * 0.264583
+      const imgW = canvas.width  * 0.264583 // px → mm (72 dpi base)
+      const imgH = canvas.height * 0.264583
 
       if (!outPdf) {
         outPdf = new jsPDF({ orientation: imgW > imgH ? 'landscape' : 'portrait', unit: 'mm', format: [imgW, imgH] })
@@ -100,19 +108,19 @@ export function NewProjectPage() {
     if (file.size > COMPRESS_THRESHOLD_MB * 1024 * 1024) {
       try {
         setPageCountError(`Compressing PDF… (0/?)`)
-        // Pass 1: scale 1.2, quality 0.75
-        finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 1.2, 0.75)
+        // Pass 1: generous quality, max 1400px edge
+        finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 1400, 0.82)
 
-        // Pass 2: if still over safe limit, compress harder
+        // Pass 2: if still over safe limit, shrink further
         if (finalFile.size > API_SAFE_MB * 1024 * 1024) {
           setPageCountError(`Still large, compressing further…`)
-          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 0.85, 0.65)
+          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 1000, 0.72)
         }
 
-        // Pass 3: last resort
+        // Pass 3: last resort — aggressive
         if (finalFile.size > API_SAFE_MB * 1024 * 1024) {
           setPageCountError(`Final compression pass…`)
-          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 0.65, 0.55)
+          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 800, 0.62)
         }
 
         setPageCountError(null)
