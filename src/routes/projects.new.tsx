@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
@@ -53,7 +52,9 @@ export function NewProjectPage() {
     if (!file || file.type !== 'application/pdf') return
     try {
       const buf = await file.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+      const lib = await import('pdfjs-dist')
+      lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
+      const pdf = await lib.getDocument({ data: new Uint8Array(buf) }).promise
       if (pdf.numPages > PAGE_LIMIT) {
         setPageCountError(`Your PDF has ${pdf.numPages} pages. Please export only your key boards (max ${PAGE_LIMIT} pages).`)
         return
@@ -89,7 +90,9 @@ export function NewProjectPage() {
     try {
       const arrayBuffer = await file.arrayBuffer()
       const uint8Array = new Uint8Array(arrayBuffer)
-      const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise
+      const lib = await import('pdfjs-dist')
+      lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
+      const pdf = await lib.getDocument({ data: uint8Array }).promise
       let text = ''
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
@@ -106,7 +109,7 @@ export function NewProjectPage() {
       }
     } catch (err) {
       console.error('Brief PDF parse error:', err)
-      setError('Failed to read the PDF. Please paste your brief manually.')
+      setError(`Failed to read the PDF: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setBriefPdfLoading(false)
       if (briefPdfRef.current) briefPdfRef.current.value = ''
