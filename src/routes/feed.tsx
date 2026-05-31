@@ -102,7 +102,7 @@ function PostCard({
       {/* ── Slides ── */}
       {post.pdf_url ? (
         <div style={{ padding: '0 12px' }}>
-          <SlideCarousel url={post.pdf_url} aspect={0.7} />
+          <SlideCarousel url={post.pdf_url} aspect={0.7} renderScale={1.5} />
         </div>
       ) : (
         <div style={{ margin: '0 12px', borderRadius: 14, height: 160, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted, fontSize: 12 }}>
@@ -381,7 +381,7 @@ export function FeedPage() {
             <div style={{ fontSize: 13, color: c.textMuted }}>Be the first to share your project critique with the community.</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20, maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 540, margin: '0 auto' }}>
             {posts.map(post => (
               <PostCard
                 key={post.id}

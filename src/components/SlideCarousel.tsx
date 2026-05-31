@@ -9,6 +9,7 @@ interface SlideCarouselProps {
   maxPages?: number          // cap pages rendered (perf); default 12
   aspect?: number            // height / width of the frame; default 0.75 (4:3-ish)
   rounded?: boolean
+  renderScale?: number       // canvas resolution multiplier (2 = retina); lower = faster
 }
 
 let pdfjsLib: typeof import('pdfjs-dist') | null = null
@@ -34,6 +35,7 @@ export function SlideCarousel({
   maxPages = 12,
   aspect = 0.75,
   rounded = true,
+  renderScale = 2,
 }: SlideCarouselProps) {
   const frameRef      = useRef<HTMLDivElement>(null)
   const canvasRef     = useRef<HTMLCanvasElement>(null)
@@ -70,14 +72,14 @@ export function SlideCarousel({
     const frameW = frameRef.current.clientWidth || 600
     const frameH = frameRef.current.clientHeight || 450
     const baseVP = pg.getViewport({ scale: 1 })
-    const scale  = Math.min(frameW / baseVP.width, frameH / baseVP.height) * 2 // retina
+    const scale  = Math.min(frameW / baseVP.width, frameH / baseVP.height) * renderScale
     const viewport = pg.getViewport({ scale })
 
     const canvas = canvasRef.current
     canvas.width  = viewport.width
     canvas.height = viewport.height
-    canvas.style.width  = `${viewport.width  / 2}px`
-    canvas.style.height = `${viewport.height / 2}px`
+    canvas.style.width  = `${viewport.width  / renderScale}px`
+    canvas.style.height = `${viewport.height / renderScale}px`
 
     const ctx = canvas.getContext('2d')!
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,7 +88,7 @@ export function SlideCarousel({
       await renderTaskRef.current.promise
       setReady(true)
     } catch { /* cancelled */ }
-  }, [])
+  }, [renderScale])
 
   // ── Load PDF once in view ──
   useEffect(() => {
