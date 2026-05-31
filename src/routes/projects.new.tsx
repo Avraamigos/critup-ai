@@ -35,7 +35,7 @@ export function NewProjectPage() {
   const navigate = useNavigate()
   const { user, profile, signOut } = useAuth()
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState({ name: '', stage: '', focuses: [] as string[], briefText: '', file: null as File | null })
+  const [form, setForm] = useState({ name: '', discipline: '', stage: '', focuses: [] as string[], briefText: '', file: null as File | null })
   const [dragging, setDragging] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
@@ -62,9 +62,10 @@ export function NewProjectPage() {
     setForm(f => ({ ...f, file }))
   }, [PAGE_LIMIT])
 
-  const totalSteps = 6
+  const totalSteps = 7
   const canNext = [
     !!form.name.trim(),
+    !!form.discipline,
     !!form.stage,
     form.focuses.length > 0,
     true,          // brief is optional — always allow skip
@@ -181,6 +182,7 @@ export function NewProjectPage() {
         user_id:     user.id,
         name:        form.name.trim(),
         stage:       form.stage as import('@/lib/database.types').ProjectStage,
+        discipline:  (form.discipline || null) as 'architecture' | 'interior' | 'urban' | null,
         focus_areas: form.focuses,
         brief_text:  form.briefText.trim() || null,
       }
@@ -281,8 +283,42 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 2: Design stage */}
+        {/* Step 2: Discipline */}
         {step === 1 && (
+          <>
+            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>What's your discipline?</h1>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>This helps connect you with the right community</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { v: 'architecture', l: 'Architecture',    emoji: '🏛️', desc: 'Buildings, structures, spatial design' },
+                { v: 'interior',     l: 'Interior Design', emoji: '🛋️', desc: 'Interior spaces, furniture, atmosphere' },
+                { v: 'urban',        l: 'Urban Design',    emoji: '🏙️', desc: 'Cities, public space, masterplanning' },
+              ].map(d => (
+                <button key={d.v} onClick={() => setForm(f => ({ ...f, discipline: d.v }))} style={{
+                  padding: '16px 18px', borderRadius: 14, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
+                  background: form.discipline === d.v ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.1)' : '#fff7ed') : c.cardBg,
+                  border: form.discipline === d.v ? '1.5px solid #F97316' : `1px solid ${c.border}`,
+                  boxShadow: form.discipline === d.v ? '0 0 20px oklch(0.72 0.18 45 / 0.12)' : 'none',
+                  display: 'flex', alignItems: 'center', gap: 14, position: 'relative',
+                }}>
+                  {form.discipline === d.v && (
+                    <div style={{ position: 'absolute', top: 12, right: 12, width: 18, height: 18, borderRadius: '50%', background: '#F97316', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Check size={10} color="#fff" strokeWidth={3} />
+                    </div>
+                  )}
+                  <div style={{ fontSize: 28 }}>{d.emoji}</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: form.discipline === d.v ? '#F97316' : c.textPrimary, marginBottom: 2 }}>{d.l}</div>
+                    <div style={{ fontSize: 12, color: c.textMuted }}>{d.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Step 3: Design stage */}
+        {step === 2 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>What stage is your design in?</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>This helps the AI calibrate its critique appropriately</p>
@@ -309,8 +345,8 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 3: Focus areas */}
-        {step === 2 && (
+        {/* Step 4: Focus areas */}
+        {step === 3 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>What should the AI focus on?</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>Select all that apply</p>
@@ -335,8 +371,8 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 4: Course Brief / Outline (optional) */}
-        {step === 3 && (
+        {/* Step 5: Course Brief / Outline (optional) */}
+        {step === 4 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>
               Paste your course brief
@@ -379,8 +415,8 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 5: Upload PDF */}
-        {step === 4 && (
+        {/* Step 6: Upload PDF */}
+        {step === 5 && (
           <>
             <style>{`
               @keyframes upload-float { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-6px); } }
@@ -498,8 +534,8 @@ export function NewProjectPage() {
           </>
         )}
 
-        {/* Step 6: Confirm before upload */}
-        {step === 5 && (
+        {/* Step 7: Confirm before upload */}
+        {step === 6 && (
           <>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Ready to analyse?</h1>
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 28 }}>Review everything before we start — this can't be undone once uploaded.</p>
@@ -520,7 +556,7 @@ export function NewProjectPage() {
                   <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 3 }}>DESIGN STAGE</div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary }}>{STAGES.find(s => s.v === form.stage)?.l}</div>
                 </div>
-                <button onClick={() => setStep(1)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+                <button onClick={() => setStep(2)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer' }}>Edit</button>
               </div>
 
               {/* Focus areas */}
@@ -535,7 +571,7 @@ export function NewProjectPage() {
                     ))}
                   </div>
                 </div>
-                <button onClick={() => setStep(2)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
+                <button onClick={() => setStep(3)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
               </div>
 
               {/* Brief */}
@@ -550,7 +586,7 @@ export function NewProjectPage() {
                     <span style={{ fontSize: 13, color: c.textMuted, fontStyle: 'italic' }}>No brief added — Crit will critique without specific requirements</span>
                   )}
                 </div>
-                <button onClick={() => setStep(3)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
+                <button onClick={() => setStep(4)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Edit</button>
               </div>
 
               {/* PDF */}
@@ -565,7 +601,7 @@ export function NewProjectPage() {
                     <div style={{ fontSize: 12, color: c.textMuted }}>{form.file ? (form.file.size / 1024 / 1024).toFixed(1) + ' MB' : ''}</div>
                   </div>
                 </div>
-                <button onClick={() => setStep(4)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Change</button>
+                <button onClick={() => setStep(5)} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 8, padding: '4px 10px', color: c.textMuted, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>Change</button>
               </div>
             </div>
 

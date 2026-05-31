@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type Discipline = 'all' | 'architecture' | 'interior' | 'urban'
+
 type Post = {
   id: string
   concept_score: number
@@ -15,8 +17,16 @@ type Post = {
   created_at: string
   project_name: string
   project_stage: string
+  project_discipline: string | null
   owner_name: string | null
 }
+
+const DISCIPLINE_TABS: { v: Discipline; label: string; emoji: string }[] = [
+  { v: 'all',          label: 'All',            emoji: '🌍' },
+  { v: 'architecture', label: 'Architecture',   emoji: '🏛️' },
+  { v: 'interior',     label: 'Interior',       emoji: '🛋️' },
+  { v: 'urban',        label: 'Urban',          emoji: '🏙️' },
+]
 
 const STAGE_LABELS: Record<string, string> = {
   'pre-design':       'Pre-Design',
@@ -114,10 +124,11 @@ export function FeedPage() {
   const c = useColors(theme)
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
-  const [posts, setPosts]       = useState<Post[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [sort, setSort]         = useState<'recent' | 'top'>('recent')
-  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [posts, setPosts]           = useState<Post[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [sort, setSort]             = useState<'recent' | 'top'>('recent')
+  const [discipline, setDiscipline] = useState<Discipline>('all')
+  const [copiedId, setCopiedId]     = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -126,7 +137,7 @@ export function FeedPage() {
         .from('analyses')
         .select(`
           id, concept_score, spatial_score, presentation_score, created_at,
-          projects ( name, stage ),
+          projects ( name, stage, discipline ),
           profiles ( full_name )
         `)
         .eq('is_public', true)
@@ -136,7 +147,6 @@ export function FeedPage() {
       if (sort === 'recent') {
         query.order('created_at', { ascending: false })
       } else {
-        // top: sort by average score descending
         query.order('concept_score', { ascending: false })
       }
 
@@ -144,7 +154,7 @@ export function FeedPage() {
       if (!data) { setLoading(false); return }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped: Post[] = (data as any[]).map(row => ({
+      let mapped: Post[] = (data as any[]).map(row => ({
         id: row.id,
         concept_score: Number(row.concept_score) || 0,
         spatial_score: Number(row.spatial_score) || 0,
@@ -152,8 +162,14 @@ export function FeedPage() {
         created_at: row.created_at,
         project_name: row.projects?.name ?? 'Untitled',
         project_stage: row.projects?.stage ?? '',
+        project_discipline: row.projects?.discipline ?? null,
         owner_name: row.profiles?.full_name ?? null,
       }))
+
+      // Filter by discipline tab
+      if (discipline !== 'all') {
+        mapped = mapped.filter(p => p.project_discipline === discipline)
+      }
 
       if (sort === 'top') {
         mapped.sort((a, b) => {
@@ -167,7 +183,7 @@ export function FeedPage() {
       setLoading(false)
     }
     load()
-  }, [sort])
+  }, [sort, discipline])
 
   const handleCopy = async (id: string) => {
     const url = `${window.location.origin}/p/${id}`
@@ -184,7 +200,7 @@ export function FeedPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0 }}>Community</h1>
-            <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>Student projects shared for feedback</div>
+            <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>See what design students are building worldwide</div>
           </div>
 
           {/* Sort toggle */}
@@ -206,6 +222,28 @@ export function FeedPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Discipline tabs */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {DISCIPLINE_TABS.map(tab => (
+            <button
+              key={tab.v}
+              onClick={() => setDiscipline(tab.v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 14px', borderRadius: '10px 10px 0 0',
+                border: `1px solid ${discipline === tab.v ? c.border : 'transparent'}`,
+                borderBottom: discipline === tab.v ? `2px solid #F97316` : '2px solid transparent',
+                background: discipline === tab.v ? c.cardBg : 'transparent',
+                color: discipline === tab.v ? '#F97316' : c.textMuted,
+                fontSize: 13, fontWeight: discipline === tab.v ? 700 : 500,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{tab.emoji}</span> {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
