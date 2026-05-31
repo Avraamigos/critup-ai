@@ -320,7 +320,10 @@ export default async function handler(
     if (analysis.status !== 'processing' && analysis.user_id) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const plan = ((analysis as any).profiles as { plan?: string } | null)?.plan ?? 'free'
-      const rl = await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
+      // Fetch user email to bypass rate limit for admin
+      const { data: authUser } = await supabase.auth.admin.getUserById(analysis.user_id as string)
+      const isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+      const rl = isAdmin ? { allowed: true } : await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
       if (!rl.allowed) {
         // Mark failed so the UI doesn't spin forever
         await supabase.from('analyses').update({ status: 'failed' }).eq('id', analysisId)
