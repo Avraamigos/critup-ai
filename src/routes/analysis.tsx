@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText, Link, Check } from 'lucide-react'
+import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText, Link, Check, Users, Globe } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { PDFViewer } from '@/components/PDFViewer'
 import { useTheme, useColors } from '@/lib/theme'
@@ -30,6 +30,8 @@ type AnalysisData = {
   feedback: Json | null
   jury_questions: Json | null
   pdf_path: string | null
+  is_public: boolean | null
+  caption: string | null
   created_at: string
 }
 
@@ -92,9 +94,11 @@ export function AnalysisPage() {
   // ── Analysis progress bar state ──
   const [progress, setProgress] = useState(0)
 
-  // ── Share state ──
-  const [sharing,   setSharing]   = useState(false)
-  const [shareDone, setShareDone] = useState(false)
+  // ── Share / post state ──
+  const [sharing,     setSharing]     = useState(false)  // in-flight for post/unpublish
+  const [linkCopied,  setLinkCopied]  = useState(false)  // "Copied!" on the Copy-link button
+  const [showPostModal, setShowPostModal] = useState(false)
+  const [postCaption, setPostCaption] = useState('')
 
   // ── Re-upload (new version) state ──
   const [showReupload,    setShowReupload]    = useState(false)
@@ -166,7 +170,7 @@ export function AnalysisPage() {
     const load = async () => {
       const { data, error: err } = await supabase
         .from('projects')
-        .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, created_at)')
+        .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, created_at)')
         .eq('id', params.projectId)
         .single()
       if (err || !data) { setError('Project not found.'); setLoading(false); return }
@@ -759,21 +763,66 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
     setTimeout(() => w.print(), 400)
   }
 
-  const handleShare = async () => {
+  const isPublished = !!latestAnalysis?.is_public
+
+  // Copy a private shareable link — does NOT publish to the community feed.
+  const handleCopyLink = async () => {
+    if (!latestAnalysis) return
+    const url = `${window.location.origin}/p/${latestAnalysis.id}`
+    try { await navigator.clipboard.writeText(url) } catch { /* ignore */ }
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
+
+  // Open the post composer (seed with any existing caption).
+  const openPostModal = () => {
+    if (!latestAnalysis) return
+    setPostCaption(latestAnalysis.caption ?? '')
+    setShowPostModal(true)
+  }
+
+  // Publish to the community feed with an optional caption.
+  const handleConfirmPost = async () => {
     if (!latestAnalysis || sharing) return
     setSharing(true)
     try {
-      await supabase.from('analyses').update({ is_public: true }).eq('id', latestAnalysis.id)
-      const url = `${window.location.origin}/p/${latestAnalysis.id}`
-      await navigator.clipboard.writeText(url)
-      setShareDone(true)
-      setTimeout(() => setShareDone(false), 2500)
+      const caption = postCaption.trim().slice(0, 280) || null
+      const { error: pubErr } = await supabase
+        .from('analyses')
+        .update({ is_public: true, caption })
+        .eq('id', latestAnalysis.id)
+      if (pubErr) throw pubErr
+      // Reflect immediately in local state so the UI flips to "Posted" without a refetch.
+      setProject(p => p && ({
+        ...p,
+        analyses: p.analyses.map(a => a.id === latestAnalysis.id ? { ...a, is_public: true, caption } : a),
+      }))
+      track.postedToCommunity(latestAnalysis.id)
+      setShowPostModal(false)
     } catch {
-      // fallback: just copy the link without the DB update
-      const url = `${window.location.origin}/p/${latestAnalysis.id}`
-      try { await navigator.clipboard.writeText(url) } catch { /* ignore */ }
-      setShareDone(true)
-      setTimeout(() => setShareDone(false), 2500)
+      window.alert('Could not post to the community. Please try again.')
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  // Take the project back down from the community feed.
+  const handleUnpublish = async () => {
+    if (!latestAnalysis || sharing) return
+    if (!window.confirm('Remove this project from the Community feed? Anyone with the link will no longer see it.')) return
+    setSharing(true)
+    try {
+      const { error: unErr } = await supabase
+        .from('analyses')
+        .update({ is_public: false })
+        .eq('id', latestAnalysis.id)
+      if (unErr) throw unErr
+      setProject(p => p && ({
+        ...p,
+        analyses: p.analyses.map(a => a.id === latestAnalysis.id ? { ...a, is_public: false } : a),
+      }))
+    } catch {
+      window.alert('Could not remove the post. Please try again.')
     } finally {
       setSharing(false)
     }
@@ -846,12 +895,34 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               <Download size={13} /> Export PDF
             </button>
           )}
+          {/* Copy a private link — does not publish */}
           <button
-            onClick={handleShare}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: shareDone ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${shareDone ? 'oklch(0.72 0.17 145)' : c.border}`, color: shareDone ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
+            onClick={handleCopyLink}
+            title="Copy a private link to this critique"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: linkCopied ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${linkCopied ? 'oklch(0.72 0.17 145)' : c.border}`, color: linkCopied ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
           >
-            {shareDone ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Share'}</>}
+            {linkCopied ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Copy link'}</>}
           </button>
+
+          {/* Post to / manage in the community feed */}
+          {isPublished ? (
+            <button
+              onClick={handleUnpublish}
+              title="Posted to the Community feed — click to remove"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145)', color: 'oklch(0.72 0.17 145)', fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
+            >
+              {sharing ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={13} />}
+              {!isMobile && (sharing ? ' Removing…' : ' Posted')}
+            </button>
+          ) : (
+            <button
+              onClick={openPostModal}
+              title="Share this critique with the Critup community"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: '#F97316', border: '1px solid #F97316', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)' }}
+            >
+              <Users size={13} />{!isMobile && ' Post to Community'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1170,6 +1241,78 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               >
                 {reuploadSaving && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
                 {reuploadSaving ? 'Uploading…' : 'Start analysis →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Post to Community modal ── */}
+      {showPostModal && latestAnalysis && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget && !sharing) setShowPostModal(false) }}
+        >
+          <div style={{ background: c.bg, borderRadius: 20, padding: '28px', width: '100%', maxWidth: 460, border: `1px solid ${c.border}`, boxShadow: '0 24px 80px rgba(0,0,0,0.35)', position: 'relative' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'oklch(0.72 0.18 45/0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={18} color="#F97316" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Post to Community</h2>
+                  <p style={{ fontSize: 12, color: c.textMuted, margin: '3px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Globe size={11} /> Public · anyone on Critup can see it
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => { if (!sharing) setShowPostModal(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, lineHeight: 1 }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Caption */}
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: c.textMuted, margin: '20px 0 8px' }}>Add a caption (optional)</label>
+            <textarea
+              value={postCaption}
+              onChange={e => setPostCaption(e.target.value.slice(0, 280))}
+              placeholder="Say something about your project…"
+              rows={3}
+              autoFocus
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'none', borderRadius: 12, border: `1px solid ${c.border}`, background: c.cardBg, color: c.textPrimary, fontSize: 14, fontFamily: FONT, padding: '12px 14px', outline: 'none', lineHeight: 1.5 }}
+            />
+            <div style={{ textAlign: 'right', fontSize: 11, color: c.textMuted, marginTop: 4 }}>{postCaption.length}/280</div>
+
+            {/* Preview of what gets shared */}
+            <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: c.cardBg, border: `1px solid ${c.border}` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>What you're sharing</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, marginBottom: 8 }}>{project.name}</div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {([['Concept', latestAnalysis.concept_score], ['Spatial', latestAnalysis.spatial_score], ['Presentation', latestAnalysis.presentation_score]] as const).map(([label, score]) => (
+                  <div key={label}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#F97316' }}>{(score ?? 0).toFixed(1)}</div>
+                    <div style={{ fontSize: 10, color: c.textMuted, fontWeight: 600 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: c.textMuted, lineHeight: 1.5, margin: '12px 0 0' }}>
+              Your scores, feedback and drawings become viewable by the community. You can remove the post anytime.
+            </p>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button onClick={() => { if (!sharing) setShowPostModal(false) }} disabled={sharing} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: sharing ? 'default' : 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPost}
+                disabled={sharing}
+                style={{ padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 0 16px oklch(0.72 0.18 45/0.35)', opacity: sharing ? 0.7 : 1 }}
+              >
+                {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                {sharing ? 'Posting…' : 'Post to Community'}
               </button>
             </div>
           </div>

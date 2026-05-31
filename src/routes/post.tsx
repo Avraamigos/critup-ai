@@ -22,6 +22,7 @@ type PostData = {
     stage: string
   }
   owner_name: string | null
+  caption: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ export function PostPage() {
         .from('analyses')
         .select(`
           id, concept_score, spatial_score, presentation_score,
-          feedback, jury_questions, created_at,
+          feedback, jury_questions, created_at, caption,
           projects ( name, stage ),
           profiles ( full_name )
         `)
@@ -89,6 +90,7 @@ export function PostPage() {
         created_at: data.created_at,
         project: { name: proj?.name ?? 'Untitled Project', stage: proj?.stage ?? '' },
         owner_name: profile?.full_name ?? null,
+        caption: (data as { caption?: string | null }).caption ?? null,
       })
       setLoading(false)
     }
@@ -167,6 +169,11 @@ export function PostPage() {
           <div style={{ fontSize: 13, color: 'oklch(0.55 0.004 270)' }}>
             {post.owner_name ? `${post.owner_name} · ` : ''}{dateStr}
           </div>
+          {post.caption && (
+            <p style={{ fontSize: 15, color: 'oklch(0.82 0.004 270)', lineHeight: 1.6, margin: '16px 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {post.caption}
+            </p>
+          )}
         </div>
 
         {/* ── Score rings ── */}

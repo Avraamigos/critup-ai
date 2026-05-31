@@ -19,6 +19,7 @@ type Post = {
   project_stage: string
   project_discipline: string | null
   owner_name: string | null
+  caption: string | null
 }
 
 const DISCIPLINE_TABS: { v: Discipline; label: string; emoji: string }[] = [
@@ -83,6 +84,13 @@ function PostCard({ post, c, theme, onCopy }: { post: Post; c: ReturnType<typeof
         </div>
       </div>
 
+      {/* Caption */}
+      {post.caption && (
+        <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {post.caption}
+        </div>
+      )}
+
       {/* Score rings */}
       <div style={{ display: 'flex', justifyContent: 'space-around' }}>
         {[
@@ -136,7 +144,7 @@ export function FeedPage() {
       const query = supabase
         .from('analyses')
         .select(`
-          id, concept_score, spatial_score, presentation_score, created_at,
+          id, concept_score, spatial_score, presentation_score, created_at, caption,
           projects ( name, stage, discipline ),
           profiles ( full_name )
         `)
@@ -164,6 +172,7 @@ export function FeedPage() {
         project_stage: row.projects?.stage ?? '',
         project_discipline: row.projects?.discipline ?? null,
         owner_name: row.profiles?.full_name ?? null,
+        caption: row.caption ?? null,
       }))
 
       // Filter by discipline tab

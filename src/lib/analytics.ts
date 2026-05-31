@@ -24,4 +24,5 @@ export const track = {
   upgradeClicked: (source: string) => trackEvent('upgrade_clicked', { source }),
   juryStarted: (projectId: string) => trackEvent('jury_started', { projectId }),
   pdfExported: (projectId: string) => trackEvent('pdf_exported', { projectId }),
+  postedToCommunity: (analysisId: string) => trackEvent('posted_to_community', { analysisId }),
 }

@@ -98,6 +98,7 @@ export interface Database {
           jury_questions: Json | null
           pdf_path: string | null
           is_public: boolean
+          caption: string | null
           error_message: string | null
           created_at: string
           updated_at: string
@@ -114,6 +115,7 @@ export interface Database {
           jury_questions?: Json | null
           pdf_path?: string | null
           is_public?: boolean
+          caption?: string | null
           error_message?: string | null
           created_at?: string
           updated_at?: string
@@ -126,6 +128,7 @@ export interface Database {
           feedback?: Json | null
           jury_questions?: Json | null
           is_public?: boolean
+          caption?: string | null
           error_message?: string | null
           updated_at?: string
         }
