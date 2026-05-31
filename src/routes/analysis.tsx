@@ -141,13 +141,13 @@ export function AnalysisPage() {
     const startTime = stored ? parseInt(stored, 10) : Date.now()
     if (!stored) localStorage.setItem(key, String(startTime))
 
-    // Calculate initial progress based on elapsed time (assume ~120s total)
+    // Calculate initial progress based on elapsed time (analysis takes ~4 min)
     const elapsed = (Date.now() - startTime) / 1000
-    const initialProgress = Math.min(94, elapsed / 120 * 97)
+    const initialProgress = Math.min(94, elapsed / 240 * 97)
     setProgress(initialProgress)
 
     const tick = setInterval(() => {
-      setProgress(p => p + Math.max(0.1, (97 - p) * 0.018))
+      setProgress(p => p + Math.max(0.05, (97 - p) * 0.009))
     }, 400)
     return () => clearInterval(tick)
   }, [project?.analyses?.map(a => a.status).join(), params.projectId])
@@ -176,12 +176,16 @@ export function AnalysisPage() {
       const stillPending = proj.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
       if (stillPending) {
         pollTimer = setTimeout(load, 4000)
-        // Give up after 3 minutes — mark locally as timed out so user sees an error
+        // Give up 7 min after the analysis actually STARTED (persisted in localStorage),
+        // not 7 min after this effect mounted — so navigating away/back doesn't reset the clock.
         if (!timeoutTimer) {
+          const startKey = `critup_analysis_start_${params.projectId}`
+          const startedAt = parseInt(localStorage.getItem(startKey) ?? '', 10) || Date.now()
+          const remaining = Math.max(10_000, 7 * 60 * 1000 - (Date.now() - startedAt))
           timeoutTimer = setTimeout(() => {
             if (pollTimer) clearTimeout(pollTimer)
             setError('Analysis is taking longer than expected. Please try re-uploading your PDF.')
-          }, 3 * 60 * 1000)
+          }, remaining)
         }
       } else {
         if (timeoutTimer) clearTimeout(timeoutTimer)

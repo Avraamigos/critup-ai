@@ -608,20 +608,32 @@ export function NewProjectPage() {
               </div>
             )}
 
-            {/* Page count error */}
-            {pageCountError && (
-              <div style={{
-                marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 10,
-                background: c.isDark ? 'oklch(0.18 0.06 30/0.6)' : '#fff7ed',
-                border: '1.5px solid oklch(0.72 0.18 45/0.5)',
-                borderRadius: 14, padding: '14px 16px',
-              }}>
-                <AlertTriangle size={16} color="#F97316" style={{ flexShrink: 0, marginTop: 1 }} />
-                <p style={{ margin: 0, fontSize: 13, color: c.textPrimary, lineHeight: 1.5 }}>
-                  {pageCountError}
-                </p>
-              </div>
-            )}
+            {/* Compression progress / page-count error.
+                "Compressing…" / "compressing further" / "compression pass" are progress, not errors —
+                show them with a spinner and neutral styling so users know the wait is intentional. */}
+            {pageCountError && (() => {
+              const isProgress = /compress/i.test(pageCountError) && !/Could not|too large/i.test(pageCountError)
+              return (
+                <div style={{
+                  marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 10,
+                  background: isProgress
+                    ? (c.isDark ? 'oklch(0.20 0.01 270)' : '#f8fafc')
+                    : (c.isDark ? 'oklch(0.18 0.06 30/0.6)' : '#fff7ed'),
+                  border: isProgress
+                    ? `1.5px solid ${c.border}`
+                    : '1.5px solid oklch(0.72 0.18 45/0.5)',
+                  borderRadius: 14, padding: '14px 16px',
+                }}>
+                  <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+                  {isProgress
+                    ? <Loader2 size={16} color="#F97316" style={{ flexShrink: 0, marginTop: 1, animation: 'spin 1s linear infinite' }} />
+                    : <AlertTriangle size={16} color="#F97316" style={{ flexShrink: 0, marginTop: 1 }} />}
+                  <p style={{ margin: 0, fontSize: 13, color: c.textPrimary, lineHeight: 1.5 }}>
+                    {isProgress ? <>{pageCountError}<br /><span style={{ fontSize: 12, color: c.textMuted }}>Large PDFs are optimized in your browser before upload — this can take up to a minute.</span></> : pageCountError}
+                  </p>
+                </div>
+              )
+            })()}
 
             {/* Selected file preview */}
             {!pageCountError && form.file && (

@@ -134,6 +134,7 @@ export function DashboardPage() {
 
   return (
     <div style={{ padding: isMobile ? '20px 16px' : '28px', maxWidth: 1080, position: 'relative' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
       {c.isDark && <div style={{ position: 'fixed', top: 0, right: 0, width: '55%', height: '45%', background: 'radial-gradient(ellipse 60% 40% at 70% 10%, oklch(0.72 0.18 45 / 0.05) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />}
 
       {/* Upgrade success banner */}
