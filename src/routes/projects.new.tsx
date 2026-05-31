@@ -70,9 +70,8 @@ export function NewProjectPage() {
       const viewport = page.getViewport({ scale })
       canvas.width  = viewport.width
       canvas.height = viewport.height
-      // pdfjs v5: render takes canvas element directly, not canvasContext
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await page.render({ canvasContext: ctx, viewport, canvas } as any).promise
+      await page.render({ canvasContext: ctx, viewport } as any).promise
 
       const jpegData = canvas.toDataURL('image/jpeg', quality)
       const imgW = viewport.width  * 0.264583 // px → mm (72dpi base)
@@ -122,7 +121,13 @@ export function NewProjectPage() {
           setPageCountError(`PDF is too large even after compression. Try exporting fewer pages.`)
           return
         }
-      } catch {
+      } catch (compressErr) {
+        console.error('PDF compression error:', compressErr)
+        // Never silently upload an oversized file — block it and tell the user
+        if (file.size > API_SAFE_MB * 1024 * 1024) {
+          setPageCountError(`Could not compress your PDF automatically. Please export a smaller version (under 20 MB) and try again.`)
+          return
+        }
         setPageCountError(null)
         finalFile = file
       }
