@@ -47,7 +47,7 @@ export function NewProjectPage() {
   const isFreeUser = !profile || profile.plan === 'free'
   const PAGE_LIMIT = 50
   const COMPRESS_THRESHOLD_MB = 20 // compress if over this size
-  const MAX_SIZE_MB = 50 // hard cap (after compression attempt)
+  const MAX_SIZE_MB = 150 // silent hard cap — browser memory protection
 
   // Compress a PDF by re-rendering each page as JPEG at reduced DPI
   const compressPdf = async (file: File, onProgress: (msg: string) => void): Promise<File> => {
@@ -514,7 +514,7 @@ export function NewProjectPage() {
               .upload-zone:hover .upload-icon-ring { transform:scale(1.07); }
             `}</style>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Upload your drawings</h1>
-            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages · large files auto-compressed</p>
+            <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 32 }}>PDF only · up to {PAGE_LIMIT} pages</p>
 
             {!form.file && (
               <div
@@ -568,7 +568,7 @@ export function NewProjectPage() {
 
                 {/* Badges row */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['💾', 'Large files auto-compressed']].map(([icon, label]) => (
+                  {[['📄', 'PDF only'], ['📑', `Up to ${PAGE_LIMIT} pages`], ['✨', 'Any file size']].map(([icon, label]) => (
                     <div key={label} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 11px', borderRadius: 100,
