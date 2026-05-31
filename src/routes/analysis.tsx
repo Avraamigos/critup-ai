@@ -594,7 +594,13 @@ export function AnalysisPage() {
             </div>
 
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>Analysis in progress</h2>
-            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 320, margin: '8px 0 0', lineHeight: 1.6 }}>Crit is reviewing your drawings in detail.<br/>This usually takes 1–2 minutes.</p>
+            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 340, margin: '8px 0 0', lineHeight: 1.6 }}>
+              Crit is reading every page of your drawings in detail.<br/>
+              This usually takes <strong style={{ color: c.textPrimary }}>3–5 minutes</strong> — longer projects take a bit more.
+            </p>
+            <p style={{ fontSize: 12, color: c.textMuted, maxWidth: 300, margin: '14px 0 0', lineHeight: 1.5, opacity: 0.7 }}>
+              You can leave this tab open in the background.<br/>Your results will be here when it's done.
+            </p>
           </>
         ) : latestFailed ? (
           <>
