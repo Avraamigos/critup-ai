@@ -387,7 +387,7 @@ export default async function handler(
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2500,
+      max_tokens: 8096,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -407,6 +407,11 @@ export default async function handler(
     })
 
     // 6. Parse JSON response
+    if (message.stop_reason === 'max_tokens') {
+      console.error('[analyze] Response truncated at max_tokens')
+      await supabase.from('analyses').update({ status: 'failed', error_message: 'AI response was truncated (too long). Try with fewer focus areas.' }).eq('id', analysisId)
+      return res.status(500).json({ error: 'AI response truncated, please try again' })
+    }
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
 
     // Try multiple extraction strategies in order:
