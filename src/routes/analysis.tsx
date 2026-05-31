@@ -232,18 +232,24 @@ export function AnalysisPage() {
     return () => { if (pollTimer) clearTimeout(pollTimer); if (timeoutTimer) clearTimeout(timeoutTimer); supabase.removeChannel(sub) }
   }, [params.projectId, retryKey])
 
-  // ── Remember last-visited project so the sidebar nav and AI chat can reference it ──
-  useEffect(() => {
-    localStorage.setItem('critup_last_analysis_id', params.projectId)
-    if (project?.name) localStorage.setItem('critup_last_project_name', project.name)
-  }, [params.projectId, project?.name])
-
   const sortedComplete = project?.analyses
     ?.filter(a => a.status === 'complete')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) ?? []
 
   const latestAnalysis   = sortedComplete[0]
   const previousAnalysis = sortedComplete[1] ?? null   // second-most-recent, for score delta
+
+  // ── Remember last-visited project + analysis for sidebar nav and AI chat ──
+  // Two distinct keys, two distinct meanings:
+  //   critup_last_project_id  → PROJECT id, for the sidebar "Analysis" nav link
+  //   critup_last_analysis_id → ANALYSIS ROW id, which chat.ts / jury.tsx look up
+  // Storing the project id under the analysis key (the old bug) made Crit chat
+  // unable to find the critique → "upload your drawings".
+  useEffect(() => {
+    localStorage.setItem('critup_last_project_id', params.projectId)
+    if (latestAnalysis?.id) localStorage.setItem('critup_last_analysis_id', latestAnalysis.id)
+    if (project?.name) localStorage.setItem('critup_last_project_name', project.name)
+  }, [params.projectId, latestAnalysis?.id, project?.name])
 
   const latestFailed = !latestAnalysis && project?.analyses?.some(a => a.status === 'failed')
 

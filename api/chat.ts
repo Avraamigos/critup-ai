@@ -134,17 +134,22 @@ export default async function handler(
 
     if (analysisId) {
       try {
+        // NOTE: do NOT embed profiles() here — analyses.user_id has no FK to
+        // public.profiles, so PostgREST can fail the whole .single() on that join,
+        // wiping the chat context ("upload your drawings"). Plan is fetched separately.
         const { data } = await supabase
           .from('analyses')
-          .select('user_id, concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas, brief_text), profiles(plan)')
+          .select('user_id, concept_score, spatial_score, presentation_score, feedback, jury_questions, projects(name, stage, focus_areas, brief_text)')
           .eq('id', analysisId)
           .eq('status', 'complete')
           .single()
 
         if (data) {
           rateLimitUserId = data.user_id as string
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          rateLimitPlan = ((data as any).profiles as { plan?: string } | null)?.plan ?? 'free'
+          if (rateLimitUserId) {
+            const { data: prof } = await supabase.from('profiles').select('plan').eq('id', rateLimitUserId).maybeSingle()
+            rateLimitPlan = (prof as { plan?: string } | null)?.plan ?? 'free'
+          }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const project = (data as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
           analysisContext = {

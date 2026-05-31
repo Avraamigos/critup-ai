@@ -62,15 +62,19 @@ export default async function handler(
       let plan = 'free'
 
       if (analysisId) {
+        // Don't embed profiles() — analyses.user_id has no FK to public.profiles,
+        // which can fail the .single(). Fetch the plan separately instead.
         const { data: aData } = await sb
           .from('analyses')
-          .select('user_id, profiles(plan)')
+          .select('user_id')
           .eq('id', analysisId)
           .single()
         if (aData) {
           userId = aData.user_id as string
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          plan = ((aData as any).profiles as { plan?: string } | null)?.plan ?? 'free'
+          if (userId) {
+            const { data: prof } = await sb.from('profiles').select('plan').eq('id', userId).maybeSingle()
+            plan = (prof as { plan?: string } | null)?.plan ?? 'free'
+          }
         }
       }
 

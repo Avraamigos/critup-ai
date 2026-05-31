@@ -360,6 +360,7 @@ export function NewProjectPage() {
 
       // Make this the active project for Crit chat context immediately
       localStorage.setItem('critup_last_analysis_id', analysisRowId)
+      localStorage.setItem('critup_last_project_id', project.id)
       localStorage.setItem('critup_last_project_name', form.name.trim())
 
       track.analysisCreated(project.id)

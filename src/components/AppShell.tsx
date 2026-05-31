@@ -84,10 +84,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Analysis nav points to last visited project; activePath always stays /analysis/
   // so it ONLY highlights on analysis pages (not on /projects fallback).
-  const lastAnalysisId = typeof localStorage !== 'undefined'
-    ? localStorage.getItem('critup_last_analysis_id')
+  // Nav needs the PROJECT id (route param is $projectId). Fall back to the legacy
+  // key for older sessions that stored the project id there.
+  const lastProjectId = typeof localStorage !== 'undefined'
+    ? (localStorage.getItem('critup_last_project_id') ?? localStorage.getItem('critup_last_analysis_id'))
     : null
-  const analysisTo = lastAnalysisId ? `/analysis/${lastAnalysisId}` : '/projects'
+  const analysisTo = lastProjectId ? `/analysis/${lastProjectId}` : '/projects'
   const NAV_ITEMS: NavDef[] = [
     { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'Dashboard' },
     { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'Projects'  },
