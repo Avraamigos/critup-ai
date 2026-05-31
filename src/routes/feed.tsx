@@ -126,7 +126,7 @@ export function FeedPage() {
 
   const [posts, setPosts]           = useState<Post[]>([])
   const [loading, setLoading]       = useState(true)
-  const [sort, setSort]             = useState<'recent' | 'top'>('recent')
+  const [sort, setSort]             = useState<'recent' | 'top'>('top')
   const [discipline, setDiscipline] = useState<Discipline>('all')
   const [copiedId, setCopiedId]     = useState<string | null>(null)
 
