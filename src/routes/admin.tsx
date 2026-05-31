@@ -24,7 +24,7 @@ const FIXED_COSTS: { service: string; cost: number; period: 'month' | 'year'; ur
 const ANTHROPIC_INPUT_PER_MTOK  = 3.00   // claude-sonnet-4-6
 const ANTHROPIC_OUTPUT_PER_MTOK = 15.00
 const AVG_INPUT_TOKENS  = 55_000  // ~50K PDF + prompts
-const AVG_OUTPUT_TOKENS = 2_500
+const AVG_OUTPUT_TOKENS = 4_000   // raised from 2500 after fixing truncation
 const HAIKU_INPUT_PER_MTOK  = 1.00   // claude-haiku-4-5 (verified Jan 2026)
 const HAIKU_OUTPUT_PER_MTOK = 5.00
 const AVG_HAIKU_INPUT  = 2_000
