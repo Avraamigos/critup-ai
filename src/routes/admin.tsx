@@ -618,7 +618,7 @@ export function AdminPage() {
                     <TH c={c}>Project</TH>
                     <TH c={c}>User</TH>
                     <TH c={c}>Date</TH>
-                    <TH c={c}></TH>
+                    <TH c={c}> </TH>
                   </tr></thead>
                   <tbody>
                     {activeErrors.map((a, i) => (
