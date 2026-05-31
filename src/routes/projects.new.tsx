@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Upload, FileText, X, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -38,6 +38,8 @@ export function NewProjectPage() {
   const [form, setForm] = useState({ name: '', discipline: '', stage: '', focuses: [] as string[], briefText: '', file: null as File | null })
   const [dragging, setDragging] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [briefPdfLoading, setBriefPdfLoading] = useState(false)
+  const briefPdfRef = useRef<HTMLInputElement>(null)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pageCountError, setPageCountError] = useState<string | null>(null)
@@ -78,6 +80,31 @@ export function NewProjectPage() {
       ...f,
       focuses: f.focuses.includes(v) ? f.focuses.filter(x => x !== v) : [...f.focuses, v],
     }))
+  }
+
+  const handleBriefPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBriefPdfLoading(true)
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      let text = ''
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const content = await page.getTextContent()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        text += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n'
+      }
+      const cleaned = text.replace(/\s{3,}/g, '\n\n').trim()
+      setForm(f => ({ ...f, briefText: cleaned }))
+    } catch {
+      // silently fail — user can paste manually
+    } finally {
+      setBriefPdfLoading(false)
+      if (briefPdfRef.current) briefPdfRef.current.value = ''
+    }
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -380,10 +407,29 @@ export function NewProjectPage() {
             <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 6 }}>
               Optional — but strongly recommended. Paste the project requirements from your department brief. Crit will evaluate your drawings against these exact constraints.
             </p>
-            <div style={{ fontSize: 12, color: '#F97316', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ fontSize: 12, color: '#F97316', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} />
               You can update this later from the project settings.
             </div>
+
+            {/* PDF upload option */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <button
+                onClick={() => briefPdfRef.current?.click()}
+                disabled={briefPdfLoading}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: briefPdfLoading ? c.textMuted : c.textPrimary, fontSize: 12, fontWeight: 600, cursor: briefPdfLoading ? 'default' : 'pointer', transition: 'all 0.15s' }}
+                onMouseEnter={e => { if (!briefPdfLoading) { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' } }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textPrimary }}
+              >
+                {briefPdfLoading
+                  ? <><Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Extracting…</>
+                  : <><FileText size={13} /> Upload brief PDF</>
+                }
+              </button>
+              <input ref={briefPdfRef} type="file" accept=".pdf" onChange={handleBriefPdf} style={{ display: 'none' }} />
+              <span style={{ fontSize: 12, color: c.textMuted }}>or paste below</span>
+            </div>
+
             <div style={{ position: 'relative' }}>
               <textarea
                 value={form.briefText}
