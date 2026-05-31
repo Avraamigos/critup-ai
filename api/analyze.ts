@@ -361,7 +361,14 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to download PDF' })
     }
 
-    const pdfBase64 = Buffer.from(await fileData.arrayBuffer()).toString('base64')
+    const pdfBuffer = await fileData.arrayBuffer()
+    // Anthropic API request body limit is 32MB. Base64 adds ~33%, so PDF binary must be under ~22MB.
+    const pdfSizeMB = pdfBuffer.byteLength / (1024 * 1024)
+    if (pdfSizeMB > 22) {
+      await supabase.from('analyses').update({ status: 'failed', error_message: `PDF too large for API: ${pdfSizeMB.toFixed(1)}MB (max ~22MB). Please compress and re-upload.` }).eq('id', analysisId)
+      return res.status(413).json({ error: 'PDF too large', detail: `${pdfSizeMB.toFixed(1)}MB — please compress your PDF before uploading` })
+    }
+    const pdfBase64 = Buffer.from(pdfBuffer).toString('base64')
 
     // 4. Build context from project info
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

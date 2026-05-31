@@ -46,11 +46,13 @@ export function NewProjectPage() {
 
   const isFreeUser = !profile || profile.plan === 'free'
   const PAGE_LIMIT = 50
-  const COMPRESS_THRESHOLD_MB = 20 // compress if over this size
+  const COMPRESS_THRESHOLD_MB = 10 // compress if over this size
+  const API_SAFE_MB = 20 // base64 adds 33% — keep binary under 20MB so encoded stays under 27MB
   const MAX_SIZE_MB = 150 // silent hard cap — browser memory protection
 
   // Compress a PDF by re-rendering each page as JPEG at reduced DPI
-  const compressPdf = async (file: File, onProgress: (msg: string) => void): Promise<File> => {
+  // scale: 1.0 = 72 DPI, 1.2 = 86 DPI, 1.5 = 108 DPI
+  const compressPdf = async (file: File, onProgress: (msg: string) => void, scale = 1.2, quality = 0.75): Promise<File> => {
     const buf = await file.arrayBuffer()
     const lib = await import('pdfjs-dist')
     lib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${lib.version}/build/pdf.worker.min.mjs`
@@ -65,14 +67,14 @@ export function NewProjectPage() {
     for (let i = 1; i <= numPages; i++) {
       onProgress(`Compressing PDF… (${i}/${numPages})`)
       const page = await pdfDoc.getPage(i)
-      const viewport = page.getViewport({ scale: 1.5 }) // ~108 DPI — clear enough for AI analysis
+      const viewport = page.getViewport({ scale })
       canvas.width  = viewport.width
       canvas.height = viewport.height
       // pdfjs v5: render takes canvas element directly, not canvasContext
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await page.render({ canvasContext: ctx, viewport, canvas } as any).promise
 
-      const jpegData = canvas.toDataURL('image/jpeg', 0.82)
+      const jpegData = canvas.toDataURL('image/jpeg', quality)
       const imgW = viewport.width  * 0.264583 // px → mm (72dpi base)
       const imgH = viewport.height * 0.264583
 
@@ -94,19 +96,34 @@ export function NewProjectPage() {
 
     let finalFile = file
 
-    // Auto-compress large PDFs instead of rejecting them
+    // Auto-compress large PDFs to stay under Anthropic's API limit
+    // Base64 adds 33%, so we need binary under ~20MB → base64 ~27MB (well under 32MB API cap)
     if (file.size > COMPRESS_THRESHOLD_MB * 1024 * 1024) {
       try {
         setPageCountError(`Compressing PDF… (0/?)`)
-        finalFile = await compressPdf(file, (msg) => setPageCountError(msg))
+        // Pass 1: scale 1.2, quality 0.75
+        finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 1.2, 0.75)
+
+        // Pass 2: if still over safe limit, compress harder
+        if (finalFile.size > API_SAFE_MB * 1024 * 1024) {
+          setPageCountError(`Still large, compressing further…`)
+          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 0.85, 0.65)
+        }
+
+        // Pass 3: last resort
+        if (finalFile.size > API_SAFE_MB * 1024 * 1024) {
+          setPageCountError(`Final compression pass…`)
+          finalFile = await compressPdf(file, (msg) => setPageCountError(msg), 0.65, 0.55)
+        }
+
         setPageCountError(null)
-        // If compression didn't help enough, warn
+
         if (finalFile.size > MAX_SIZE_MB * 1024 * 1024) {
-          setPageCountError(`PDF is still ${(finalFile.size / 1024 / 1024).toFixed(0)} MB after compression. Try exporting fewer pages.`)
+          setPageCountError(`PDF is too large even after compression. Try exporting fewer pages.`)
           return
         }
       } catch {
-        setPageCountError(null) // compression failed — proceed with original and let server handle it
+        setPageCountError(null)
         finalFile = file
       }
     }
