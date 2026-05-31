@@ -94,6 +94,7 @@ export interface Database {
           feedback: Json | null
           jury_questions: Json | null
           pdf_path: string | null
+          is_public: boolean
           created_at: string
           updated_at: string
         }
@@ -108,6 +109,7 @@ export interface Database {
           feedback?: Json | null
           jury_questions?: Json | null
           pdf_path?: string | null
+          is_public?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -118,6 +120,7 @@ export interface Database {
           presentation_score?: number | null
           feedback?: Json | null
           jury_questions?: Json | null
+          is_public?: boolean
           updated_at?: string
         }
         Relationships: []
