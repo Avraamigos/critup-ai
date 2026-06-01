@@ -82,7 +82,7 @@ const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
-    text: '📧 Welcome email — not built yet.\nWhen a user signs up, send a transactional welcome email via Resend. Use the Resend Claude Code plugin to build it.',
+    text: '✅ Welcome email — DONE.\nBranded Resend welcome email fires on onboarding completion (api/welcome.ts). Uses existing RESEND_API_KEY.',
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
@@ -90,7 +90,7 @@ const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
-    text: '🔍 SEO / meta tags — not set up.\nAdd og:image, og:title, og:description, twitter:card to index.html for proper social sharing previews.',
+    text: '✅ SEO — DONE.\nog:/twitter: meta tags in index.html; robots.txt + sitemap.xml live in public/.\nTODO (manual): submit sitemap in Google Search Console → verify critup.ai, add https://critup.ai/sitemap.xml.',
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
