@@ -111,6 +111,13 @@ export function OnboardingPage() {
       updated_at:          new Date().toISOString(),
     }).eq('id', user.id)
 
+    // Welcome email (fire-and-forget — never blocks onboarding completion)
+    fetch('/api/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id }),
+    }).catch(() => {})
+
     await refreshProfile()
     setSaving(false)
     navigate({ to: '/pricing' })

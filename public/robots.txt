@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /$
+Allow: /landing
+Allow: /pricing
+Allow: /meet-crit
+Allow: /privacy
+Allow: /terms
+Allow: /login
+Allow: /signup
+
+# Private / app-only routes — no SEO value, keep out of the index
+Disallow: /admin
+Disallow: /settings
+Disallow: /assistant
+Disallow: /onboarding
+Disallow: /reset-password
+Disallow: /projects/new
+Disallow: /analysis/
+Disallow: /jury
+Disallow: /feed
+
+Sitemap: https://critup.ai/sitemap.xml
