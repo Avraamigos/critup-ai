@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
@@ -13,6 +14,7 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
 }
 
 export function PricingPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
@@ -47,23 +49,23 @@ export function PricingPage() {
 
   const plans = [
     {
-      name: 'Free', price: '$0', sub: '',
-      features: ['1 complete AI critique', 'Concept, Spatial & Presentation scores', 'PDF upload (up to 50 pages)', 'Basic jury questions'],
-      cta: currentPlan === 'free' ? 'Current plan' : 'Continue free',
+      name: t('pricing.planFree'), price: '$0', sub: '',
+      features: [t('pricing.freeFeat1'), t('pricing.freeFeat2'), t('pricing.freeFeat3'), t('pricing.freeFeat4')],
+      cta: currentPlan === 'free' ? t('pricing.currentPlan') : t('pricing.continueFree'),
       featured: false, action: () => navigate({ to: '/' }),
     },
     {
-      name: 'Monthly', price: '$7', sub: '/mo', cancel: 'Cancel anytime',
-      features: ['Full project analyses', 'Voiceover narration (page by page)', 'Jury Q&A simulation', 'AI project assistant', 'Progress history', 'Multi-language support'],
-      cta: currentPlan === 'monthly' ? 'Current plan' : (loadingPlan === 'monthly' ? 'Opening…' : 'Start monthly'),
-      featured: true, badge: 'Most popular',
+      name: t('pricing.planMonthly'), price: '$7', sub: t('pricing.subMonth'), cancel: t('pricing.cancelAnytime'),
+      features: [t('pricing.monthlyFeat1'), t('pricing.monthlyFeat2'), t('pricing.monthlyFeat3'), t('pricing.monthlyFeat4'), t('pricing.monthlyFeat5'), t('pricing.monthlyFeat6')],
+      cta: currentPlan === 'monthly' ? t('pricing.currentPlan') : (loadingPlan === 'monthly' ? t('pricing.opening') : t('pricing.startMonthly')),
+      featured: true, badge: t('pricing.mostPopular'),
       action: () => { if (currentPlan === 'monthly') return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },
     },
     {
-      name: 'Yearly', price: '$45', sub: '/yr', crossed: '$84', save: 'Save 46%',
-      features: ['Everything in Monthly', 'Video presentation coach', 'Priority processing', 'Early access to new features'],
-      cta: currentPlan === 'yearly' ? 'Current plan' : (loadingPlan === 'yearly' ? 'Opening…' : 'Start yearly'),
-      featured: false, badge: 'Best value',
+      name: t('pricing.planYearly'), price: '$45', sub: t('pricing.subYear'), crossed: '$84', save: t('pricing.save46'),
+      features: [t('pricing.yearlyFeat1'), t('pricing.yearlyFeat2'), t('pricing.yearlyFeat3'), t('pricing.yearlyFeat4')],
+      cta: currentPlan === 'yearly' ? t('pricing.currentPlan') : (loadingPlan === 'yearly' ? t('pricing.opening') : t('pricing.startYearly')),
+      featured: false, badge: t('pricing.bestValue'),
       action: () => { if (currentPlan === 'yearly') return; track.upgradeClicked('pricing_yearly'); openCheckout('yearly') },
     },
   ]
@@ -74,9 +76,9 @@ export function PricingPage() {
       <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '70%', height: '45%', background: 'radial-gradient(ellipse, oklch(0.72 0.18 45 / 0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 900 }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}><CritupLogo size={22} theme={theme} /></div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.12em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 10 }}>CHOOSE YOUR PLAN</div>
-        <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center', marginBottom: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif", color: c.textPrimary }}>Start free. Upgrade when you're ready.</h1>
-        <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', marginBottom: 48 }}>One free project analysis included. No card required.</p>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.12em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 10 }}>{t('pricing.eyebrow')}</div>
+        <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center', marginBottom: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif", color: c.textPrimary }}>{t('pricing.title')}</h1>
+        <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', marginBottom: 48 }}>{t('pricing.subtitle')}</p>
 
         <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
           {plans.map(({ name, price, sub, cancel, crossed, save, features, cta, featured, badge, action }) => (
@@ -116,10 +118,10 @@ export function PricingPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <button onClick={() => navigate({ to: '/' })} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>Continue with free →</button>
+          <button onClick={() => navigate({ to: '/' })} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>{t('pricing.continueWithFree')}</button>
         </div>
         <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: c.isDark ? 'oklch(0.45 0.004 270)' : '#9ca3af' }}>
-          Questions? <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
+          {t('pricing.questions')} <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
         </div>
         <div style={{
           textAlign: 'center', marginTop: 28,
@@ -127,7 +129,7 @@ export function PricingPage() {
           borderTop: `1px solid ${c.border}`, paddingTop: 20,
           lineHeight: 1.6,
         }}>
-          <strong style={{ color: c.textPrimary }}>14-day refund policy</strong> — Not satisfied? Contact us within 14 days of purchase for a full refund, no questions asked.{' '}
+          <strong style={{ color: c.textPrimary }}>{t('pricing.refundTitle')}</strong>{t('pricing.refundBody')}
           <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
         </div>
       </div>

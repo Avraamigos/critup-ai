@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 
@@ -72,6 +73,7 @@ const sections = [
 ]
 
 export function TermsPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
 
@@ -79,15 +81,15 @@ export function TermsPage() {
     <div style={{ background: c.bg, color: c.textPrimary, minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 48px', height: 60, borderBottom: `1px solid ${c.border}` }}>
         <Link to="/landing"><CritupLogo size={20} showText theme={theme} /></Link>
-        <Link to="/landing" style={{ fontSize: 13, color: c.textMuted, textDecoration: 'none' }}>← Back</Link>
+        <Link to="/landing" style={{ fontSize: 13, color: c.textMuted, textDecoration: 'none' }}>{t('legal.back')}</Link>
       </nav>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '64px 24px 80px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>Legal</div>
-        <h1 style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.035em', margin: '0 0 8px', fontFamily: FONT }}>Terms of Service</h1>
-        <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 8px' }}>Last updated: May 2026</p>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>{t('legal.eyebrow')}</div>
+        <h1 style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.035em', margin: '0 0 8px', fontFamily: FONT }}>{t('legal.termsTitle')}</h1>
+        <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 8px' }}>{t('legal.lastUpdated')}</p>
         <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 48px', lineHeight: 1.6, padding: '14px 16px', background: c.cardBg, borderRadius: 10, border: `1px solid ${c.border}` }}>
-          Please read these Terms carefully before using Critup.ai. By accessing or using the Service you agree to be bound by these Terms. These Terms contain important limitations on our liability and a dispute resolution clause requiring arbitration.
+          {t('legal.termsIntro')}
         </p>
 
         {sections.map(({ title, body }) => (
@@ -100,7 +102,7 @@ export function TermsPage() {
         ))}
 
         <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 32, fontSize: 13, color: c.textMuted }}>
-          Questions? Email <a href="mailto:hello@critup.ai" style={{ color: '#F97316', textDecoration: 'none' }}>hello@critup.ai</a>
+          {t('legal.questionsEmail')} <a href="mailto:hello@critup.ai" style={{ color: '#F97316', textDecoration: 'none' }}>hello@critup.ai</a>
         </div>
       </div>
     </div>

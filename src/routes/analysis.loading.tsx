@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
@@ -9,16 +10,17 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
 }
 
 const STEPS = [
-  { label: 'Parsing PDF drawings', dur: 1400 },
-  { label: 'Identifying design elements', dur: 1600 },
-  { label: 'Analysing concept strength', dur: 1800 },
-  { label: 'Evaluating spatial logic', dur: 1600 },
-  { label: 'Scoring presentation', dur: 1400 },
-  { label: 'Generating jury questions', dur: 1200 },
-  { label: 'Compiling report', dur: 1000 },
+  { labelKey: 'analysisLoading.step1', dur: 1400 },
+  { labelKey: 'analysisLoading.step2', dur: 1600 },
+  { labelKey: 'analysisLoading.step3', dur: 1800 },
+  { labelKey: 'analysisLoading.step4', dur: 1600 },
+  { labelKey: 'analysisLoading.step5', dur: 1400 },
+  { labelKey: 'analysisLoading.step6', dur: 1200 },
+  { labelKey: 'analysisLoading.step7', dur: 1000 },
 ]
 
 export function AnalysisLoadingPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
@@ -73,10 +75,10 @@ export function AnalysisLoadingPage() {
         </div>
 
         <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', margin: '0 0 8px', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>
-          Analysing your project
+          {t('analysisLoading.title')}
         </h2>
         <p style={{ fontSize: 14, color: '#F97316', margin: '0 0 36px', fontWeight: 500, minHeight: 20, transition: 'opacity 0.3s' }}>
-          {STEPS[Math.min(currentStep, STEPS.length - 1)].label}…
+          {t(STEPS[Math.min(currentStep, STEPS.length - 1)].labelKey)}…
         </p>
 
         {/* Progress bar */}
@@ -99,7 +101,7 @@ export function AnalysisLoadingPage() {
                   {done && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', animation: 'bounce-dot 0.8s ease-in-out infinite' }} />}
                 </div>
-                <span style={{ fontSize: 13, color: done ? c.textPrimary : active ? '#F97316' : c.textMuted, fontWeight: active ? 600 : 400, transition: 'color 0.3s' }}>{s.label}</span>
+                <span style={{ fontSize: 13, color: done ? c.textPrimary : active ? '#F97316' : c.textMuted, fontWeight: active ? 600 : 400, transition: 'color 0.3s' }}>{t(s.labelKey)}</span>
               </div>
             )
           })}

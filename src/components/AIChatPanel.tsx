@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Send, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
 import { AIOrb } from '@/components/AIOrb'
@@ -15,7 +17,7 @@ interface Message {
   text: string
 }
 
-const CHIPS = ['Explain my critique', 'Jury prep help', 'Weakest point?', 'Improve concept']
+const CHIP_KEYS = ['chat.chip1', 'chat.chip2', 'chat.chip3', 'chat.chip4']
 
 // Read context stored by AnalysisPage
 function getLastProjectName() {
@@ -25,10 +27,10 @@ function getLastAnalysisId() {
   try { return localStorage.getItem('critup_last_analysis_id') ?? null } catch { return null }
 }
 
-function makeGreeting() {
+function makeGreeting(t: TFunction) {
   const name = getLastProjectName()
-  if (name) return `Hi! I'm ready to help with **${name}**. Ask me anything about your critique, scores, or how to prep for jury.`
-  return "Hi! Upload a project to get started. I'll analyse your drawings and give you targeted critique, score breakdowns, and jury prep."
+  if (name) return t('chat.greetingWithProject', { name })
+  return t('chat.greetingNoProject')
 }
 
 interface LimitError { limitReached: true; message: string }
@@ -50,7 +52,7 @@ async function callChatAPI(messages: Message[], analysisId: string | null): Prom
 
   if (res.status === 429 || res.status === 403) {
     const err = await res.json().catch(() => ({})) as { message?: string }
-    return { limitReached: true, message: err.message ?? "You've reached your free plan limit." }
+    return { limitReached: true, message: err.message ?? '' }
   }
 
   if (!res.ok) {
@@ -63,9 +65,10 @@ async function callChatAPI(messages: Message[], analysisId: string | null): Prom
 }
 
 export function AIChatPanel({ open, onClose, theme }: Props) {
+  const { t } = useTranslation()
   const c = useColors(theme)
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<Message[]>(() => [{ role: 'ai', text: makeGreeting() }])
+  const [messages, setMessages] = useState<Message[]>(() => [{ role: 'ai', text: makeGreeting(t) }])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [limitMsg, setLimitMsg] = useState<string | null>(null)
@@ -73,11 +76,12 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
   // Re-initialise greeting when panel is opened
   useEffect(() => {
     if (open) {
-      setMessages([{ role: 'ai', text: makeGreeting() }])
+      setMessages([{ role: 'ai', text: makeGreeting(t) }])
       setInput('')
       setError(null)
       setLimitMsg(null)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const endRef  = useRef<HTMLDivElement>(null)
@@ -95,7 +99,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
 
     // No project uploaded yet — reply locally without hitting the API
     if (!analysisId) {
-      setMessages(m => [...m, { role: 'ai', text: "I don't have any of your projects to work with yet. Upload a design first and I'll give you targeted critique, scores, and jury prep." }])
+      setMessages(m => [...m, { role: 'ai', text: t('chat.noProjectReply') }])
       return
     }
 
@@ -103,7 +107,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
     try {
       const result = await callChatAPI(newMessages, analysisId)
       if (typeof result === 'object' && result.limitReached) {
-        setLimitMsg(result.message)
+        setLimitMsg(result.message || t('chat.limitDefault'))
         setMessages(newMessages.slice(0, -1))
       } else {
         setMessages(m => [...m, { role: 'ai', text: result as string }])
@@ -119,7 +123,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
         } catch {}
         setMessages([
           ...newMessages,
-          { role: 'ai', text: "I don't have any of your projects to work with yet. Upload a design first and I'll give you targeted critique, scores, and jury prep." },
+          { role: 'ai', text: t('chat.noProjectReply') },
         ])
       } else {
         setError(msg)
@@ -192,7 +196,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
                   width: 6, height: 6, borderRadius: '50%', background: '#4ade80',
                   animation: 'glow-pulse 2s ease-in-out infinite',
                 }} />
-                <span style={{ fontSize: 11, color: c.textMuted, fontWeight: 500 }}>Online · Ask me anything</span>
+                <span style={{ fontSize: 11, color: c.textMuted, fontWeight: 500 }}>{t('chat.online')}</span>
               </div>
             </div>
           </div>
@@ -281,7 +285,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
               color: isDark ? '#fca5a5' : '#dc2626',
               fontSize: 12, lineHeight: 1.5,
             }}>
-              ⚠️ {error} — please try again
+              ⚠️ {error} — {t('chat.tryAgainSuffix')}
             </div>
           )}
 
@@ -291,17 +295,17 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
         {/* ── Limit banner ── */}
         {limitMsg && (
           <div style={{ margin: '0 14px 10px', padding: '12px 14px', borderRadius: 12, background: isDark ? 'oklch(0.22 0.015 35)' : '#fff7ed', border: '1.5px solid oklch(0.72 0.18 45/0.4)', flexShrink: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', marginBottom: 4 }}>Free plan limit reached</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', marginBottom: 4 }}>{t('chat.limitTitle')}</div>
             <div style={{ fontSize: 12, color: isDark ? '#fbd5b0' : '#92400e', lineHeight: 1.5, marginBottom: 10 }}>{limitMsg}</div>
             <a href="/pricing" style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
-              Upgrade to Pro →
+              {t('chat.upgradeToPro')}
             </a>
           </div>
         )}
 
         {/* ── Chips ── */}
         <div style={{ padding: '6px 14px 0', display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-          {CHIPS.map(ch => (
+          {CHIP_KEYS.map(ck => t(ck)).map(ch => (
             <button
               key={ch}
               onClick={() => send(ch)}
@@ -348,7 +352,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) }
               }}
-              placeholder="Ask anything about your project…"
+              placeholder={t('chat.inputPlaceholder')}
               rows={1}
               style={{
                 flex: 1, background: 'none', border: 'none', outline: 'none',
@@ -375,7 +379,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
             </button>
           </div>
           <div style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', marginTop: 8 }}>
-            Shift+Enter for new line · Enter to send
+            {t('chat.enterHint')}
           </div>
         </div>
       </div>

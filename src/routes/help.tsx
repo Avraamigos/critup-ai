@@ -1,30 +1,26 @@
 import { useState } from 'react'
-import { Search, ChevronDown, ChevronUp, MessageSquare, BookOpen, Video } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Search, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 
-const FAQS = [
-  { q: 'How many analyses do I get?', a: 'The Free plan includes 1 project analysis. The Monthly plan ($7/mo) and Yearly plan ($45/yr) give you generous access — more than enough for any active architecture student.' },
-  { q: 'What design disciplines does Critup support?', a: 'Architecture, Interior Architecture, Urban Design, and Landscape Architecture. More disciplines are coming soon.' },
-  { q: 'How accurate is the AI scoring?', a: 'Scores are calibrated against common jury rubrics (concept clarity, spatial logic, presentation quality). They are a guide, not a grade — use them to identify weak points to address.' },
-  { q: 'Can I re-analyse a project after making changes?', a: 'Yes — just upload the updated PDF from the project page. Each upload creates a new analysis snapshot so you can track improvement over time.' },
-  { q: 'What language is the feedback delivered in?', a: 'You can choose English, Russian, or Turkish in Onboarding or Settings. The full critique and jury questions will be generated in your selected language.' },
-  { q: 'Is my work kept private?', a: 'Your uploaded PDFs and analyses are private to your account. We do not share or use your design work to train AI models.' },
-  { q: 'How do I practise jury questions?', a: 'Go to Jury Practice in the sidebar. You can select questions generated from your project and practice answering them with the AI.' },
-  { q: 'How do I upgrade my plan?', a: 'Go to Settings → Plan & Billing to view your current plan and upgrade. Payments are processed securely by Stripe.' },
-]
+const FAQ_KEYS = ['faq1', 'faq2', 'faq3', 'faq4', 'faq5', 'faq6', 'faq7', 'faq8']
 
-const GUIDES = [
-  { icon: '📐', title: 'Getting your first critique', desc: 'Upload your PDF and get a full analysis in under 2 minutes.' },
-  { icon: '🎯', title: 'Jury Practice guide', desc: 'How to use recording and feedback to prepare effectively.' },
-  { icon: '📊', title: 'Understanding your scores', desc: 'What C/S/P scores mean and how to improve each.' },
-  { icon: '🗣️', title: 'Preparing your opening statement', desc: 'Use the AI assistant to refine how you present your concept.' },
+const GUIDE_DEFS = [
+  { icon: '📐', titleKey: 'help.guide1Title', descKey: 'help.guide1Desc' },
+  { icon: '🎯', titleKey: 'help.guide2Title', descKey: 'help.guide2Desc' },
+  { icon: '📊', titleKey: 'help.guide3Title', descKey: 'help.guide3Desc' },
+  { icon: '🗣️', titleKey: 'help.guide4Title', descKey: 'help.guide4Desc' },
 ]
 
 export function HelpPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
+
+  const FAQS = FAQ_KEYS.map(k => ({ q: t(`help.${k}q`), a: t(`help.${k}a`) }))
+  const GUIDES = GUIDE_DEFS.map(g => ({ icon: g.icon, title: t(g.titleKey), desc: t(g.descKey) }))
 
   const filtered = FAQS.filter(f =>
     f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase())
@@ -32,8 +28,8 @@ export function HelpPage() {
 
   return (
     <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Help & Support</h1>
-      <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 28px' }}>Find answers or get in touch</p>
+      <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>{t('help.title')}</h1>
+      <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 28px' }}>{t('help.subtitle')}</p>
 
       {/* Search */}
       <div style={{ position: 'relative', marginBottom: 32 }}>
@@ -41,7 +37,7 @@ export function HelpPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search for answers…"
+          placeholder={t('help.searchPlaceholder')}
           style={{ width: '100%', padding: '12px 16px 12px 40px', borderRadius: 12, boxSizing: 'border-box', background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, outline: 'none', fontFamily: "'Inter',sans-serif" }}
           onFocus={e => e.target.style.borderColor = '#F97316'}
           onBlur={e => e.target.style.borderColor = c.border}
@@ -51,7 +47,7 @@ export function HelpPage() {
       {/* Quick guides */}
       {!search && (
         <div style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, margin: '0 0 14px', letterSpacing: '-0.01em' }}>Quick guides</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, margin: '0 0 14px', letterSpacing: '-0.01em' }}>{t('help.quickGuides')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
             {GUIDES.map(g => (
               <div key={g.title} style={{ background: c.cardBg, borderRadius: 14, padding: '14px 16px', border: `1px solid ${c.border}`, cursor: 'pointer', transition: 'all 0.15s' }}
@@ -70,7 +66,7 @@ export function HelpPage() {
       {/* FAQ */}
       <div>
         <h2 style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, margin: '0 0 12px', letterSpacing: '-0.01em' }}>
-          {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : 'Frequently asked questions'}
+          {search ? t('help.results', { count: filtered.length }) : t('help.faqHeading')}
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {filtered.map((faq, i) => (
@@ -90,7 +86,7 @@ export function HelpPage() {
             </div>
           ))}
           {filtered.length === 0 && (
-            <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', padding: '24px 0' }}>No results for "{search}"</p>
+            <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', padding: '24px 0' }}>{t('help.noResults', { q: search })}</p>
           )}
         </div>
       </div>
@@ -98,11 +94,11 @@ export function HelpPage() {
       {/* Contact */}
       <div style={{ marginTop: 32, background: c.cardBg, borderRadius: 18, padding: '20px 22px', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary, margin: '0 0 3px' }}>Still need help?</p>
-          <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>We respond within one business day</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: c.textPrimary, margin: '0 0 3px' }}>{t('help.stillNeedHelp')}</p>
+          <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>{t('help.respondTime')}</p>
         </div>
         <a href="mailto:hello@critup.ai" style={{ padding: '10px 20px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.3)' }}>
-          Email us →
+          {t('help.emailUs')}
         </a>
       </div>
     </div>

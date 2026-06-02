@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Send } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { AIOrb } from '@/components/AIOrb'
@@ -8,12 +9,7 @@ import { supabase } from '@/lib/supabase'
 
 interface Msg { role: 'user' | 'ai'; text: string; ts: string }
 
-const CHIPS = [
-  "What's my weakest area?",
-  'How should I open my jury presentation?',
-  'What will the jury ask first?',
-  'Improve my concept statement',
-]
+const CHIP_KEYS = ['assistant.chip1', 'assistant.chip2', 'assistant.chip3', 'assistant.chip4']
 
 const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
@@ -38,7 +34,7 @@ async function loadLatestAnalysis(userId: string): Promise<LatestAnalysis | null
     if (!data) return null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const project = (data as any).projects as { name: string } | null
-    return { id: data.id as string, projectName: project?.name ?? 'Your Project' }
+    return { id: data.id as string, projectName: project?.name ?? '' }
   } catch {
     return null
   }
@@ -69,6 +65,7 @@ async function sendToAPI(msgs: Msg[], analysisId: string | null): Promise<string
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AssistantPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const { user } = useAuth()
@@ -88,11 +85,12 @@ export function AssistantPage() {
       if (cancelled) return
       setLatestAnalysis(analysis)
       const greeting = analysis
-        ? `Hi! I've analysed **${analysis.projectName}**. Ask me anything — jury questions, score breakdowns, how to improve your design.`
-        : "Hi! Upload a project to get started. I'll analyse your drawings and give you targeted critique, score breakdowns, and jury prep."
+        ? t('assistant.greetingWithProject', { name: analysis.projectName || t('assistant.defaultProjectName') })
+        : t('assistant.greetingNoProject')
       setMsgs([{ role: 'ai', text: greeting, ts: now() }])
     })
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   useEffect(() => {
@@ -109,7 +107,7 @@ export function AssistantPage() {
 
     // No project uploaded yet — respond locally without hitting the API
     if (!latestAnalysis) {
-      setMsgs(m => [...m, { role: 'ai', text: "I don't have any of your projects to work with yet. Upload your first design and I'll give you targeted critique, score breakdowns, and jury prep.", ts: now() }])
+      setMsgs(m => [...m, { role: 'ai', text: t('assistant.noProjectReply'), ts: now() }])
       return
     }
 
@@ -118,7 +116,7 @@ export function AssistantPage() {
       const reply = await sendToAPI(newMsgs, latestAnalysis.id)
       setMsgs(m => [...m, { role: 'ai', text: reply, ts: now() }])
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      const msg = err instanceof Error ? err.message : t('assistant.somethingWrong')
       setError(msg)
       setMsgs(newMsgs.slice(0, -1))
     } finally {
@@ -135,8 +133,8 @@ export function AssistantPage() {
           <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Crit</h1>
           <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>
             {latestAnalysis
-              ? `Knows your project inside out · ${latestAnalysis.projectName}`
-              : 'Upload a project to unlock personalised advice'}
+              ? t('assistant.subtitleKnows', { name: latestAnalysis.projectName || t('assistant.defaultProjectName') })
+              : t('assistant.subtitleUpload')}
           </p>
         </div>
       </div>
@@ -174,7 +172,7 @@ export function AssistantPage() {
 
         {error && (
           <div style={{ padding: '10px 16px', borderRadius: 10, background: c.isDark ? 'oklch(0.18 0.06 25)' : '#fef2f2', border: `1px solid ${c.isDark ? 'oklch(0.35 0.1 25)' : '#fecaca'}`, color: c.isDark ? '#fca5a5' : '#dc2626', fontSize: 13 }}>
-            ⚠️ {error} — please try again
+            ⚠️ {error} — {t('assistant.tryAgainSuffix')}
           </div>
         )}
 
@@ -184,7 +182,7 @@ export function AssistantPage() {
       {/* Quick chips */}
       {msgs.length <= 1 && (
         <div style={{ padding: '0 28px 12px', display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-          {CHIPS.map(chip => (
+          {CHIP_KEYS.map(ck => t(ck)).map(chip => (
             <button key={chip} onClick={() => send(chip)} disabled={loading} style={{
               padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`,
               color: c.textMuted, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.15s', opacity: loading ? 0.5 : 1,
@@ -208,7 +206,7 @@ export function AssistantPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-            placeholder="Ask anything about your project…"
+            placeholder={t('assistant.inputPlaceholder')}
             rows={1}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: c.textPrimary, fontSize: 14, resize: 'none', fontFamily: "'Inter',sans-serif", lineHeight: 1.5, paddingTop: 4 }}
           />
@@ -224,7 +222,7 @@ export function AssistantPage() {
             <Send size={15} color={input.trim() && !loading ? '#fff' : c.textMuted} />
           </button>
         </div>
-        <p style={{ fontSize: 11, color: c.textMuted, margin: '6px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
+        <p style={{ fontSize: 11, color: c.textMuted, margin: '6px 0 0', textAlign: 'center' }}>{t('assistant.enterHint')}</p>
       </div>
     </div>
   )

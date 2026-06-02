@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
@@ -11,6 +12,7 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
 
 // Two modes: "request" (enter email) and "update" (enter new password after clicking email link)
 export function ResetPasswordPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
@@ -36,7 +38,7 @@ export function ResetPasswordPage() {
   }, [])
 
   const requestReset = async () => {
-    if (!email || !email.includes('@')) { setError('Valid email required'); return }
+    if (!email || !email.includes('@')) { setError(t('resetPassword.errValidEmail')); return }
     setLoading(true); setError('')
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -47,8 +49,8 @@ export function ResetPasswordPage() {
   }
 
   const updatePassword = async () => {
-    if (password.length < 6) { setError('At least 6 characters'); return }
-    if (password !== confirm) { setError('Passwords do not match'); return }
+    if (password.length < 6) { setError(t('resetPassword.errMinChars')); return }
+    if (password !== confirm) { setError(t('resetPassword.errNoMatch')); return }
     setLoading(true); setError('')
     const { error: err } = await supabase.auth.updateUser({ password })
     setLoading(false)
@@ -69,10 +71,10 @@ export function ResetPasswordPage() {
         {sent && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: c.textPrimary, margin: '0 0 10px', fontFamily: FONT }}>Check your email</h1>
-            <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 6px' }}>We sent a reset link to</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: c.textPrimary, margin: '0 0 10px', fontFamily: FONT }}>{t('resetPassword.checkEmail')}</h1>
+            <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 6px' }}>{t('resetPassword.sentTo')}</p>
             <p style={{ fontSize: 14, fontWeight: 600, color: '#F97316', margin: '0 0 24px' }}>{email}</p>
-            <button onClick={() => navigate({ to: '/login' })} style={{ color: '#F97316', background: 'none', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>← Back to sign in</button>
+            <button onClick={() => navigate({ to: '/login' })} style={{ color: '#F97316', background: 'none', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>{t('resetPassword.backToSignIn')}</button>
           </div>
         )}
 
@@ -80,20 +82,20 @@ export function ResetPasswordPage() {
         {done && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: c.textPrimary, margin: '0 0 10px', fontFamily: FONT }}>Password updated!</h1>
-            <p style={{ fontSize: 14, color: c.textMuted }}>Redirecting you to the dashboard…</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: c.textPrimary, margin: '0 0 10px', fontFamily: FONT }}>{t('resetPassword.passwordUpdated')}</h1>
+            <p style={{ fontSize: 14, color: c.textMuted }}>{t('resetPassword.redirecting')}</p>
           </div>
         )}
 
         {/* Request reset form */}
         {!sent && !done && mode === 'request' && (
           <>
-            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: FONT }}>Reset password</h1>
-            <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>Enter your email and we'll send you a reset link</p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: FONT }}>{t('resetPassword.resetTitle')}</h1>
+            <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>{t('resetPassword.resetSubtitle')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>Email</label>
-                <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError('') }} placeholder="you@university.edu"
+                <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>{t('resetPassword.email')}</label>
+                <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError('') }} placeholder={t('resetPassword.emailPlaceholder')}
                   style={{ ...inp, borderColor: error ? 'oklch(0.65 0.18 25)' : c.border }}
                   onFocus={e => e.target.style.borderColor = '#F97316'}
                   onBlur={e => e.target.style.borderColor = error ? 'oklch(0.65 0.18 25)' : c.border}
@@ -102,11 +104,11 @@ export function ResetPasswordPage() {
                 {error && <div style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)', marginTop: 4 }}>{error}</div>}
               </div>
               <button onClick={requestReset} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)' }}>
-                {loading ? 'Sending…' : 'Send reset link'}
+                {loading ? t('resetPassword.sending') : t('resetPassword.sendResetLink')}
               </button>
             </div>
             <p style={{ textAlign: 'center', fontSize: 13, color: c.textMuted, marginTop: 22, marginBottom: 0 }}>
-              <button onClick={() => navigate({ to: '/login' })} style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0 }}>← Back to sign in</button>
+              <button onClick={() => navigate({ to: '/login' })} style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0 }}>{t('resetPassword.backToSignIn')}</button>
             </p>
           </>
         )}
@@ -114,12 +116,12 @@ export function ResetPasswordPage() {
         {/* Update password form */}
         {!done && mode === 'update' && (
           <>
-            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: FONT }}>Set new password</h1>
-            <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>Choose a strong password for your account</p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: FONT }}>{t('resetPassword.setNewTitle')}</h1>
+            <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>{t('resetPassword.setNewSubtitle')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
-                { label: 'New password', value: password, onChange: setPassword, placeholder: '••••••••' },
-                { label: 'Confirm password', value: confirm, onChange: setConfirm, placeholder: '••••••••' },
+                { label: t('resetPassword.newPassword'), value: password, onChange: setPassword, placeholder: '••••••••' },
+                { label: t('resetPassword.confirmPassword'), value: confirm, onChange: setConfirm, placeholder: '••••••••' },
               ].map(({ label, value, onChange, placeholder }) => (
                 <div key={label}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>{label}</label>
@@ -132,7 +134,7 @@ export function ResetPasswordPage() {
               ))}
               {error && <div style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)' }}>{error}</div>}
               <button onClick={updatePassword} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)' }}>
-                {loading ? 'Updating…' : 'Update password'}
+                {loading ? t('resetPassword.updating') : t('resetPassword.updatePassword')}
               </button>
             </div>
           </>
