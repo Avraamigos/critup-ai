@@ -52,6 +52,9 @@ export default async function handler(
 
   if (!anthropicKey) return res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY' })
 
+  // Multi-language: feedback is written in the student's profile language.
+  let userLanguage = 'en'
+
   // ── Plan check + jury rate limit ─────────────────────────────────────────────
   if (supabaseUrl && serviceKey) {
     try {
@@ -72,8 +75,9 @@ export default async function handler(
         if (aData) {
           userId = aData.user_id as string
           if (userId) {
-            const { data: prof } = await sb.from('profiles').select('plan').eq('id', userId).maybeSingle()
+            const { data: prof } = await sb.from('profiles').select('plan, language').eq('id', userId).maybeSingle()
             plan = (prof as { plan?: string } | null)?.plan ?? 'free'
+            userLanguage = (prof as { language?: string | null } | null)?.language ?? 'en'
           }
         }
       }
@@ -142,7 +146,15 @@ Your expertise is specifically in HOW to frame architectural arguments — the l
 
 Your feedback is a coaching response, not a grade. Be direct, specific, and practical. Reference exactly what the student said. Show them a better version and explain WHY that framing works — what it signals to a jury, why it's more convincing.
 
-Respond with ONLY valid JSON — no markdown outside the JSON.`
+Respond with ONLY valid JSON — no markdown outside the JSON.${
+  (() => {
+    const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+    const langCode = (userLanguage || 'en').toLowerCase()
+    return langCode !== 'en' && languageNames[langCode]
+      ? `\n\nLANGUAGE: Write all JSON string VALUES entirely in ${languageNames[langCode]}. Keep the JSON keys in English exactly as specified.`
+      : ''
+  })()
+}`
 
   const userPrompt = `A student was asked this jury question:
 "${question}"

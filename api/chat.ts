@@ -38,7 +38,16 @@ function buildSystemPrompt(context: {
   presentationScore: number
   feedback: Array<{ title: string; text: string; suggestion: string }>
   juryQuestions: string[]
-} | null): string {
+} | null, language = 'en'): string {
+  // Multi-language: respond in the student's profile language. Same voice/model
+  // downstream — only the language of the text changes.
+  const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+  const langCode = (language || 'en').toLowerCase()
+  const languageNote =
+    langCode !== 'en' && languageNames[langCode]
+      ? `\n\nLANGUAGE: Always respond entirely in ${languageNames[langCode]}, regardless of the language the student writes in.`
+      : ''
+
   const base = `You are an expert architecture jury critic and design coach integrated into Critup.ai. You have 20+ years of experience advising students at ETH Zurich, Bartlett, Harvard GSD, TU Berlin, and METU.
 
 Your role is to:
@@ -53,7 +62,7 @@ Keep responses concise and practical (2-4 short paragraphs max unless more detai
 IMPORTANT: You are strictly scoped to this student's architectural project and their critique results. If asked about anything unrelated to architecture, design, jury preparation, or this specific project, politely redirect: "I'm here to help with your project critique and jury prep — ask me anything about your scores, feedback, or presentation strategy."`
 
   if (!context) {
-    return base + `\n\nThe student hasn't analysed a project yet. Guide them to upload their drawings to get a full critique.`
+    return base + `\n\nThe student hasn't analysed a project yet. Guide them to upload their drawings to get a full critique.` + languageNote
   }
 
   const overallScore = ((context.conceptScore + context.spatialScore + context.presentationScore) / 3).toFixed(1)
@@ -91,7 +100,7 @@ PREDICTED JURY QUESTIONS:
 ${jurySummary}
 
 ---
-When students ask "what's my weakest area", refer to ${weakest.name} score specifically. When they ask about jury questions, refer to the predicted questions above. Always ground your advice in this specific project data.`
+When students ask "what's my weakest area", refer to ${weakest.name} score specifically. When they ask about jury questions, refer to the predicted questions above. Always ground your advice in this specific project data.${languageNote}`
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -128,6 +137,7 @@ export default async function handler(
   let analysisContext = null
   let rateLimitUserId: string | null = null
   let rateLimitPlan = 'free'
+  let userLanguage = 'en'
 
   if (supabaseUrl && serviceKey) {
     const supabase = createClient(supabaseUrl, serviceKey)
@@ -147,8 +157,9 @@ export default async function handler(
         if (data) {
           rateLimitUserId = data.user_id as string
           if (rateLimitUserId) {
-            const { data: prof } = await supabase.from('profiles').select('plan').eq('id', rateLimitUserId).maybeSingle()
+            const { data: prof } = await supabase.from('profiles').select('plan, language').eq('id', rateLimitUserId).maybeSingle()
             rateLimitPlan = (prof as { plan?: string } | null)?.plan ?? 'free'
+            userLanguage = (prof as { language?: string | null } | null)?.language ?? 'en'
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const project = (data as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
@@ -206,7 +217,7 @@ export default async function handler(
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 1024,
-      system: buildSystemPrompt(analysisContext),
+      system: buildSystemPrompt(analysisContext, userLanguage),
       messages: messages.map(m => ({
         role: m.role,
         content: m.content,

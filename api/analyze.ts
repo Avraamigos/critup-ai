@@ -354,14 +354,14 @@ export default async function handler(
 
     // Fetch the user's profile separately (plan + discipline). Non-fatal — defaults
     // to the free plan if it can't be read, so analysis never blocks on this.
-    let profileData: { plan?: string; discipline?: string | null } | null = null
+    let profileData: { plan?: string; discipline?: string | null; language?: string | null } | null = null
     if (analysis.user_id) {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('plan, discipline')
+        .select('plan, discipline, language')
         .eq('id', analysis.user_id as string)
         .maybeSingle()
-      profileData = prof as { plan?: string; discipline?: string | null } | null
+      profileData = prof as { plan?: string; discipline?: string | null; language?: string | null } | null
     }
 
     if (analysis.status === 'complete') {
@@ -458,6 +458,17 @@ export default async function handler(
       ? `\n\nPROJECT CONTEXT:\nProject name: "${project.name}"\nDesign stage: ${project.stage}${discipline ? `\nStudent discipline: ${discipline}` : ''}${project.focus_areas?.length ? `\nFocus areas: ${project.focus_areas.join(', ')}` : ''}${project.brief_text ? `\n\nCOURSE BRIEF / DEPARTMENT REQUIREMENTS (evaluate the drawings against these):\n${project.brief_text}` : ''}`
       : ''
 
+    // Multi-language: the user's profile language drives the language of the
+    // critique. The JSON structure (keys) stays English so the frontend keeps
+    // working; only the human-readable VALUES are translated. ElevenLabs uses a
+    // multilingual model, so the audio follows the text language automatically.
+    const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+    const langCode = (profileData?.language ?? 'en').toLowerCase()
+    const languageNote =
+      langCode !== 'en' && languageNames[langCode]
+        ? `\n\nLANGUAGE:\nWrite ALL human-readable text — every title, description, suggestion, strength, weakness, and jury question — in ${languageNames[langCode]}. Keep the JSON keys themselves in English exactly as specified. Do not mix languages: the values must be entirely ${languageNames[langCode]}.`
+        : ''
+
     // 5. Call Claude
     const anthropic = new Anthropic({ apiKey: anthropicKey })
 
@@ -475,7 +486,7 @@ export default async function handler(
             },
             {
               type: 'text',
-              text: USER_PROMPT + contextNote,
+              text: USER_PROMPT + contextNote + languageNote,
             },
           ],
         },
