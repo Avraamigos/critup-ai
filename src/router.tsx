@@ -25,6 +25,7 @@ import { ResetPasswordPage } from '@/routes/reset-password'
 import { AdminPage } from '@/routes/admin'
 import { PostPage } from '@/routes/post'
 import { FeedPage } from '@/routes/feed'
+import { ShowcasePage } from '@/routes/showcase'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -59,6 +60,7 @@ const termsRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/te
 const meetCritRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/meet-crit',  component: MeetCritPage })
 const resetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage })
 const postRoute = createRoute({ getParentRoute: () => rootRoute, path: '/p/$analysisId', component: PostPage })
+const showcaseRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/showcase', component: ShowcasePage })
 const notFoundRoute  = createRoute({ getParentRoute: () => rootRoute, path: '*', component: NotFoundPage })
 
 // App shell routes
@@ -96,6 +98,7 @@ const routeTree = rootRoute.addChildren([
   meetCritRoute,
   resetPasswordRoute,
   postRoute,
+  showcaseRoute,
   notFoundRoute,
 ])
 
