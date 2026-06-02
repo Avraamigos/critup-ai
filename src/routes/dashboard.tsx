@@ -1,4 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Eye, Plus, ArrowRight, Mic, TrendingUp, Calendar, Loader2, Sparkles } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { useTheme, useColors } from '@/lib/theme'
@@ -33,26 +35,32 @@ type Project = {
   analyses: Analysis[]
 }
 
-const STAGE_META: Record<string, { label: string; color: string }> = {
-  'pre-design':       { label: 'Pre-Design',      color: '#6366f1' },
-  'initial-concept':  { label: 'Initial Concept',  color: '#F97316' },
-  'finalized-design': { label: 'Finalized Design', color: 'oklch(0.72 0.17 145)' },
-  'jury-prep':        { label: 'Jury Prep',         color: 'oklch(0.65 0.18 25)' },
+// Stage → brand color. The human label is resolved via t(`stages.<key>`).
+const STAGE_COLOR: Record<string, string> = {
+  'pre-design':       '#6366f1',
+  'initial-concept':  '#F97316',
+  'finalized-design': 'oklch(0.72 0.17 145)',
+  'jury-prep':        'oklch(0.65 0.18 25)',
 }
 
-function timeAgo(dateStr: string) {
+function stageLabel(stage: string, t: TFunction) {
+  return t(`stages.${stage}`, { defaultValue: stage })
+}
+
+function timeAgo(dateStr: string, t: TFunction) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const d = Math.floor(diff / 86400000)
-  if (d === 0) return 'Today'
-  if (d === 1) return 'Yesterday'
-  if (d < 7) return `${d}d ago`
-  if (d < 30) return `${Math.floor(d / 7)}w ago`
-  return `${Math.floor(d / 30)}mo ago`
+  if (d === 0) return t('time.today')
+  if (d === 1) return t('time.yesterday')
+  if (d < 7) return t('time.daysAgo', { count: d })
+  if (d < 30) return t('time.weeksAgo', { count: Math.floor(d / 7) })
+  return t('time.monthsAgo', { count: Math.floor(d / 30) })
 }
 
 export function DashboardPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const isMobile = useIsMobile()
   const navigate = useNavigate()
   const { user, profile, refreshProfile } = useAuth()
@@ -76,14 +84,14 @@ export function DashboardPage() {
   }, [])
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-  const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
+  const greeting = hour < 12 ? t('dashboard.greetingMorning') : hour < 18 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening')
+  const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || t('dashboard.there')
   const discipline = profile?.discipline
-  const disciplineLabel = discipline === 'arch' ? 'Architecture'
-    : discipline === 'interior' ? 'Interior Architecture'
-    : discipline === 'urban' ? 'Urban Design'
-    : discipline === 'landscape' ? 'Landscape Architecture'
-    : 'Architecture Student'
+  const disciplineLabel = discipline === 'arch' ? t('disciplines.architecture')
+    : discipline === 'interior' ? t('disciplines.interior')
+    : discipline === 'urban' ? t('disciplines.urban')
+    : discipline === 'landscape' ? t('disciplines.landscape')
+    : t('disciplines.student')
 
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
   const isPro = profile?.plan !== 'free'
@@ -130,7 +138,9 @@ export function DashboardPage() {
     ?.filter(a => a.status === 'complete')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
 
-  const stage = activeProject ? (STAGE_META[activeProject.stage] ?? { label: activeProject.stage, color: '#F97316' }) : null
+  const stage = activeProject
+    ? { label: stageLabel(activeProject.stage, t), color: STAGE_COLOR[activeProject.stage] ?? '#F97316' }
+    : null
 
   return (
     <div style={{ padding: isMobile ? '20px 16px' : '28px', maxWidth: 1080, position: 'relative' }}>
@@ -141,7 +151,7 @@ export function DashboardPage() {
       {showUpgradeBanner && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'linear-gradient(135deg, #F97316, #fb923c)', borderRadius: 14, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 32px oklch(0.72 0.18 45 / 0.4)', animation: 'slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}>
           <Sparkles size={18} color="#fff" />
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Welcome to Pro! All features are now unlocked.</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{t('dashboard.welcomeToPro')}</span>
           <style>{`@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
         </div>
       )}
@@ -157,7 +167,7 @@ export function DashboardPage() {
           </div>
         </div>
         <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
-          {projects.length === 0 ? "Create your first project to get started." : `You have ${projects.length} project${projects.length !== 1 ? 's' : ''}. Keep improving.`}
+          {projects.length === 0 ? t('dashboard.noProjectsSubtitle') : t('dashboard.hasProjectsSubtitle', { count: projects.length })}
         </p>
       </div>
 
@@ -178,7 +188,7 @@ export function DashboardPage() {
             {/* Analyses */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted, fontFamily: FONT }}>Analyses</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted, fontFamily: FONT }}>{t('dashboard.analyses')}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: analysesUsed >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{analysesUsed}/1</span>
               </div>
               <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.30 0.004 270)' : '#e5e7eb', overflow: 'hidden', width: 120 }}>
@@ -187,12 +197,12 @@ export function DashboardPage() {
             </div>
             <div style={{ fontSize: 12, color: c.textMuted, fontFamily: FONT }}>
               {analysesUsed >= 1
-                ? <span>Free analysis used — <span style={{ color: '#F97316', fontWeight: 600 }}>upgrade for full access</span></span>
-                : '1 free analysis remaining · Jury Practice, chat & more with Pro'}
+                ? <span>{t('dashboard.freeUsed')}<span style={{ color: '#F97316', fontWeight: 600 }}>{t('dashboard.upgradeForAccess')}</span></span>
+                : t('dashboard.freeRemaining')}
             </div>
           </div>
           <Link to="/pricing" style={{ flexShrink: 0, padding: '7px 16px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)', fontFamily: FONT }}>
-            {analysesUsed >= 1 ? 'Upgrade now' : 'Upgrade to Pro'}
+            {analysesUsed >= 1 ? t('dashboard.upgradeNow') : t('dashboard.upgradeToPro')}
           </Link>
         </div>
       )}
@@ -265,7 +275,7 @@ export function DashboardPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? 16 : 20 }}>
                   <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Active project</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{t('dashboard.activeProject')}</div>
                     <h2 style={{ fontSize: isMobile ? 16 : 17, fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 6px', color: c.textPrimary, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {activeProject.name}
                     </h2>
@@ -274,7 +284,7 @@ export function DashboardPage() {
                         {stage?.label}
                       </div>
                       <span style={{ fontSize: 11, color: c.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Calendar size={11} color={c.textMuted} /> {timeAgo(activeProject.created_at)}
+                        <Calendar size={11} color={c.textMuted} /> {timeAgo(activeProject.created_at, t)}
                       </span>
                     </div>
                   </div>
@@ -286,24 +296,24 @@ export function DashboardPage() {
                       display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Inter',sans-serif",
                       whiteSpace: 'nowrap', flexShrink: 0,
                     }}>
-                    <Eye size={13} color="#fff" /> {isMobile ? 'View' : 'View analysis'}
+                    <Eye size={13} color="#fff" /> {isMobile ? t('dashboard.view') : t('dashboard.viewAnalysis')}
                   </button>
                 </div>
 
                 {latestAnalysis ? (
                   <div style={{ display: 'flex', gap: isMobile ? 12 : 20 }}>
-                    <ScoreRing score={latestAnalysis.concept_score ?? 0} label="Concept" size={isMobile ? 72 : 82} theme={theme} />
-                    <ScoreRing score={latestAnalysis.spatial_score ?? 0} label="Spatial" size={isMobile ? 72 : 82} theme={theme} />
-                    <ScoreRing score={latestAnalysis.presentation_score ?? 0} label="Presentation" size={isMobile ? 72 : 82} theme={theme} />
+                    <ScoreRing score={latestAnalysis.concept_score ?? 0} label={t('scores.concept')} size={isMobile ? 72 : 82} theme={theme} />
+                    <ScoreRing score={latestAnalysis.spatial_score ?? 0} label={t('scores.spatial')} size={isMobile ? 72 : 82} theme={theme} />
+                    <ScoreRing score={latestAnalysis.presentation_score ?? 0} label={t('scores.presentation')} size={isMobile ? 72 : 82} theme={theme} />
                   </div>
                 ) : (
                   <div style={{ padding: '18px', borderRadius: 12, background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f8fafc', border: `1px solid ${c.border}`, textAlign: 'center' }}>
                     {activeProject.analyses?.some(a => a.status === 'pending' || a.status === 'processing') ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#F97316', fontSize: 13, fontWeight: 600 }}>
-                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Analysis in progress…
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> {t('dashboard.analysisInProgress')}
                       </div>
                     ) : (
-                      <span style={{ fontSize: 13, color: c.textMuted }}>No analysis yet — upload a PDF to get feedback</span>
+                      <span style={{ fontSize: 13, color: c.textMuted }}>{t('dashboard.noAnalysisYet')}</span>
                     )}
                   </div>
                 )}
@@ -316,12 +326,12 @@ export function DashboardPage() {
                 border: `1.5px dashed ${c.border}`, textAlign: 'center',
               }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>🏛</div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: c.textPrimary, fontFamily: FONT }}>No projects yet</h2>
-                <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 20px' }}>Create your first project and upload your drawings to get AI critique</p>
+                <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: c.textPrimary, fontFamily: FONT }}>{t('dashboard.noProjectsTitle')}</h2>
+                <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 20px' }}>{t('dashboard.noProjectsDesc')}</p>
                 <button
                   onClick={() => navigate({ to: '/projects/new' })}
                   style={{ padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.3)' }}>
-                  Create first project →
+                  {t('dashboard.createFirstProject')}
                 </button>
               </div>
             )}
@@ -345,12 +355,12 @@ export function DashboardPage() {
                   <Plus size={18} color="#F97316" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', margin: isMobile ? 0 : '0 0 6px', color: c.textPrimary, fontFamily: FONT }}>New project</h3>
-                  {!isMobile && <p style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.5, margin: 0 }}>Upload your brief and get stage-specific feedback</p>}
+                  <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', margin: isMobile ? 0 : '0 0 6px', color: c.textPrimary, fontFamily: FONT }}>{t('dashboard.newProject')}</h3>
+                  {!isMobile && <p style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.5, margin: 0 }}>{t('dashboard.newProjectDesc')}</p>}
                 </div>
               </div>
               <div style={{ fontSize: 13, color: '#F97316', fontWeight: 600, marginTop: isMobile ? 0 : 18, display: 'flex', alignItems: 'center', gap: 4 }}>
-                Start <ArrowRight size={13} color="#F97316" />
+                {t('dashboard.start')} <ArrowRight size={13} color="#F97316" />
               </div>
             </Link>
           </div>
@@ -364,8 +374,8 @@ export function DashboardPage() {
             position: 'relative', zIndex: 1,
           }}>
             {[
-              { icon: Mic, label: 'Jury Practice', sub: 'Practise your answers', to: '/jury' },
-              { icon: TrendingUp, label: 'All Projects', sub: `${projects.length} project${projects.length !== 1 ? 's' : ''}`, to: '/projects' },
+              { icon: Mic, label: t('dashboard.juryPractice'), sub: t('dashboard.juryPracticeSub'), to: '/jury' },
+              { icon: TrendingUp, label: t('dashboard.allProjects'), sub: t('dashboard.projectsCount', { count: projects.length }), to: '/projects' },
             ].map(({ icon: Icon, label, sub, to }) => (
               <Link key={label} to={to} style={{
                 background: c.cardBg, borderRadius: 14, padding: isMobile ? '14px' : '16px 18px',
@@ -393,14 +403,14 @@ export function DashboardPage() {
           {projects.length > 0 && (
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: c.textPrimary }}>Recent projects</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: c.textPrimary }}>{t('dashboard.recentProjects')}</h3>
                 <Link to="/projects" style={{ color: '#F97316', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-                  View all <ArrowRight size={12} color="#F97316" />
+                  {t('dashboard.viewAll')} <ArrowRight size={12} color="#F97316" />
                 </Link>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {projects.slice(0, isMobile ? 2 : 3).map(p => {
-                  const ps = STAGE_META[p.stage] ?? { label: p.stage, color: '#F97316' }
+                  const ps = { label: stageLabel(p.stage, t), color: STAGE_COLOR[p.stage] ?? '#F97316' }
                   const la = p.analyses?.filter(a => a.status === 'complete').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
                   return (
                     <Link key={p.id} to="/analysis/$projectId" params={{ projectId: p.id }} style={{
@@ -415,7 +425,7 @@ export function DashboardPage() {
                         <div style={{ fontSize: 13, fontWeight: 600, color: c.textPrimary, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                         <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
                           <div style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, background: `${ps.color}18`, color: ps.color, border: `1px solid ${ps.color}40`, whiteSpace: 'nowrap' }}>{ps.label}</div>
-                          <span style={{ fontSize: 11, color: c.textMuted }}>{timeAgo(p.created_at)}</span>
+                          <span style={{ fontSize: 11, color: c.textMuted }}>{timeAgo(p.created_at, t)}</span>
                         </div>
                       </div>
                       {la ? (
