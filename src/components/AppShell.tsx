@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
   LayoutGrid, Folder, CircleDot, Mic, Users,
@@ -15,9 +16,10 @@ import { useAuth } from '@/lib/auth'
 // so the Analysis item can always highlight on /analysis/* regardless of its `to`.
 type NavDef = { to: string; activePath: string; icon: React.ElementType; label: string }
 
+// `label` holds an i18n key (resolved with t() at render time).
 const BOTTOM_ITEMS: NavDef[] = [
-  { to: '/settings', activePath: '/settings', icon: Settings,   label: 'Settings' },
-  { to: '/help',     activePath: '/help',     icon: HelpCircle, label: 'Help'     },
+  { to: '/settings', activePath: '/settings', icon: Settings,   label: 'nav.settings' },
+  { to: '/help',     activePath: '/help',     icon: HelpCircle, label: 'nav.help'     },
 ]
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif"
@@ -35,6 +37,7 @@ function useIsMobile() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { profile, user, loading: authLoading, signOut: authSignOut } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -103,12 +106,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : null
   const analysisTo = lastProjectId ? `/analysis/${lastProjectId}` : '/projects'
   const NAV_ITEMS: NavDef[] = [
-    { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'Dashboard' },
-    { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'Projects'  },
-    { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'Analysis'  },
-    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'Jury'      },
-    { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'Community' },
-    ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'Admin' }] : []),
+    { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'nav.dashboard' },
+    { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'nav.projects'  },
+    { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'nav.analysis'  },
+    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury'      },
+    { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'nav.feed' },
+    ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'nav.admin' }] : []),
   ]
 
   // Use activePath (not `to`) for highlight detection
@@ -117,7 +120,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return currentPath.startsWith(activePath)
   }
 
-  const pageLabel = [...NAV_ITEMS, ...BOTTOM_ITEMS].find(n => isActive(n.activePath))?.label || 'Critup'
+  const pageLabelKey = [...NAV_ITEMS, ...BOTTOM_ITEMS].find(n => isActive(n.activePath))?.label
+  const pageLabel = pageLabelKey ? t(pageLabelKey) : 'Critup'
 
   const NavItem = ({ to, activePath, icon: Icon, label }: NavDef) => {
     const active = isActive(activePath)
@@ -138,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <span style={{ flexShrink: 0, display: 'flex', marginLeft: sidebarOpen ? 0 : 'auto', marginRight: sidebarOpen ? 0 : 'auto' }}>
           <Icon size={17} color={active ? '#F97316' : c.textMuted} strokeWidth={1.6} />
         </span>
-        {sidebarOpen && <span>{label}</span>}
+        {sidebarOpen && <span>{t(label)}</span>}
       </Link>
     )
   }
@@ -181,7 +185,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {sidebarOpen && !isPro && !isAdmin && (
             <div style={{ margin: '10px 10px 8px', padding: '14px', borderRadius: 12, background: c.isDark ? 'oklch(0.225 0.004 270)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45 / 0.3)', boxShadow: '0 0 16px oklch(0.72 0.18 45 / 0.08)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 8, letterSpacing: '0.04em', fontFamily: FONT }}>FREE PLAN</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 8, letterSpacing: '0.04em', fontFamily: FONT }}>{t('appShell.freePlan')}</div>
               {/* Analyses usage bar */}
               {(() => {
                 const used = (profile as { analyses_used?: number } | null)?.analyses_used ?? 0
@@ -189,8 +193,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 return (
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 10, color: c.textMuted, fontFamily: FONT }}>Analyses</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: used >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{used}/1 used</span>
+                      <span style={{ fontSize: 10, color: c.textMuted, fontFamily: FONT }}>{t('appShell.analyses')}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: used >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{t('appShell.usedCount', { used })}</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.32 0.004 270)' : '#fde8d0', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: used >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
@@ -199,7 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )
               })()}
               <Link to="/pricing" style={{ display: 'block', width: '100%', padding: '7px 0', borderRadius: 7, background: '#F97316', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 10px oklch(0.72 0.18 45 / 0.35)', textAlign: 'center', textDecoration: 'none', fontFamily: FONT }}>
-                Upgrade to Pro →
+                {t('appShell.upgradeToPro')}
               </Link>
             </div>
           )}
@@ -278,10 +282,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   zIndex: 9999,
                 }}>
                   {[
-                    { icon: User, label: 'Profile', to: '/settings' },
-                    { icon: TrendingUp, label: 'My Projects', to: '/projects' },
-                    ...(!isPro ? [{ icon: Star, label: 'Upgrade to Pro', to: '/pricing', orange: true }] : []),
-                    ...(profile?.plan === 'monthly' ? [{ icon: Star, label: 'Upgrade to Yearly', to: '/pricing', orange: true }] : []),
+                    { icon: User, label: t('appShell.profile'), to: '/settings' },
+                    { icon: TrendingUp, label: t('appShell.myProjects'), to: '/projects' },
+                    ...(!isPro ? [{ icon: Star, label: t('appShell.upgradeProMenu'), to: '/pricing', orange: true }] : []),
+                    ...(profile?.plan === 'monthly' ? [{ icon: Star, label: t('appShell.upgradeYearlyMenu'), to: '/pricing', orange: true }] : []),
                   ].map(({ icon: Icon, label, to, orange }) => (
                     <Link key={label} to={to} onClick={() => setAccountOpen(false)} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
@@ -308,7 +312,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
                     <LogOut size={15} color="oklch(0.65 0.18 25)" strokeWidth={1.6} />
-                    Sign out
+                    {t('nav.signOut')}
                   </button>
                 </div>
               )}
@@ -344,7 +348,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }}>
                 <Icon size={20} color={active ? '#F97316' : c.textMuted} strokeWidth={active ? 2 : 1.6} />
                 <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, fontFamily: FONT, letterSpacing: '0.01em' }}>
-                  {label}
+                  {t(label)}
                 </span>
               </Link>
             )

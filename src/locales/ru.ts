@@ -1,0 +1,46 @@
+import type { TranslationSchema } from './en'
+
+// Russian. Typed against the English schema — TypeScript flags any missing key.
+export const ru: TranslationSchema = {
+  common: {
+    save: 'Сохранить',
+    saved: 'Сохранено!',
+    saving: 'Сохранение…',
+    cancel: 'Отмена',
+    delete: 'Удалить',
+    edit: 'Изменить',
+    close: 'Закрыть',
+    back: 'Назад',
+    next: 'Далее',
+    continue: 'Продолжить',
+    loading: 'Загрузка…',
+    retry: 'Повторить',
+    confirm: 'Подтвердить',
+    submit: 'Отправить',
+    upgrade: 'Улучшить план',
+    free: 'Бесплатно',
+    pro: 'Pro',
+  },
+  nav: {
+    dashboard: 'Главная',
+    projects: 'Проекты',
+    analysis: 'Анализ',
+    feed: 'Сообщество',
+    jury: 'Жюри',
+    settings: 'Настройки',
+    help: 'Помощь',
+    pricing: 'Тарифы',
+    admin: 'Админ',
+    signOut: 'Выйти',
+  },
+  appShell: {
+    freePlan: 'БЕСПЛАТНЫЙ ПЛАН',
+    analyses: 'Анализы',
+    usedCount: 'использовано {{used}}/1',
+    upgradeToPro: 'Перейти на Pro →',
+    profile: 'Профиль',
+    myProjects: 'Мои проекты',
+    upgradeProMenu: 'Перейти на Pro',
+    upgradeYearlyMenu: 'Перейти на годовой',
+  },
+}

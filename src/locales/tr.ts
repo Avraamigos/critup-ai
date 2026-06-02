@@ -1,0 +1,46 @@
+import type { TranslationSchema } from './en'
+
+// Turkish. Typed against the English schema — TypeScript flags any missing key.
+export const tr: TranslationSchema = {
+  common: {
+    save: 'Kaydet',
+    saved: 'Kaydedildi!',
+    saving: 'Kaydediliyor…',
+    cancel: 'İptal',
+    delete: 'Sil',
+    edit: 'Düzenle',
+    close: 'Kapat',
+    back: 'Geri',
+    next: 'İleri',
+    continue: 'Devam et',
+    loading: 'Yükleniyor…',
+    retry: 'Tekrar dene',
+    confirm: 'Onayla',
+    submit: 'Gönder',
+    upgrade: 'Yükselt',
+    free: 'Ücretsiz',
+    pro: 'Pro',
+  },
+  nav: {
+    dashboard: 'Panel',
+    projects: 'Projeler',
+    analysis: 'Analiz',
+    feed: 'Topluluk',
+    jury: 'Jüri',
+    settings: 'Ayarlar',
+    help: 'Yardım',
+    pricing: 'Fiyatlandırma',
+    admin: 'Yönetici',
+    signOut: 'Çıkış yap',
+  },
+  appShell: {
+    freePlan: 'ÜCRETSİZ PLAN',
+    analyses: 'Analizler',
+    usedCount: '{{used}}/1 kullanıldı',
+    upgradeToPro: "Pro'ya yükselt →",
+    profile: 'Profil',
+    myProjects: 'Projelerim',
+    upgradeProMenu: "Pro'ya yükselt",
+    upgradeYearlyMenu: 'Yıllığa yükselt',
+  },
+}

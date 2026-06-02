@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { Database } from './database.types'
+import i18n from './i18n'
+
+// Keep the UI language in sync with the profile's saved language (en/ru/tr).
+function syncUiLanguage(profile: { language?: string | null } | null) {
+  const lang = profile?.language ?? 'en'
+  if (i18n.language !== lang) i18n.changeLanguage(lang)
+}
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -93,7 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch profile OUTSIDE the auth lock via .then() — never blocks lock
         const sessionUser = session.user
         fetchProfile(sessionUser).then(profile => {
-          setState(s => ({ ...s, profile: applyAdminOverride(sessionUser, profile) }))
+          const resolved = applyAdminOverride(sessionUser, profile)
+          syncUiLanguage(resolved)
+          setState(s => ({ ...s, profile: resolved }))
         })
       } else {
         setState(s => ({ ...s, profile: null }))
@@ -140,7 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     if (state.user) {
       const profile = await fetchProfile(state.user)
-      setState(s => ({ ...s, profile: applyAdminOverride(state.user, profile ?? null) }))
+      const resolved = applyAdminOverride(state.user, profile ?? null)
+      syncUiLanguage(resolved)
+      setState(s => ({ ...s, profile: resolved }))
     }
   }
 
