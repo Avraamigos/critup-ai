@@ -43,8 +43,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     req.on('error', reject)
   })
 
-  // Skip verification if secret not configured yet (dev mode)
-  if (webhookSecret && !verifySignature(rawBody, signatureHeader, webhookSecret)) {
+  // Fail closed: a webhook that can upgrade accounts MUST be signed. If the
+  // secret isn't configured, reject every request rather than trusting the
+  // body (an unsigned POST could otherwise grant anyone a Pro plan for free).
+  if (!webhookSecret) {
+    console.error('Paddle webhook: PADDLE_WEBHOOK_SECRET not set — rejecting')
+    return res.status(500).json({ error: 'Webhook not configured' })
+  }
+  if (!verifySignature(rawBody, signatureHeader, webhookSecret)) {
     console.warn('Paddle webhook: invalid signature')
     return res.status(401).json({ error: 'Invalid signature' })
   }

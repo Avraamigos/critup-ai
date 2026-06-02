@@ -82,6 +82,14 @@ const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
+    text: '🔐 CRITICAL at launch — set PADDLE_WEBHOOK_SECRET in Vercel env BEFORE going live.\nThe webhook now fails closed: with no secret it rejects every request (security fix — stops anyone granting themselves Pro for free). So until the secret is set, paid upgrades will NOT work. Get it from Paddle dashboard → Developer Tools → Notifications.',
+    createdAt: new Date('2026-06-02').toISOString(),
+  },
+  {
+    text: '🛡️ Security audit (Jun 2) — DONE: secrets clean, admin-auth ok, IDOR/RLS ok, Paddle webhook now fails closed, security headers added, ws dep patched.\nStill to verify in Supabase dashboard: (1) RLS enabled on every table, (2) email verification ON for signups, (3) leaked-password protection (needs Pro).\nDeferred (low priority): analyze.ts has no per-caller auth (credit-burn abuse vector, mitigated by rate limits); 2 dev-only vite/esbuild npm-audit issues (not prod-facing).',
+    createdAt: new Date('2026-06-02').toISOString(),
+  },
+  {
     text: '✅ Welcome email — DONE.\nBranded Resend welcome email fires on onboarding completion (api/welcome.ts). Uses existing RESEND_API_KEY.',
     createdAt: new Date('2026-05-29').toISOString(),
   },
