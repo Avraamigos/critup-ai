@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { AIOrb } from '@/components/AIOrb'
@@ -19,6 +20,7 @@ function scrollTo(id: string) {
 export function LandingPage() {
   const { theme, toggle, isDark } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const [activeStage, setActiveStage] = useState(0)
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -31,25 +33,25 @@ export function LandingPage() {
   }, [])
 
   const stages = [
-    { name: 'Pre-Design', feedback: "Your brief shows a strong civic program. Focus your concept around the tension between public/private threshold — this is what juries probe first at this stage. Precedents worth studying: Sou Fujimoto's spatial gradients, Aires Mateus's spatial economy." },
-    { name: 'Initial Concept', feedback: "Your parti communicates the core idea but form generation feels arbitrary. Ground your massing in topographic data or program adjacency logic. The jury will immediately ask 'why this shape?' — have three answers ready." },
-    { name: 'Finalized Design', feedback: "Circulation on Level 2 creates a dead-end near Grid B-3. The section reveals a 4.2m gallery ceiling that contradicts your stated 'compressed/released' spatial narrative. Address this before submission." },
-    { name: 'Jury Prep', feedback: "Open with your concept in one sentence, then show the site diagram. Practice: 'My project proposes X as a response to Y constraint.' Your faculty typically asks about structure after slide 4 — prepare a 30-second structural logic answer." },
+    { name: t('stages.pre-design'), feedback: t('landing.stageFb0') },
+    { name: t('stages.initial-concept'), feedback: t('landing.stageFb1') },
+    { name: t('stages.finalized-design'), feedback: t('landing.stageFb2') },
+    { name: t('stages.jury-prep'), feedback: t('landing.stageFb3') },
   ]
 
   const faqs = [
-    { q: 'How does Crit understand my project?', a: 'You upload your design boards as a PDF — plans, sections, renders, diagrams, all in one file. Crit reads every page and gives you targeted, specific critique rather than generic feedback.' },
-    { q: 'What file formats do you accept?', a: 'PDFs. Combine all your sheets into one PDF — each page gets its own analysis and highlighted annotations.' },
-    { q: 'How is this different from ChatGPT?', a: "ChatGPT gives generic writing feedback. Crit is calibrated on architecture jury culture, design theory, and academic presentation standards. It understands spatial logic, circulation, and what juries actually probe." },
-    { q: 'Does it work for interior design and urban planning?', a: 'Yes. Crit adapts to your discipline. Interior architecture critique focuses on spatial sequence and material narrative; urban planning on connectivity, density, and program relationships.' },
-    { q: 'Can I use it in Russian or Turkish?', a: 'Yes. Set your preferred language in settings. All feedback, jury questions, and assistant conversations respond in your chosen language.' },
-    { q: 'Is my work private?', a: 'Your files are encrypted and only used to generate your critique. We do not use your project files to train AI models. Delete your projects at any time.' },
+    { q: t('landing.faq1q'), a: t('landing.faq1a') },
+    { q: t('landing.faq2q'), a: t('landing.faq2a') },
+    { q: t('landing.faq3q'), a: t('landing.faq3a') },
+    { q: t('landing.faq4q'), a: t('landing.faq4a') },
+    { q: t('landing.faq5q'), a: t('landing.faq5a') },
+    { q: t('landing.faq6q'), a: t('landing.faq6a') },
   ]
 
   const testimonials = [
-    { quote: "I went into my final jury with confidence for the first time. Crit caught things my tutors hadn't mentioned.", name: 'Lara M.', meta: 'Architecture · TU Berlin' },
-    { quote: "The jury simulation is scary accurate. Three practice questions came up word-for-word in my actual crit.", name: 'Kerem A.', meta: 'Interior Architecture · METU' },
-    { quote: "It caught that my section was missing the ground datum. I never would have noticed myself.", name: 'Sofia R.', meta: 'Urban Design · Strelka' },
+    { quote: t('landing.testimonial1'), name: 'Lara M.', meta: 'Architecture · TU Berlin' },
+    { quote: t('landing.testimonial2'), name: 'Kerem A.', meta: 'Interior Architecture · METU' },
+    { quote: t('landing.testimonial3'), name: 'Sofia R.', meta: 'Urban Design · Strelka' },
   ]
 
   return (
@@ -63,11 +65,11 @@ export function LandingPage() {
           {/* Desktop nav links */}
           {!isMobile && (
             <div style={{ display: 'flex', gap: 32, fontSize: 14, color: c.textMuted, fontWeight: 500 }}>
-              {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
+              {[['landing.navFeatures', 'features'], ['landing.navHow', 'how'], ['landing.navPricing', 'pricing']].map(([label, id]) => (
                 <button key={id} onClick={() => scrollTo(id)} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: 0, fontFamily: "'Inter', sans-serif" }}
                   onMouseEnter={e => (e.currentTarget.style.color = c.textPrimary)}
                   onMouseLeave={e => (e.currentTarget.style.color = c.textMuted)}
-                >{label}</button>
+                >{t(label)}</button>
               ))}
             </div>
           )}
@@ -82,8 +84,8 @@ export function LandingPage() {
               </button>
             ) : (
               <>
-                <Link to="/login" style={{ padding: '7px 18px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>Sign in</Link>
-                <Link to="/signup" style={{ padding: '8px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)' }}>Get started free</Link>
+                <Link to="/login" style={{ padding: '7px 18px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>{t('landing.signIn')}</Link>
+                <Link to="/signup" style={{ padding: '8px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)' }}>{t('landing.getStarted')}</Link>
               </>
             )}
           </div>
@@ -92,12 +94,12 @@ export function LandingPage() {
         {/* Mobile dropdown menu */}
         {isMobile && mobileMenuOpen && (
           <div style={{ padding: '12px 20px 16px', borderTop: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', gap: 8, background: isDark ? 'oklch(0.16 0.004 270)' : '#fff' }}>
-            {[['Features', 'features'], ['How it works', 'how'], ['Pricing', 'pricing']].map(([label, id]) => (
-              <button key={id} onClick={() => { scrollTo(id); setMobileMenuOpen(false) }} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 15, fontWeight: 500, cursor: 'pointer', padding: '6px 0', textAlign: 'left', fontFamily: "'Inter', sans-serif" }}>{label}</button>
+            {[['landing.navFeatures', 'features'], ['landing.navHow', 'how'], ['landing.navPricing', 'pricing']].map(([label, id]) => (
+              <button key={id} onClick={() => { scrollTo(id); setMobileMenuOpen(false) }} style={{ background: 'none', border: 'none', color: c.textMuted, fontSize: 15, fontWeight: 500, cursor: 'pointer', padding: '6px 0', textAlign: 'left', fontFamily: "'Inter', sans-serif" }}>{t(label)}</button>
             ))}
             <div style={{ height: 1, background: c.border, margin: '4px 0' }} />
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{ padding: '10px 0', color: c.textPrimary, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Sign in</Link>
-            <Link to="/signup" onClick={() => setMobileMenuOpen(false)} style={{ padding: '11px 0', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>Get started free</Link>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{ padding: '10px 0', color: c.textPrimary, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>{t('landing.signIn')}</Link>
+            <Link to="/signup" onClick={() => setMobileMenuOpen(false)} style={{ padding: '11px 0', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>{t('landing.getStarted')}</Link>
           </div>
         )}
       </nav>
@@ -110,29 +112,29 @@ export function LandingPage() {
         <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px', position: 'relative', zIndex: 2 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px 5px 10px', borderRadius: 100, background: 'oklch(0.72 0.18 45 / 0.1)', border: '1px solid oklch(0.72 0.18 45 / 0.22)', fontSize: 13, color: '#F97316', fontWeight: 500, marginBottom: 28 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F97316', display: 'inline-block', animation: 'hero-pulse 2s ease-in-out infinite' }} />
-            AI jury feedback for design students
+            {t('landing.heroBadge')}
           </div>
 
           <h1 style={{ fontSize: isMobile ? '38px' : 'clamp(42px, 6.5vw, 74px)', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 18, color: c.textPrimary, fontFamily: FONT_DISPLAY }}>
-            Stop guessing what<br />your jury will say
+            {t('landing.heroTitle1')}<br />{t('landing.heroTitle2')}
           </h1>
           <p style={{ fontSize: isMobile ? 16 : 18, color: c.textMuted, lineHeight: 1.65, maxWidth: 500, margin: '0 auto 32px' }}>
-            Upload your project boards. Get honest, specific critique — the same feedback a 20-year jury veteran would give — before you step into the room.
+            {t('landing.heroSubtitle')}
           </p>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 36 }}>
             <Link to="/signup" style={{ padding: isMobile ? '13px 28px' : '14px 34px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: isMobile ? 15 : 16, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 24px oklch(0.72 0.18 45 / 0.35)', textDecoration: 'none', fontFamily: FONT_DISPLAY, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              Analyse my project free <ArrowRight size={16} />
+              {t('landing.heroCtaPrimary')} <ArrowRight size={16} />
             </Link>
             {!isMobile && (
-              <button onClick={() => scrollTo('how')} style={{ padding: '14px 26px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>See how it works ↓</button>
+              <button onClick={() => scrollTo('how')} style={{ padding: '14px 26px', borderRadius: 100, background: 'transparent', border: `1.5px solid ${c.border}`, color: c.textPrimary, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>{t('landing.heroCtaSecondary')}</button>
             )}
           </div>
 
           <div style={{ display: 'flex', gap: isMobile ? 14 : 24, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['No credit card required', 'Architecture, Interior, Urban', 'English · Russian · Turkish'].map(t => (
-              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.textMuted }}>
-                <Check size={12} color="#F97316" strokeWidth={2.5} />{t}
+            {[t('landing.heroTrust1'), t('landing.heroTrust2'), t('landing.heroTrust3')].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: c.textMuted }}>
+                <Check size={12} color="#F97316" strokeWidth={2.5} />{item}
               </div>
             ))}
           </div>
@@ -201,23 +203,23 @@ export function LandingPage() {
         <div style={{ maxWidth:720, margin:'0 auto', display:'flex', alignItems:'center', gap: isMobile ? 28 : 48, flexWrap:'wrap', justifyContent:'center' }}>
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, flexShrink:0 }}>
             <AIOrb size={isMobile ? 60 : 80} float />
-            <div style={{ fontSize:13, fontWeight:700, color:c.textPrimary, letterSpacing:'-0.01em' }}>Meet Crit</div>
-            <div style={{ fontSize:11, color:'#F97316', fontWeight:500 }}>Your AI design critic</div>
+            <div style={{ fontSize:13, fontWeight:700, color:c.textPrimary, letterSpacing:'-0.01em' }}>{t('landing.meetName')}</div>
+            <div style={{ fontSize:11, color:'#F97316', fontWeight:500 }}>{t('landing.meetRole')}</div>
           </div>
           <div style={{ flex:1, minWidth: isMobile ? '100%' : 280 }}>
             <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 12px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>
-              A critic that actually knows your work
+              {t('landing.meetTitle')}
             </h2>
             <p style={{ fontSize:15, color:c.textMuted, lineHeight:1.7, margin:'0 0 16px' }}>
-              Crit reads your drawings page by page, spots weak points, predicts jury questions, and coaches you on how to answer them.
+              {t('landing.meetDesc')}
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {['Narrates your boards with voice critique','Pins annotations on exact areas','Simulates real jury Q&A for your project'].map(t => (
-                <div key={t} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:c.textMuted }}>
+              {[t('landing.meet1'), t('landing.meet2'), t('landing.meet3')].map(item => (
+                <div key={item} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:c.textMuted }}>
                   <div style={{ width:18, height:18, borderRadius:'50%', background:'oklch(0.72 0.18 45 / 0.12)', border:'1px solid oklch(0.72 0.18 45 / 0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <Check size={10} color="#F97316" strokeWidth={3} />
                   </div>
-                  {t}
+                  {item}
                 </div>
               ))}
             </div>
@@ -229,14 +231,14 @@ export function LandingPage() {
       <section id="how" style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px', position:'relative' }}>
         <DotGrid theme={theme} />
         <div style={{ textAlign:'center', marginBottom:44, position:'relative', zIndex:1 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Process</div>
-          <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight:800, letterSpacing:'-0.035em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Three steps to jury-ready</h2>
+          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>{t('landing.processLabel')}</div>
+          <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight:800, letterSpacing:'-0.035em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.processTitle')}</h2>
         </div>
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16, position:'relative', zIndex:1 }}>
           {[
-            { icon: Upload, n:'01', title:'Upload your boards', desc:'Combine your plans, sections, renders, and diagrams into one PDF. Every page gets its own analysis.' },
-            { icon: Zap,    n:'02', title:'Crit reads everything', desc:'Scores your concept, spatial logic, and presentation. Pins annotations on the exact areas that need work.' },
-            { icon: MessageSquare, n:'03', title:'Practice and refine', desc:'Get predicted jury questions tailored to your drawings. Chat with Crit to work through any weakness.' },
+            { icon: Upload, n:'01', title:t('landing.step1Title'), desc:t('landing.step1Desc') },
+            { icon: Zap,    n:'02', title:t('landing.step2Title'), desc:t('landing.step2Desc') },
+            { icon: MessageSquare, n:'03', title:t('landing.step3Title'), desc:t('landing.step3Desc') },
           ].map(({ icon: Icon, n, title, desc }) => (
             <div key={n} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:18, padding:'24px', border:`1px solid ${c.border}` }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
@@ -256,9 +258,9 @@ export function LandingPage() {
       <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '80px 40px' }}>
         <div style={{ maxWidth:760, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:32 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Adaptive feedback</div>
-            <h2 style={{ fontSize: isMobile ? 24 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Feedback that knows your stage</h2>
-            <p style={{ fontSize:14, color:c.textMuted, margin:0 }}>Pre-design gets different critique than jury prep.</p>
+            <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>{t('landing.stageLabel')}</div>
+            <h2 style={{ fontSize: isMobile ? 24 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.stageTitle')}</h2>
+            <p style={{ fontSize:14, color:c.textMuted, margin:0 }}>{t('landing.stageSubtitle')}</p>
           </div>
           <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', marginBottom:20 }}>
             {stages.map((s, i) => (
@@ -268,7 +270,7 @@ export function LandingPage() {
           <div style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:16, border:'1px solid oklch(0.72 0.18 45 / 0.2)', padding:'20px 22px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
               <div style={{ width:8, height:8, borderRadius:'50%', background:'#F97316' }} />
-              <span style={{ fontSize:10, fontWeight:700, color:'#F97316', letterSpacing:'0.1em', textTransform:'uppercase' }}>{stages[activeStage].name} · Crit's feedback</span>
+              <span style={{ fontSize:10, fontWeight:700, color:'#F97316', letterSpacing:'0.1em', textTransform:'uppercase' }}>{stages[activeStage].name} · {t('landing.critFeedback')}</span>
             </div>
             <p style={{ fontSize:14, color:c.textMuted, lineHeight:1.75, margin:0 }}>{stages[activeStage].feedback}</p>
           </div>
@@ -278,17 +280,17 @@ export function LandingPage() {
       {/* ── FEATURES ── */}
       <section id="features" style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px' }}>
         <div style={{ textAlign:'center', marginBottom:44 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>What you get</div>
-          <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Everything built for design school</h2>
+          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>{t('landing.featuresLabel')}</div>
+          <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.featuresTitle')}</h2>
         </div>
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap:14 }}>
           {[
-            { icon:'🎙', title:'PDF Voiceover',      desc:'Crit narrates your boards page by page with spoken, targeted critique.' },
-            { icon:'📌', title:'Pinned Annotations', desc:'Pulsating markers on exact areas needing attention — not just text.' },
-            { icon:'💬', title:'Jury Simulation',    desc:'Practice real jury questions generated from your actual drawings.' },
-            { icon:'✨', title:'Ask Crit',           desc:'Chat with Crit about anything — scores, design decisions, how to improve.' },
-            { icon:'🌍', title:'Multi-language',     desc:'Full critique in English, Russian, and Turkish.' },
-            { icon:'📈', title:'Score Tracking',     desc:'Concept, spatial, and presentation scores tracked across projects.' },
+            { icon:'🎙', title:t('landing.feat1Title'), desc:t('landing.feat1Desc') },
+            { icon:'📌', title:t('landing.feat2Title'), desc:t('landing.feat2Desc') },
+            { icon:'💬', title:t('landing.feat3Title'), desc:t('landing.feat3Desc') },
+            { icon:'✨', title:t('landing.feat4Title'), desc:t('landing.feat4Desc') },
+            { icon:'🌍', title:t('landing.feat5Title'), desc:t('landing.feat5Desc') },
+            { icon:'📈', title:t('landing.feat6Title'), desc:t('landing.feat6Desc') },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}` }}>
               <div style={{ width:36, height:36, borderRadius:9, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, fontSize:18 }}>{icon}</div>
@@ -303,26 +305,26 @@ export function LandingPage() {
       <section id="pricing" style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, borderBottom:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '80px 40px' }}>
         <div style={{ maxWidth:900, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:40 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Pricing</div>
-            <h2 style={{ fontSize: isMobile ? 28 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Start free. Upgrade anytime.</h2>
-            <p style={{ fontSize:15, color:c.textMuted, margin:0 }}>No card required to start. Cancel anytime.</p>
+            <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>{t('landing.pricingLabel')}</div>
+            <h2 style={{ fontSize: isMobile ? 28 : 38, fontWeight:800, letterSpacing:'-0.03em', margin:'0 0 10px', fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.pricingTitle')}</h2>
+            <p style={{ fontSize:15, color:c.textMuted, margin:0 }}>{t('landing.pricingSubtitle')}</p>
           </div>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16 }}>
             {[
               {
-                name:'Free', price:'$0', sub:'', featured:false,
-                features:['1 project analysis','Concept, Spatial & Presentation scores','Pinned annotations on your drawings','10 messages with Crit'],
-                cta:'Start analysing free',
+                name:t('landing.planFree'), price:'$0', sub:'', featured:false,
+                features:[t('landing.freeFeat1'),t('landing.freeFeat2'),t('landing.freeFeat3'),t('landing.freeFeat4')],
+                cta:t('landing.freeCta'),
               },
               {
-                name:'Monthly', price:'$7', sub:'/mo', featured:true, badge:'Most popular',
-                features:['Full project analyses','PDF voiceover narration','Jury Q&A practice sessions','Crit AI chat','Full project history'],
-                cta:'Start monthly',
+                name:t('landing.planMonthly'), price:'$7', sub:'/mo', featured:true, badge:t('landing.mostPopular'),
+                features:[t('landing.monthlyFeat1'),t('landing.monthlyFeat2'),t('landing.monthlyFeat3'),t('landing.monthlyFeat4'),t('landing.monthlyFeat5')],
+                cta:t('landing.monthlyCta'),
               },
               {
-                name:'Yearly', price:'$45', sub:'/yr', crossed:'$84', save:'Save 46%', featured:false, badge:'Best value',
-                features:['Everything in Monthly','Priority AI processing','Earliest access to new features','Direct support'],
-                cta:'Start yearly',
+                name:t('landing.planYearly'), price:'$45', sub:'/yr', crossed:'$84', save:t('landing.save46'), featured:false, badge:t('landing.bestValue'),
+                features:[t('landing.yearlyFeat1'),t('landing.yearlyFeat2'),t('landing.yearlyFeat3'),t('landing.yearlyFeat4')],
+                cta:t('landing.yearlyCta'),
               },
             ].map(({ name, price, sub, crossed, save, features: feats, cta, featured, badge }) => (
               <div key={name} style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:20, padding:'28px 24px', border: featured ? '1.5px solid #F97316' : `1px solid ${c.border}`, boxShadow: featured ? '0 0 40px oklch(0.72 0.18 45 / 0.12)' : 'none', position:'relative', marginTop: (!isMobile && featured) ? -8 : 0 }}>
@@ -353,8 +355,8 @@ export function LandingPage() {
       {/* ── TESTIMONIALS ── */}
       <section style={{ maxWidth:960, margin:'0 auto', padding: isMobile ? '64px 20px' : '88px 40px' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>Early users</div>
-          <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>What students say</h2>
+          <div style={{ fontSize:11, fontWeight:700, color:'#F97316', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:12 }}>{t('landing.testimonialsLabel')}</div>
+          <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight:800, letterSpacing:'-0.03em', margin:0, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.testimonialsTitle')}</h2>
         </div>
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap:16 }}>
           {testimonials.map(({ quote, name, meta }) => (
@@ -371,7 +373,7 @@ export function LandingPage() {
       {/* ── FAQ ── */}
       <section style={{ background: isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc', borderTop:`1px solid ${c.border}`, padding: isMobile ? '56px 20px' : '72px 40px' }}>
         <div style={{ maxWidth:660, margin:'0 auto' }}>
-          <h2 style={{ fontSize: isMobile ? 26 : 34, fontWeight:800, letterSpacing:'-0.03em', textAlign:'center', marginBottom:36, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Common questions</h2>
+          <h2 style={{ fontSize: isMobile ? 26 : 34, fontWeight:800, letterSpacing:'-0.03em', textAlign:'center', marginBottom:36, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.faqTitle')}</h2>
           <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
             {faqs.map(({ q, a }, i) => (
               <div key={i} style={{ background: isDark ? 'oklch(0.19 0.004 270)' : '#fff', borderRadius:12, border:`1px solid ${c.border}`, overflow:'hidden' }}>
@@ -394,10 +396,10 @@ export function LandingPage() {
           <div style={{ display:'flex', justifyContent:'center', marginBottom:22 }}>
             <AIOrb size={isMobile ? 52 : 64} float />
           </div>
-          <h2 style={{ fontSize: isMobile ? 30 : 'clamp(36px,5vw,54px)', fontWeight:800, letterSpacing:'-0.035em', marginBottom:10, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>Ready to walk in confident?</h2>
-          <p style={{ fontSize:15, color:c.textMuted, marginBottom:30 }}>First analysis is free. No card required.</p>
+          <h2 style={{ fontSize: isMobile ? 30 : 'clamp(36px,5vw,54px)', fontWeight:800, letterSpacing:'-0.035em', marginBottom:10, fontFamily:FONT_DISPLAY, color:c.textPrimary }}>{t('landing.finalTitle')}</h2>
+          <p style={{ fontSize:15, color:c.textMuted, marginBottom:30 }}>{t('landing.finalSubtitle')}</p>
           <Link to="/signup" style={{ padding: isMobile ? '13px 32px' : '15px 40px', borderRadius:100, background:'#F97316', color:'#fff', fontSize:15, fontWeight:600, cursor:'pointer', boxShadow:'0 0 28px oklch(0.72 0.18 45 / 0.35)', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:8 }}>
-            Analyse my project free <ArrowRight size={16} />
+            {t('landing.finalCta')} <ArrowRight size={16} />
           </Link>
         </div>
       </section>
@@ -406,9 +408,9 @@ export function LandingPage() {
       <footer style={{ borderTop:`1px solid ${c.border}`, padding: isMobile ? '24px 20px' : '28px 48px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:14 }}>
         <CritupLogo size={18} showText theme={theme} />
         <div style={{ display:'flex', gap:20, fontSize:13, color:c.textMuted }}>
-          <Link to="/privacy" style={{ color:c.textMuted, textDecoration:'none' }}>Privacy</Link>
-          <Link to="/terms"   style={{ color:c.textMuted, textDecoration:'none' }}>Terms</Link>
-          <a href="mailto:hello@critup.ai" style={{ color:c.textMuted, textDecoration:'none' }}>Contact</a>
+          <Link to="/privacy" style={{ color:c.textMuted, textDecoration:'none' }}>{t('landing.privacy')}</Link>
+          <Link to="/terms"   style={{ color:c.textMuted, textDecoration:'none' }}>{t('landing.terms')}</Link>
+          <a href="mailto:hello@critup.ai" style={{ color:c.textMuted, textDecoration:'none' }}>{t('landing.contact')}</a>
         </div>
         <div style={{ fontSize:11, color: isDark ? 'oklch(0.4 0.004 270)' : '#9ca3af' }}>© 2026 Critup.ai · Avraam Valikhan & Adil Kamal Batcha</div>
       </footer>
