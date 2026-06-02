@@ -41,6 +41,7 @@ type ProjectData = {
   id: string
   name: string
   stage: string
+  discipline: string | null
   analyses: AnalysisData[]
 }
 
@@ -185,7 +186,7 @@ export function AnalysisPage() {
     const load = async () => {
       const { data, error: err } = await supabase
         .from('projects')
-        .select('id, name, stage, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, error_message, created_at)')
+        .select('id, name, stage, discipline, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, error_message, created_at)')
         .eq('id', params.projectId)
         .single()
       if (err || !data) { setError('Project not found.'); setLoading(false); return }
@@ -865,10 +866,21 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
         slideCount = 0
       }
 
-      // 2. Publish the analysis.
+      // 2. Publish the analysis. We denormalize the public display fields
+      //    (author name + project meta) onto the row so the feed and shared
+      //    post pages can render them without reading the author's profile or
+      //    project — both of which are protected by owner-only RLS.
       const { error: pubErr } = await supabase
         .from('analyses')
-        .update({ is_public: true, caption, slide_count: slideCount })
+        .update({
+          is_public: true,
+          caption,
+          slide_count: slideCount,
+          owner_name:         profile?.full_name ?? null,
+          project_name:       project?.name ?? null,
+          project_stage:      project?.stage ?? null,
+          project_discipline: project?.discipline ?? null,
+        })
         .eq('id', analysisId)
       if (pubErr) throw pubErr
 

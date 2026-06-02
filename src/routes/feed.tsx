@@ -197,7 +197,7 @@ export function FeedPage() {
         .from('analyses')
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path, slide_count,
-          projects ( name, stage, discipline )
+          owner_name, project_name, project_stage, project_discipline
         `)
         .eq('is_public', true)
         .eq('status', 'complete')
@@ -216,14 +216,9 @@ export function FeedPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = data as any[]
 
-      // Author names: fetched separately (no FK from analyses → profiles, so we
-      // can't embed it). Batched into one query keyed by user_id.
-      const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
-      const nameById: Record<string, string> = {}
-      if (userIds.length) {
-        const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', userIds)
-        profs?.forEach(p => { if (p.full_name) nameById[p.id] = p.full_name })
-      }
+      // Author name + project meta are denormalized onto the analysis row at
+      // publish time (see migration 013). We can't read them from profiles /
+      // projects here because those tables are owner-only under RLS.
 
       // Pre-rendered slides are public images — only fall back to signing the
       // raw PDF for legacy posts that have no rendered slides yet.
@@ -246,10 +241,10 @@ export function FeedPage() {
         spatial_score: Number(row.spatial_score) || 0,
         presentation_score: Number(row.presentation_score) || 0,
         created_at: row.created_at,
-        project_name: row.projects?.name ?? 'Untitled',
-        project_stage: row.projects?.stage ?? '',
-        project_discipline: row.projects?.discipline ?? null,
-        owner_name: nameById[row.user_id] ?? null,
+        project_name: row.project_name ?? 'Untitled',
+        project_stage: row.project_stage ?? '',
+        project_discipline: row.project_discipline ?? null,
+        owner_name: row.owner_name ?? null,
         caption: row.caption ?? null,
         slides: row.slide_count > 0 ? slideUrls(row.id, row.slide_count) : [],
         pdf_url: row.pdf_path ? (urlByPath[row.pdf_path] ?? null) : null,

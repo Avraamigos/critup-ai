@@ -97,7 +97,7 @@ export function PostPage() {
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score,
           feedback, jury_questions, created_at, caption, pdf_path, slide_count,
-          projects ( name, stage )
+          owner_name, project_name, project_stage
         `)
         .eq('id', analysisId)
         .eq('is_public', true)
@@ -106,21 +106,18 @@ export function PostPage() {
 
       if (error || !data) { setNotFound(true); setLoading(false); return }
 
+      // Project meta + author name are denormalized onto the analysis row at
+      // publish time (migration 013). Reading projects/profiles directly would
+      // fail here for non-owners under owner-only RLS.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const proj = (data as any).projects as { name: string; stage: string } | null
+      const proj = { name: (data as any).project_name as string | null, stage: (data as any).project_stage as string | null }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfPath = (data as any).pdf_path as string | null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const slideCount = Number((data as any).slide_count) || 0
 
-      // Author name fetched separately (no FK from analyses → profiles)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ownerId = (data as any).user_id as string | null
-      let ownerName: string | null = null
-      if (ownerId) {
-        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', ownerId).maybeSingle()
-        ownerName = prof?.full_name ?? null
-      }
+      const ownerName = ((data as any).owner_name as string | null) ?? null
 
       // Pre-rendered slides are public; only sign the raw PDF for legacy posts.
       const slides = slideCount > 0
@@ -154,7 +151,7 @@ export function PostPage() {
       const [{ data: likes }, { data: cmts }] = await Promise.all([
         supabase.from('post_likes').select('user_id').eq('analysis_id', analysisId),
         supabase.from('post_comments')
-          .select('id, body, created_at, profiles ( full_name )')
+          .select('id, body, created_at, author_name')
           .eq('analysis_id', analysisId)
           .order('created_at', { ascending: true }),
       ])
@@ -163,7 +160,7 @@ export function PostPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setComments((cmts as any[] ?? []).map(r => ({
         id: r.id, body: r.body, created_at: r.created_at,
-        author_name: r.profiles?.full_name ?? null,
+        author_name: r.author_name ?? null,
       })))
     }
     load()
@@ -187,7 +184,7 @@ export function PostPage() {
     setPosting(true)
     const { data, error } = await supabase
       .from('post_comments')
-      .insert({ analysis_id: analysisId, user_id: user.id, body: body.slice(0, 1000) })
+      .insert({ analysis_id: analysisId, user_id: user.id, body: body.slice(0, 1000), author_name: myProfile?.full_name ?? null })
       .select('id, created_at')
       .single()
     setPosting(false)

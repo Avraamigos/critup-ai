@@ -74,6 +74,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigate({ to: '/landing' })
   }
 
+  // Don't render protected content until auth resolves. Without this, a logged-out
+  // visitor (or anyone mid-redirect to /landing or /onboarding) sees the dashboard
+  // flash for a frame before the guard effect above navigates away.
+  if (authLoading || !user || (profile && !profile.onboarding_complete)) {
+    return (
+      <div style={{ minHeight: '100vh', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: `3px solid ${c.border}`, borderTopColor: '#F97316', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    )
+  }
+
   const isAdmin = user?.email === 'ibro12345@icloud.com'
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()

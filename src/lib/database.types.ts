@@ -100,6 +100,10 @@ export interface Database {
           is_public: boolean
           caption: string | null
           slide_count: number
+          owner_name: string | null
+          project_name: string | null
+          project_stage: string | null
+          project_discipline: string | null
           error_message: string | null
           created_at: string
           updated_at: string
@@ -118,6 +122,10 @@ export interface Database {
           is_public?: boolean
           caption?: string | null
           slide_count?: number
+          owner_name?: string | null
+          project_name?: string | null
+          project_stage?: string | null
+          project_discipline?: string | null
           error_message?: string | null
           created_at?: string
           updated_at?: string
@@ -132,6 +140,10 @@ export interface Database {
           is_public?: boolean
           caption?: string | null
           slide_count?: number
+          owner_name?: string | null
+          project_name?: string | null
+          project_stage?: string | null
+          project_discipline?: string | null
           error_message?: string | null
           updated_at?: string
         }
@@ -159,6 +171,7 @@ export interface Database {
           analysis_id: string
           user_id: string
           body: string
+          author_name: string | null
           created_at: string
         }
         Insert: {
@@ -166,10 +179,12 @@ export interface Database {
           analysis_id: string
           user_id: string
           body: string
+          author_name?: string | null
           created_at?: string
         }
         Update: {
           body?: string
+          author_name?: string | null
         }
         Relationships: []
       }
