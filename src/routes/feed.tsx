@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { User } from '@supabase/supabase-js'
 import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
@@ -28,19 +29,12 @@ type Post = {
   pdf_url: string | null
 }
 
-const DISCIPLINE_TABS: { v: Discipline; label: string; emoji: string }[] = [
-  { v: 'all',          label: 'All',            emoji: '🌍' },
-  { v: 'architecture', label: 'Architecture',   emoji: '🏛️' },
-  { v: 'interior',     label: 'Interior',       emoji: '🛋️' },
-  { v: 'urban',        label: 'Urban',          emoji: '🏙️' },
+const DISCIPLINE_TABS: { v: Discipline; labelKey: string; emoji: string }[] = [
+  { v: 'all',          labelKey: 'feed.discAll',          emoji: '🌍' },
+  { v: 'architecture', labelKey: 'feed.discArchitecture', emoji: '🏛️' },
+  { v: 'interior',     labelKey: 'feed.discInterior',     emoji: '🛋️' },
+  { v: 'urban',        labelKey: 'feed.discUrban',        emoji: '🏙️' },
 ]
-
-const STAGE_LABELS: Record<string, string> = {
-  'pre-design':       'Pre-Design',
-  'initial-concept':  'Initial Concept',
-  'finalized-design': 'Finalized Design',
-  'jury-prep':        'Jury Prep',
-}
 
 const AVATAR_COLORS = ['#F97316', 'oklch(0.6 0.18 250)', 'oklch(0.62 0.17 160)', 'oklch(0.62 0.2 320)', 'oklch(0.65 0.18 25)']
 
@@ -73,9 +67,11 @@ function PostCard({
   onCopied: () => void
   onCommentCountChange: (id: string, delta: number) => void
 }) {
-  const stageLabel = STAGE_LABELS[post.project_stage] ?? post.project_stage
-  const dateStr = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const name = post.owner_name ?? 'Anonymous'
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
+  const stageLabel = post.project_stage ? t(`stages.${post.project_stage}`, { defaultValue: post.project_stage }) : ''
+  const dateStr = new Date(post.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
+  const name = post.owner_name ?? t('feed.anonymous')
 
   // Inline comments — lazy-loaded the first time the thread is opened.
   const [expanded, setExpanded]   = useState(false)
@@ -119,7 +115,7 @@ function PostCard({
   }
 
   const handleShare = async () => {
-    const result = await sharePost(post.id, { text: `Check out "${post.project_name}" on Critup.ai` })
+    const result = await sharePost(post.id, { text: t('feed.shareText', { name: post.project_name }) })
     if (result === 'copied') onCopied()
   }
 
@@ -164,16 +160,16 @@ function PostCard({
         </div>
       ) : (
         <div style={{ margin: '0 12px', borderRadius: 14, height: 160, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted, fontSize: 12 }}>
-          Drawings unavailable
+          {t('feed.drawingsUnavailable')}
         </div>
       )}
 
       {/* ── Score row ── */}
       <div style={{ display: 'flex', justifyContent: 'space-around', padding: '14px 16px 6px' }}>
         {[
-          { label: 'Concept',      score: post.concept_score },
-          { label: 'Spatial',      score: post.spatial_score },
-          { label: 'Presentation', score: post.presentation_score },
+          { label: t('scores.concept'),      score: post.concept_score },
+          { label: t('scores.spatial'),      score: post.spatial_score },
+          { label: t('scores.presentation'), score: post.presentation_score },
         ].map(r => (
           <ScoreRing key={r.label} score={r.score} label={r.label} size={58} theme={theme} animated={false} />
         ))}
@@ -190,7 +186,7 @@ function PostCard({
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 12px 14px' }}>
         <button
           onClick={() => onToggleLike(post.id)}
-          aria-label={liked ? 'Unlike' : 'Like'}
+          aria-label={liked ? t('feed.unlike') : t('feed.like')}
           style={socialBtn(liked ? 'oklch(0.65 0.22 20)' : c.textMuted)}
         >
           <Heart size={18} fill={liked ? 'oklch(0.65 0.22 20)' : 'none'} />
@@ -198,7 +194,7 @@ function PostCard({
         </button>
         <button
           onClick={toggleComments}
-          aria-label="Comments"
+          aria-label={t('feed.comments')}
           aria-expanded={expanded}
           style={socialBtn(expanded ? '#F97316' : c.textMuted)}
         >
@@ -207,7 +203,7 @@ function PostCard({
         </button>
         <button
           onClick={handleShare}
-          aria-label="Share"
+          aria-label={t('feed.share')}
           style={{ ...socialBtn(c.textMuted), marginLeft: 'auto' }}
         >
           <Share2 size={18} />
@@ -228,30 +224,30 @@ function PostCard({
                 onChange={e => setBody(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment() } }}
                 maxLength={1000}
-                placeholder="Add a comment…"
+                placeholder={t('feed.addComment')}
                 style={{ flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 100, padding: '9px 14px', color: c.textPrimary, fontSize: 13, outline: 'none' }}
               />
               <button
                 onClick={addComment}
                 disabled={posting || !body.trim()}
-                aria-label="Post comment"
+                aria-label={t('feed.postComment')}
                 style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', border: 'none', background: body.trim() ? '#F97316' : c.border, color: '#fff', cursor: body.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Send size={14} />
               </button>
             </div>
           ) : (
-            <div style={{ fontSize: 12.5, color: c.textMuted }}>Log in to join the conversation.</div>
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>{t('feed.loginToComment')}</div>
           )}
 
           {/* Thread */}
           {loadingC ? (
-            <div style={{ fontSize: 12.5, color: c.textMuted }}>Loading comments…</div>
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>{t('feed.loadingComments')}</div>
           ) : comments.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: c.textMuted }}>No comments yet — be the first.</div>
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>{t('feed.noComments')}</div>
           ) : (
             comments.map(cm => {
-              const cname = cm.author_name ?? 'Anonymous'
+              const cname = cm.author_name ?? t('feed.anonymous')
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
@@ -261,7 +257,7 @@ function PostCard({
                     <div style={{ fontSize: 12.5, color: c.textPrimary }}>
                       <span style={{ fontWeight: 700 }}>{cname}</span>
                       <span style={{ color: c.textMuted, fontSize: 11, marginLeft: 8 }}>
-                        {new Date(cm.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {new Date(cm.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                     <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -289,6 +285,7 @@ function socialBtn(color: string): React.CSSProperties {
 // ─── Feed page ────────────────────────────────────────────────────────────────
 
 export function FeedPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const { user } = useAuth()
@@ -444,8 +441,8 @@ export function FeedPage() {
       <div style={{ padding: '20px 28px 0', borderBottom: `1px solid ${c.border}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0 }}>Community</h1>
-            <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>See what design students are building worldwide</div>
+            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0 }}>{t('feed.title')}</h1>
+            <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>{t('feed.subtitle')}</div>
           </div>
 
           {/* Sort toggle */}
@@ -463,7 +460,7 @@ export function FeedPage() {
                   transition: 'all 0.15s',
                 }}
               >
-                {s === 'recent' ? <><Clock size={11} /> Recent</> : <><TrendingUp size={11} /> Top</>}
+                {s === 'recent' ? <><Clock size={11} /> {t('feed.recent')}</> : <><TrendingUp size={11} /> {t('feed.top')}</>}
               </button>
             ))}
           </div>
@@ -486,7 +483,7 @@ export function FeedPage() {
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
-              <span style={{ fontSize: 14 }}>{tab.emoji}</span> {tab.label}
+              <span style={{ fontSize: 14 }}>{tab.emoji}</span> {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -502,8 +499,8 @@ export function FeedPage() {
         ) : posts.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🏛️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, marginBottom: 6 }}>No posts yet</div>
-            <div style={{ fontSize: 13, color: c.textMuted }}>Be the first to share your project critique with the community.</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, marginBottom: 6 }}>{t('feed.noPostsTitle')}</div>
+            <div style={{ fontSize: 13, color: c.textMuted }}>{t('feed.noPostsBody')}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 540, margin: '0 auto' }}>
@@ -529,7 +526,7 @@ export function FeedPage() {
       {/* Copied toast */}
       {copiedId && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'oklch(0.72 0.17 145)', color: '#fff', padding: '10px 20px', borderRadius: 100, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 999, animation: 'slide-up 0.2s ease' }}>
-          <Check size={14} /> Link copied
+          <Check size={14} /> {t('feed.linkCopied')}
           <style>{`@keyframes slide-up { from { opacity:0; transform:translateX(-50%) translateY(8px) } to { opacity:1; transform:translateX(-50%) translateY(0) } }`}</style>
         </div>
       )}

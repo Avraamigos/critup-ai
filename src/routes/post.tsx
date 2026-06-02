@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, AlertCircle, Heart, Send, MessageCircle, Share2, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
@@ -40,13 +41,6 @@ type PostData = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STAGE_LABELS: Record<string, string> = {
-  'pre-design':       'Pre-Design',
-  'initial-concept':  'Initial Concept',
-  'finalized-design': 'Finalized Design',
-  'jury-prep':        'Jury Prep',
-}
-
 const scoreColor = (s: number) =>
   s >= 8 ? 'oklch(0.72 0.17 145)' : s >= 6 ? '#F97316' : 'oklch(0.65 0.18 25)'
 
@@ -84,6 +78,8 @@ function DotGrid() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function PostPage() {
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
   const { analysisId } = useParams({ from: '/p/$analysisId' })
   const navigate = useNavigate()
   const { user, profile: myProfile } = useAuth()
@@ -101,7 +97,7 @@ export function PostPage() {
 
   const handleShare = async () => {
     if (!post) return
-    const result = await sharePost(post.id, { text: `Check out "${post.project.name}" on Critup.ai` })
+    const result = await sharePost(post.id, { text: t('feed.shareText', { name: post.project.name }) })
     if (result === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2000) }
   }
 
@@ -156,7 +152,7 @@ export function PostPage() {
         feedback: (data.feedback as FeedbackItem[]) || [],
         jury_questions: (data.jury_questions as string[]) || [],
         created_at: data.created_at,
-        project: { name: proj?.name ?? 'Untitled Project', stage: proj?.stage ?? '' },
+        project: { name: proj?.name ?? t('post.untitledProject'), stage: proj?.stage ?? '' },
         owner_name: ownerName,
         caption: (data as { caption?: string | null }).caption ?? null,
         slides,
@@ -228,28 +224,28 @@ export function PostPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#0c0c0e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: '#fff', gap: 16 }}>
         <AlertCircle size={40} color="oklch(0.65 0.18 25)" />
-        <div style={{ fontSize: 20, fontWeight: 700 }}>Project not found</div>
-        <div style={{ fontSize: 14, color: 'oklch(0.55 0.004 270)' }}>This project hasn't been shared publicly.</div>
+        <div style={{ fontSize: 20, fontWeight: 700 }}>{t('post.notFoundTitle')}</div>
+        <div style={{ fontSize: 14, color: 'oklch(0.55 0.004 270)' }}>{t('post.notFoundBody')}</div>
         <button
           onClick={() => navigate({ to: '/' })}
           style={{ marginTop: 8, padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
         >
-          Go to Critup
+          {t('post.goToCritup')}
         </button>
       </div>
     )
   }
 
   const avg = ((post.concept_score + post.spatial_score + post.presentation_score) / 3)
-  const stageLabel = STAGE_LABELS[post.project.stage] ?? post.project.stage
+  const stageLabel = post.project.stage ? t(`stages.${post.project.stage}`, { defaultValue: post.project.stage }) : ''
   const topFeedback = post.feedback.slice(0, 3)
   const topQuestions = post.jury_questions.slice(0, 3)
-  const dateStr = new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const dateStr = new Date(post.created_at).toLocaleDateString(dateLocale, { year: 'numeric', month: 'long', day: 'numeric' })
 
   const rings = [
-    { label: 'Concept',      score: post.concept_score },
-    { label: 'Spatial',      score: post.spatial_score },
-    { label: 'Presentation', score: post.presentation_score },
+    { label: t('scores.concept'),      score: post.concept_score },
+    { label: t('scores.spatial'),      score: post.spatial_score },
+    { label: t('scores.presentation'), score: post.presentation_score },
   ]
 
   return (
@@ -268,7 +264,7 @@ export function PostPage() {
             onClick={() => navigate({ to: '/signup' })}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
-            Try for free <ArrowRight size={14} />
+            {t('post.tryForFree')} <ArrowRight size={14} />
           </button>
         </div>
 
@@ -307,7 +303,7 @@ export function PostPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showComments ? 20 : 24, paddingBottom: 18, borderBottom: '1px solid oklch(0.18 0.004 270)' }}>
           <button
             onClick={handleToggleLike}
-            aria-label={liked ? 'Unlike' : 'Like'}
+            aria-label={liked ? t('feed.unlike') : t('feed.like')}
             style={actionBtn(liked ? 'oklch(0.7 0.2 20)' : 'oklch(0.7 0.004 270)')}
           >
             <Heart size={20} fill={liked ? 'oklch(0.7 0.2 20)' : 'none'} />
@@ -315,7 +311,7 @@ export function PostPage() {
           </button>
           <button
             onClick={() => setShowComments(v => !v)}
-            aria-label="Comments"
+            aria-label={t('feed.comments')}
             aria-expanded={showComments}
             style={actionBtn(showComments ? '#F97316' : 'oklch(0.7 0.004 270)')}
           >
@@ -324,17 +320,17 @@ export function PostPage() {
           </button>
           <button
             onClick={handleShare}
-            aria-label="Share"
+            aria-label={t('feed.share')}
             style={{ ...actionBtn('oklch(0.7 0.004 270)'), marginLeft: 'auto' }}
           >
             <Share2 size={20} />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Share</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{t('feed.share')}</span>
           </button>
         </div>
 
         {/* ── Score rings ── */}
         <div style={{ background: 'oklch(0.14 0.004 270)', border: '1px solid oklch(0.22 0.004 270)', borderRadius: 20, padding: '28px 24px', marginBottom: 24 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 20 }}>AI Critique Scores</div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 20 }}>{t('post.aiCritiqueScores')}</div>
           <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             {rings.map(r => (
               <ScoreRing key={r.label} score={r.score} label={r.label} size={88} theme="dark" />
@@ -343,7 +339,7 @@ export function PostPage() {
 
           {/* Overall average bar */}
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid oklch(0.22 0.004 270)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'oklch(0.55 0.004 270)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Overall</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'oklch(0.55 0.004 270)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('post.overall')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, margin: '0 16px' }}>
               <div style={{ flex: 1, height: 5, background: 'oklch(0.22 0.004 270)', borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{ width: `${avg * 10}%`, height: '100%', background: scoreColor(avg), borderRadius: 10, transition: 'width 1s ease' }} />
@@ -359,7 +355,7 @@ export function PostPage() {
         {topFeedback.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 12 }}>
-              Critique Highlights
+              {t('post.critiqueHighlights')}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {topFeedback.map((f, i) => (
@@ -381,7 +377,7 @@ export function PostPage() {
         {topQuestions.length > 0 && (
           <div style={{ marginBottom: 40 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 12 }}>
-              Predicted Jury Questions
+              {t('post.predictedJuryQuestions')}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {topQuestions.map((q, i) => (
@@ -397,7 +393,7 @@ export function PostPage() {
         {showComments && (
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 12 }}>
-            Comments {comments.length > 0 && `(${comments.length})`}
+            {t('post.comments')} {comments.length > 0 && `(${comments.length})`}
           </div>
 
           {/* Add comment */}
@@ -412,13 +408,13 @@ export function PostPage() {
                   onChange={e => setCommentBody(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment() } }}
                   maxLength={1000}
-                  placeholder="Add a comment…"
+                  placeholder={t('feed.addComment')}
                   style={{ flex: 1, background: 'oklch(0.14 0.004 270)', border: '1px solid oklch(0.22 0.004 270)', borderRadius: 12, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none', fontFamily: FONT }}
                 />
                 <button
                   onClick={handleAddComment}
                   disabled={posting || !commentBody.trim()}
-                  aria-label="Post comment"
+                  aria-label={t('feed.postComment')}
                   style={{ flexShrink: 0, width: 40, borderRadius: 12, border: 'none', background: commentBody.trim() ? '#F97316' : 'oklch(0.22 0.004 270)', color: '#fff', cursor: commentBody.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Send size={15} />
@@ -430,14 +426,14 @@ export function PostPage() {
               onClick={() => navigate({ to: '/login' })}
               style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px dashed oklch(0.28 0.004 270)', background: 'transparent', color: 'oklch(0.6 0.004 270)', fontSize: 13, cursor: 'pointer', marginBottom: comments.length ? 20 : 0 }}
             >
-              Log in to join the conversation
+              {t('post.loginToComment')}
             </button>
           )}
 
           {/* Thread */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {comments.map(cm => {
-              const cname = cm.author_name ?? 'Anonymous'
+              const cname = cm.author_name ?? t('feed.anonymous')
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
@@ -447,7 +443,7 @@ export function PostPage() {
                     <div style={{ fontSize: 13, color: '#fff' }}>
                       <span style={{ fontWeight: 700 }}>{cname}</span>
                       <span style={{ color: 'oklch(0.45 0.004 270)', fontSize: 11, marginLeft: 8 }}>
-                        {new Date(cm.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {new Date(cm.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                     <div style={{ fontSize: 13, color: 'oklch(0.78 0.004 270)', lineHeight: 1.5, marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -464,30 +460,30 @@ export function PostPage() {
         {/* ── CTA ── */}
         <div style={{ background: 'linear-gradient(135deg, oklch(0.72 0.18 45 / 0.1), oklch(0.72 0.18 45 / 0.04))', border: '1px solid oklch(0.72 0.18 45 / 0.2)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 8, color: '#fff' }}>
-            Get your project critiqued by AI
+            {t('post.ctaTitle')}
           </div>
           <div style={{ fontSize: 14, color: 'oklch(0.65 0.004 270)', marginBottom: 20, lineHeight: 1.5 }}>
-            Upload your drawings. Get concept, spatial & presentation scores,<br />jury prep questions, and page-by-page voiceover feedback.
+            {t('post.ctaBodyLine1')}<br />{t('post.ctaBodyLine2')}
           </div>
           <button
             onClick={() => navigate({ to: '/signup' })}
             style={{ padding: '12px 32px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 28px oklch(0.72 0.18 45 / 0.4)' }}
           >
-            Analyse your project — it's free
+            {t('post.ctaButton')}
           </button>
-          <div style={{ marginTop: 10, fontSize: 12, color: 'oklch(0.45 0.004 270)' }}>No card required</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'oklch(0.45 0.004 270)' }}>{t('post.noCardRequired')}</div>
         </div>
 
         {/* ── Footer ── */}
         <div style={{ marginTop: 40, textAlign: 'center', fontSize: 12, color: 'oklch(0.35 0.004 270)' }}>
-          Critup.ai · AI critique for architecture students
+          {t('post.footer')}
         </div>
       </div>
 
       {/* Copied toast (shown when native share isn't available and we fall back to copy) */}
       {copied && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'oklch(0.72 0.17 145)', color: '#fff', padding: '10px 20px', borderRadius: 100, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 999 }}>
-          <Check size={14} /> Link copied
+          <Check size={14} /> {t('feed.linkCopied')}
         </div>
       )}
     </div>

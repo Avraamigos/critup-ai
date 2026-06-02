@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Mic, MicOff, ChevronRight, RotateCcw, Plus, AlertCircle, Loader2 } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -25,6 +26,7 @@ const speechSupported = !!SpeechRecognition
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function JuryPage() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
@@ -132,9 +134,9 @@ export function JuryPage() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onerror = (e: any) => {
-      if (e.error === 'not-allowed') setMicError('Microphone access was denied. Please allow mic access in your browser and try again.')
+      if (e.error === 'not-allowed') setMicError(t('jury.micDenied'))
       else if (e.error === 'no-speech') { /* ignore, just silence */ }
-      else setMicError(`Recording error: ${e.error}`)
+      else setMicError(t('jury.recordingError', { error: e.error }))
     }
 
     rec.start()
@@ -155,7 +157,7 @@ export function JuryPage() {
 
     const finalTranscript = transcript.trim()
     if (!finalTranscript) {
-      setMicError("No speech detected. Make sure your microphone is working and speak clearly.")
+      setMicError(t('jury.noSpeech'))
       setStage('select')
       return
     }
@@ -180,7 +182,7 @@ export function JuryPage() {
       setFeedback(data)
       setStage('result')
     } catch (err) {
-      setFeedbackErr('Could not get feedback right now. Please try again.')
+      setFeedbackErr(t('jury.feedbackError'))
       setStage('result')
     }
   }
@@ -214,21 +216,21 @@ export function JuryPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 54px)', padding: '0 24px', fontFamily: FONT }}>
         <div style={{ maxWidth: 420, textAlign: 'center' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 32 }}>🎤</div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, margin: '0 0 10px', letterSpacing: '-0.03em' }}>Jury Practice is Pro</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, margin: '0 0 10px', letterSpacing: '-0.03em' }}>{t('jury.paywallTitle')}</h2>
           <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.65, margin: '0 0 24px' }}>
-            Practice answering jury questions out loud and get real-time coaching on how to frame your argument. Unlock it with a Pro plan.
+            {t('jury.paywallBody')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, textAlign: 'left', padding: '16px 20px', borderRadius: 14, background: c.cardBg, border: `1px solid ${c.border}` }}>
-            {['Live speech transcription', 'AI coaching on every answer', 'Framing suggestions from your critique', 'Predicted follow-up questions'].map(f => (
+            {[t('jury.paywallFeat1'), t('jury.paywallFeat2'), t('jury.paywallFeat3'), t('jury.paywallFeat4')].map(f => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: c.textPrimary }}>
                 <span style={{ color: '#F97316', fontWeight: 700 }}>✓</span> {f}
               </div>
             ))}
           </div>
           <a href="/pricing" style={{ display: 'inline-block', padding: '12px 32px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px oklch(0.72 0.18 45/0.4)' }}>
-            Upgrade to Pro →
+            {t('jury.upgradeToPro')}
           </a>
-          <div style={{ marginTop: 12, fontSize: 12, color: c.textMuted }}>$8/month · Cancel anytime</div>
+          <div style={{ marginTop: 12, fontSize: 12, color: c.textMuted }}>{t('jury.priceNote')}</div>
         </div>
       </div>
     )
@@ -245,15 +247,15 @@ export function JuryPage() {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px', fontFamily: FONT }}>Jury Practice</h1>
-        <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>Answer questions out loud — Crit coaches you on how to frame your argument</p>
+        <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px', fontFamily: FONT }}>{t('jury.title')}</h1>
+        <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>{t('jury.subtitle')}</p>
       </div>
 
       {/* Speech not supported */}
       {!speechSupported && (
         <div style={{ display: 'flex', gap: 10, padding: '14px 16px', borderRadius: 12, background: 'oklch(0.65 0.18 25/0.08)', border: '1px solid oklch(0.65 0.18 25/0.3)', marginBottom: 20 }}>
           <AlertCircle size={15} color="oklch(0.65 0.18 25)" style={{ flexShrink: 0, marginTop: 1 }} />
-          <p style={{ fontSize: 13, color: 'oklch(0.65 0.18 25)', margin: 0 }}>Voice recording requires Chrome or Safari. Please open this page in Chrome for the best experience.</p>
+          <p style={{ fontSize: 13, color: 'oklch(0.65 0.18 25)', margin: 0 }}>{t('jury.voiceUnsupportedWarning')}</p>
         </div>
       )}
 
@@ -269,10 +271,10 @@ export function JuryPage() {
       {!loading && questions.length === 0 && (
         <div style={{ maxWidth: 440, margin: '60px auto', textAlign: 'center' }}>
           <div style={{ fontSize: 52, marginBottom: 18 }}>🎙</div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: c.textPrimary, fontFamily: FONT }}>No questions yet</h2>
-          <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 24px' }}>Upload your drawings to get jury questions tailored to your specific project.</p>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: c.textPrimary, fontFamily: FONT }}>{t('jury.noQuestionsTitle')}</h2>
+          <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 24px' }}>{t('jury.noQuestionsBody')}</p>
           <button onClick={() => navigate({ to: '/projects/new' })} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 28px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 20px oklch(0.72 0.18 45/0.3)' }}>
-            <Plus size={16} /> Upload a project
+            <Plus size={16} /> {t('jury.uploadProject')}
           </button>
         </div>
       )}
@@ -284,7 +286,7 @@ export function JuryPage() {
           {/* Left — question bank */}
           <div style={{ background: c.cardBg, borderRadius: 18, border: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}`, flexShrink: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 2 }}>JURY QUESTIONS</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 2 }}>{t('jury.juryQuestions')}</div>
               {projectName && <div style={{ fontSize: 11, color: c.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectName}</div>}
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -303,9 +305,9 @@ export function JuryPage() {
 
             {/* Question card */}
             <div style={{ background: c.cardBg, borderRadius: 16, padding: '18px 20px', border: `1.5px solid #F97316`, boxShadow: '0 0 24px oklch(0.72 0.18 45/0.1)', flexShrink: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 8 }}>QUESTION {qIdx + 1} OF {questions.length}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 8 }}>{t('jury.questionOf', { n: qIdx + 1, total: questions.length })}</div>
               <p style={{ fontSize: 15, fontWeight: 600, color: c.textPrimary, margin: '0 0 10px', lineHeight: 1.5 }}>"{question}"</p>
-              <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>💡 Think for a moment, then record. Aim for 30–60 seconds.</p>
+              <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{t('jury.thinkHint')}</p>
             </div>
 
             {/* Record / Answering / Loading / Result */}
@@ -322,10 +324,10 @@ export function JuryPage() {
                     <Mic size={28} color={speechSupported ? '#F97316' : c.textMuted} />
                   </div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>
-                    {speechSupported ? 'Tap to record your answer' : 'Voice not supported in this browser'}
+                    {speechSupported ? t('jury.tapToRecord') : t('jury.voiceNotSupported')}
                   </p>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>
-                    {speechSupported ? 'Your answer will be transcribed live as you speak' : 'Open in Chrome or Safari'}
+                    {speechSupported ? t('jury.transcribedLive') : t('jury.openInChrome')}
                   </p>
                 </div>
               )}
@@ -337,7 +339,7 @@ export function JuryPage() {
                   <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'oklch(0.65 0.18 25)', animation: 'wave-jury 1s ease-in-out infinite' }} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'oklch(0.65 0.18 25)', letterSpacing: '0.06em' }}>RECORDING</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'oklch(0.65 0.18 25)', letterSpacing: '0.06em' }}>{t('jury.recording')}</span>
                     </div>
                     <span style={{ fontSize: 16, fontWeight: 800, fontFamily: 'monospace', color: c.textPrimary }}>{fmt(timer)}</span>
                   </div>
@@ -352,7 +354,7 @@ export function JuryPage() {
                   {/* Live transcript */}
                   <div style={{ padding: '0 18px 16px', minHeight: 60 }}>
                     <p style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.6, margin: 0 }}>
-                      {transcript || <span style={{ color: c.textMuted, fontStyle: 'italic' }}>Listening…</span>}
+                      {transcript || <span style={{ color: c.textMuted, fontStyle: 'italic' }}>{t('jury.listening')}</span>}
                       {interimText && <span style={{ color: c.textMuted }}> {interimText}</span>}
                     </p>
                   </div>
@@ -360,7 +362,7 @@ export function JuryPage() {
                   {/* Stop button */}
                   <div style={{ padding: '0 18px 18px', display: 'flex', justifyContent: 'center' }}>
                     <button onClick={stopRecording} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 28px', borderRadius: 100, background: 'oklch(0.65 0.18 25)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                      <MicOff size={15} /> Done — get coaching
+                      <MicOff size={15} /> {t('jury.doneGetCoaching')}
                     </button>
                   </div>
                 </div>
@@ -370,8 +372,8 @@ export function JuryPage() {
               {stage === 'loading' && (
                 <div style={{ background: c.cardBg, borderRadius: 16, padding: '40px 20px', border: `1px solid ${c.border}`, textAlign: 'center', animation: 'fade-up 0.3s ease-out' }}>
                   <Loader2 size={28} color="#F97316" style={{ animation: 'spin 1s linear infinite', marginBottom: 14 }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>Crit is reading your answer…</p>
-                  <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>Analysing how to frame it better</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>{t('jury.readingAnswer')}</p>
+                  <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{t('jury.analysingFraming')}</p>
                 </div>
               )}
 
@@ -388,9 +390,9 @@ export function JuryPage() {
                   {/* What you said */}
                   {transcript && (
                     <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 16px', border: `1px solid ${c.border}` }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 8 }}>YOUR ANSWER</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 8 }}>{t('jury.yourAnswer')}</div>
                       <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 4px', lineHeight: 1.6, fontStyle: 'italic' }}>"{transcript}"</p>
-                      <div style={{ fontSize: 11, color: c.textMuted }}>{fmt(timer)} spoken</div>
+                      <div style={{ fontSize: 11, color: c.textMuted }}>{t('jury.spoken', { time: fmt(timer) })}</div>
                     </div>
                   )}
 
@@ -398,19 +400,19 @@ export function JuryPage() {
                     <>
                       {/* What landed */}
                       <div style={{ background: c.isDark ? 'oklch(0.72 0.17 145/0.06)' : '#f0fdf4', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.17 145/0.35)' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.55 0.17 145)', letterSpacing: '0.1em', marginBottom: 8 }}>✓ WHAT LANDED</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.55 0.17 145)', letterSpacing: '0.1em', marginBottom: 8 }}>✓ {t('jury.whatLanded')}</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{feedback.whatLanded}</p>
                       </div>
 
                       {/* The gap */}
                       <div style={{ background: c.isDark ? 'oklch(0.72 0.18 45/0.06)' : '#fff7ed', borderRadius: 14, padding: '16px', border: '1px solid oklch(0.72 0.18 45/0.3)' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 8 }}>↗ THE GAP</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 8 }}>↗ {t('jury.theGap')}</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{feedback.theGap}</p>
                       </div>
 
                       {/* Better framing — the main coaching block */}
                       <div style={{ background: c.cardBg, borderRadius: 14, padding: '16px', border: `1.5px solid #F97316`, boxShadow: '0 0 20px oklch(0.72 0.18 45/0.08)' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 10 }}>💬 HOW TO FRAME IT</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 10 }}>💬 {t('jury.howToFrame')}</div>
                         <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.75 }}>{feedback.betterFraming}</p>
                       </div>
 
@@ -418,7 +420,7 @@ export function JuryPage() {
                       <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px 16px', border: `1px solid ${c.border}`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                         <span style={{ fontSize: 16, flexShrink: 0 }}>🎯</span>
                         <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 6 }}>JURY WILL FOLLOW UP WITH</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 6 }}>{t('jury.followUpWith')}</div>
                           <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.55, fontStyle: 'italic' }}>"{feedback.likelyFollowUp}"</p>
                         </div>
                       </div>
@@ -428,10 +430,10 @@ export function JuryPage() {
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
                     <button onClick={nextQuestion} style={{ flex: 1, padding: '11px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 0 14px oklch(0.72 0.18 45/0.3)' }}>
-                      Next question <ChevronRight size={14} />
+                      {t('jury.nextQuestion')} <ChevronRight size={14} />
                     </button>
                     <button onClick={retry} style={{ padding: '11px 18px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <RotateCcw size={13} /> Try again
+                      <RotateCcw size={13} /> {t('jury.tryAgain')}
                     </button>
                   </div>
                 </div>
