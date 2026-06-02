@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -22,6 +23,7 @@ const GoogleIcon = () => (
 export function LoginPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, signIn } = useAuth()
   const [email, setEmail] = useState('')
@@ -41,8 +43,8 @@ export function LoginPage() {
 
   const submit = async () => {
     const e: Record<string, string> = {}
-    if (!email || !email.includes('@')) e.email = 'Valid email required'
-    if (!password) e.password = 'Password is required'
+    if (!email || !email.includes('@')) e.email = t('auth.validEmail')
+    if (!password) e.password = t('auth.passwordRequired')
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
     const { error } = await signIn(email, password)
@@ -65,12 +67,12 @@ export function LoginPage() {
       <div style={{ position: 'absolute', top: '-10%', right: '5%', width: '50%', height: '60%', background: 'radial-gradient(ellipse, oklch(0.72 0.18 45 / 0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ width: '100%', maxWidth: 420, padding: '44px 40px', background: c.cardBg, borderRadius: 24, border: `1px solid ${c.border}`, position: 'relative', zIndex: 1, boxShadow: c.isDark ? 'none' : '0 8px 40px rgba(0,0,0,0.08)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}><CritupLogo size={24} theme={theme} /></div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Welcome back</h1>
-        <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>Sign in to your account</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>{t('auth.welcomeBack')}</h1>
+        <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>{t('auth.signInSubtitle')}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>Email</label>
-            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }} placeholder="you@email.com"
+            <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>{t('auth.email')}</label>
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErrors(v => ({ ...v, email: '' })) }} placeholder={t('auth.emailPlaceholder')}
               style={{ ...inp, borderColor: errors.email ? 'oklch(0.65 0.18 25)' : c.border }}
               onFocus={e => e.target.style.borderColor = errors.email ? 'oklch(0.65 0.18 25)' : '#F97316'}
               onBlur={e => e.target.style.borderColor = errors.email ? 'oklch(0.65 0.18 25)' : c.border}
@@ -79,8 +81,8 @@ export function LoginPage() {
           </div>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280' }}>Password</label>
-              <button onClick={() => navigate({ to: '/reset-password' })} style={{ background: 'none', border: 'none', color: '#F97316', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: 0 }}>Forgot?</button>
+              <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280' }}>{t('auth.password')}</label>
+              <button onClick={() => navigate({ to: '/reset-password' })} style={{ background: 'none', border: 'none', color: '#F97316', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: 0 }}>{t('auth.forgot')}</button>
             </div>
             <input type="password" value={password} onChange={e => { setPassword(e.target.value); setErrors(v => ({ ...v, password: '' })) }} placeholder="••••••••"
               style={{ ...inp, borderColor: errors.password ? 'oklch(0.65 0.18 25)' : c.border }}
@@ -89,16 +91,16 @@ export function LoginPage() {
             />
             {errors.password && <div style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)', marginTop: 4 }}>{errors.password}</div>}
           </div>
-          <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', marginTop: 4 }}>{loading ? 'Signing in…' : 'Sign in'}</button>
+          <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', marginTop: 4 }}>{loading ? t('auth.signingIn') : t('auth.signIn')}</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
-          <div style={{ flex: 1, height: 1, background: c.border }} /><span style={{ fontSize: 12, color: c.textMuted }}>or</span><div style={{ flex: 1, height: 1, background: c.border }} />
+          <div style={{ flex: 1, height: 1, background: c.border }} /><span style={{ fontSize: 12, color: c.textMuted }}>{t('auth.or')}</span><div style={{ flex: 1, height: 1, background: c.border }} />
         </div>
         <button onClick={signInWithGoogle} style={{ width: '100%', padding: '11px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-          <GoogleIcon /> Continue with Google
+          <GoogleIcon /> {t('auth.continueGoogle')}
         </button>
         <p style={{ textAlign: 'center', fontSize: 13, color: c.textMuted, marginTop: 22, marginBottom: 0 }}>
-          No account? <Link to="/signup" style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>Sign up</Link>
+          {t('auth.noAccount')} <Link to="/signup" style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>{t('auth.signUp')}</Link>
         </p>
       </div>
     </div>

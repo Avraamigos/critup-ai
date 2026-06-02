@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Check } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
@@ -13,23 +14,23 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
 
 const STEPS = [
   {
-    q: 'What are you studying?', key: 'discipline', type: 'single' as const,
+    q: 'onboarding.qDiscipline', key: 'discipline', type: 'single' as const,
     options: [
-      { v: 'arch', l: 'Architecture', emoji: '🏛' },
-      { v: 'interior', l: 'Interior Architecture', emoji: '🏠' },
-      { v: 'urban', l: 'Urban Design', emoji: '🗺' },
-      { v: 'landscape', l: 'Landscape Architecture', emoji: '🌲' },
+      { v: 'arch', l: 'onboarding.discArch', emoji: '🏛' },
+      { v: 'interior', l: 'onboarding.discInterior', emoji: '🏠' },
+      { v: 'urban', l: 'onboarding.discUrban', emoji: '🗺' },
+      { v: 'landscape', l: 'onboarding.discLandscape', emoji: '🌲' },
     ],
   },
   {
-    q: 'What year are you in?', key: 'year', type: 'single' as const,
+    q: 'onboarding.qYear', key: 'year', type: 'single' as const,
     options: [
-      { v: '1', l: 'Year 1' }, { v: '2', l: 'Year 2' }, { v: '3', l: 'Year 3' },
-      { v: '4', l: 'Year 4' }, { v: 'grad', l: 'Graduate' },
+      { v: '1', l: 'onboarding.year1' }, { v: '2', l: 'onboarding.year2' }, { v: '3', l: 'onboarding.year3' },
+      { v: '4', l: 'onboarding.year4' }, { v: 'grad', l: 'onboarding.yearGrad' },
     ],
   },
   {
-    q: "What's your university?", key: 'university', type: 'search' as const,
+    q: 'onboarding.qUniversity', key: 'university', type: 'search' as const,
     suggestions: [
       'MIT', 'ETH Zurich', 'TU Delft', 'Bartlett UCL', 'AA London', 'Columbia GSAPP',
       'Harvard GSD', 'Yale School of Architecture', 'SCI-Arc', 'Pratt Institute',
@@ -48,7 +49,7 @@ const STEPS = [
     ],
   },
   {
-    q: 'Preferred language?', key: 'language', type: 'single' as const,
+    q: 'onboarding.qLanguage', key: 'language', type: 'single' as const,
     options: [
       { v: 'en', l: 'English', flag: '🇬🇧' },
       { v: 'ru', l: 'Русский', flag: '🇷🇺' },
@@ -56,17 +57,17 @@ const STEPS = [
     ],
   },
   {
-    q: "What's your biggest jury challenge?", key: 'challenges', type: 'multi' as const,
-    sub: 'Select all that apply',
+    q: 'onboarding.qChallenges', key: 'challenges', type: 'multi' as const,
+    sub: 'onboarding.selectAll',
     options: [
-      { v: 'concept', l: 'Getting my concept across' },
-      { v: 'defending', l: 'Defending design decisions' },
-      { v: 'nerves', l: 'Presentation nerves' },
-      { v: 'spatial', l: 'Spatial logic questions' },
-      { v: 'unknown', l: "Not knowing what jury will ask" },
-      { v: 'time', l: 'Time management' },
-      { v: 'drawings', l: 'Explaining my drawings' },
-      { v: 'unexpected', l: 'Handling unexpected questions' },
+      { v: 'concept', l: 'onboarding.chConcept' },
+      { v: 'defending', l: 'onboarding.chDefending' },
+      { v: 'nerves', l: 'onboarding.chNerves' },
+      { v: 'spatial', l: 'onboarding.chSpatial' },
+      { v: 'unknown', l: 'onboarding.chUnknown' },
+      { v: 'time', l: 'onboarding.chTime' },
+      { v: 'drawings', l: 'onboarding.chDrawings' },
+      { v: 'unexpected', l: 'onboarding.chUnexpected' },
     ],
   },
 ]
@@ -74,6 +75,7 @@ const STEPS = [
 export function OnboardingPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, refreshProfile } = useAuth()
   const [step, setStep] = useState(0)
@@ -139,16 +141,16 @@ export function OnboardingPage() {
       <div style={{ maxWidth: 600, margin: '0 auto', width: '100%', padding: '72px 24px 48px', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 48 }}>
           <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '4px 8px', borderRadius: 8 }}>
-            <ArrowLeft size={16} color={c.textMuted} /> Back
+            <ArrowLeft size={16} color={c.textMuted} /> {t('onboarding.back')}
           </button>
-          <span style={{ fontSize: 12, color: c.textMuted, fontWeight: 500 }}>Step {step + 1} of {totalSteps}</span>
+          <span style={{ fontSize: 12, color: c.textMuted, fontWeight: 500 }}>{t('onboarding.stepOf', { n: step + 1, total: totalSteps })}</span>
           <CritupLogo size={18} showText={false} theme={theme} />
         </div>
 
         <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: cur.type === 'multi' ? 6 : 32, lineHeight: 1.15, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>
-          {cur.q}
+          {t(cur.q)}
         </h1>
-        {'sub' in cur && cur.sub && <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 24 }}>{cur.sub}</p>}
+        {'sub' in cur && cur.sub && <p style={{ fontSize: 14, color: c.textMuted, marginBottom: 24 }}>{t(cur.sub)}</p>}
 
         {(cur.type === 'single' || cur.type === 'multi') && (
           <div style={{
@@ -172,7 +174,7 @@ export function OnboardingPage() {
                 )}
                 {'emoji' in opt && opt.emoji && <div style={{ fontSize: 22, marginBottom: 8 }}>{opt.emoji}</div>}
                 {'flag' in opt && opt.flag && <div style={{ fontSize: 24, marginBottom: 8 }}>{opt.flag}</div>}
-                <div style={{ fontSize: 14, fontWeight: 600, color: isSelected(opt.v) ? '#F97316' : c.textPrimary }}>{opt.l}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: isSelected(opt.v) ? '#F97316' : c.textPrimary }}>{t(opt.l)}</div>
               </button>
             ))}
           </div>
@@ -190,7 +192,7 @@ export function OnboardingPage() {
               <input
                 value={(curSel as string) || ''}
                 onChange={e => setSel(s => ({ ...s, [cur.key]: e.target.value }))}
-                placeholder="Search your university..."
+                placeholder={t('onboarding.searchUniversity')}
                 autoComplete="off"
                 style={{ width: '100%', padding: '13px 16px', borderRadius: 12, boxSizing: 'border-box', background: c.cardBg, border: `1.5px solid #F97316`, color: c.textPrimary, fontSize: 15, outline: 'none', fontFamily: "'Inter',sans-serif" }}
               />
@@ -215,7 +217,7 @@ export function OnboardingPage() {
                       border: 'none', borderTop: `1px solid ${c.border}`,
                       color: '#F97316', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontStyle: 'italic',
                     }}>
-                      Use "{curSel}" →
+                      {t('onboarding.use', { x: curSel as string })}
                     </button>
                   )}
                 </div>
@@ -232,7 +234,7 @@ export function OnboardingPage() {
             cursor: (canNext && !saving) ? 'pointer' : 'not-allowed', opacity: saving ? 0.7 : 1,
             boxShadow: canNext ? '0 0 18px oklch(0.72 0.18 45 / 0.35)' : 'none', transition: 'all 0.2s',
           }}>
-            {saving ? 'Saving…' : step === totalSteps - 1 ? 'Finish setup →' : 'Next →'}
+            {saving ? t('onboarding.saving') : step === totalSteps - 1 ? t('onboarding.finish') : t('onboarding.next')}
           </button>
         </div>
       </div>

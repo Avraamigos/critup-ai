@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -23,6 +24,7 @@ const GoogleIcon = () => (
 export function SignupPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { signUp } = useAuth()
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
@@ -35,10 +37,10 @@ export function SignupPage() {
 
   const submit = async () => {
     const e: Record<string, string> = {}
-    if (!form.name) e.name = 'Required'
-    if (!form.email || !form.email.includes('@')) e.email = 'Valid email required'
-    if (form.password.length < 6) e.password = 'At least 6 characters'
-    if (form.password !== form.confirm) e.confirm = 'Passwords do not match'
+    if (!form.name) e.name = t('auth.required')
+    if (!form.email || !form.email.includes('@')) e.email = t('auth.validEmail')
+    if (form.password.length < 6) e.password = t('auth.atLeast6')
+    if (form.password !== form.confirm) e.confirm = t('auth.passwordsNoMatch')
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
     const { error } = await signUp(form.email, form.password, form.name)
@@ -57,16 +59,16 @@ export function SignupPage() {
         <DotGrid theme={theme} />
         <div style={{ width: '100%', maxWidth: 420, padding: '44px 40px', background: c.cardBg, borderRadius: 24, border: `1px solid ${c.border}`, position: 'relative', zIndex: 1, textAlign: 'center', boxShadow: c.isDark ? 'none' : '0 8px 40px rgba(0,0,0,0.08)' }}>
           <div style={{ fontSize: 48, marginBottom: 20 }}>📬</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 10px', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Check your email</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 10px', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>{t('auth.checkEmail')}</h1>
           <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 6px', lineHeight: 1.6 }}>
-            We sent a confirmation link to
+            {t('auth.sentLinkTo')}
           </p>
           <p style={{ fontSize: 14, fontWeight: 600, color: '#F97316', margin: '0 0 20px' }}>{verifyEmail}</p>
           <p style={{ fontSize: 13, color: c.textMuted, margin: '0 0 28px', lineHeight: 1.6 }}>
-            Click the link in the email to verify your account and get started.
+            {t('auth.clickLink')}
           </p>
           <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>
-            Wrong email? <button onClick={() => setVerifyEmail('')} style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 12, fontWeight: 500, padding: 0 }}>Go back</button>
+            {t('auth.wrongEmail')} <button onClick={() => setVerifyEmail('')} style={{ background: 'none', border: 'none', color: '#F97316', cursor: 'pointer', fontSize: 12, fontWeight: 500, padding: 0 }}>{t('auth.goBack')}</button>
           </p>
         </div>
       </div>
@@ -87,14 +89,14 @@ export function SignupPage() {
       <div style={{ position: 'absolute', top: '-10%', right: '5%', width: '50%', height: '60%', background: 'radial-gradient(ellipse, oklch(0.72 0.18 45 / 0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ width: '100%', maxWidth: 420, padding: '44px 40px', background: c.cardBg, borderRadius: 24, border: `1px solid ${c.border}`, position: 'relative', zIndex: 1, boxShadow: c.isDark ? 'none' : '0 8px 40px rgba(0,0,0,0.08)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}><CritupLogo size={24} theme={theme} /></div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>Create your account</h1>
-        <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>Free to start — no credit card needed</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', margin: '0 0 6px', textAlign: 'center', color: c.textPrimary, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>{t('auth.createAccount')}</h1>
+        <p style={{ fontSize: 13, color: c.textMuted, textAlign: 'center', margin: '0 0 28px' }}>{t('auth.signupSubtitle')}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           {[
-            { key: 'name', label: 'Full name', type: 'text', placeholder: 'Your full name' },
-            { key: 'email', label: 'Email', type: 'email', placeholder: 'you@email.com' },
-            { key: 'password', label: 'Password', type: 'password', placeholder: '••••••••' },
-            { key: 'confirm', label: 'Confirm password', type: 'password', placeholder: '••••••••' },
+            { key: 'name', label: t('auth.fullName'), type: 'text', placeholder: t('auth.fullNamePlaceholder') },
+            { key: 'email', label: t('auth.email'), type: 'email', placeholder: t('auth.emailPlaceholder') },
+            { key: 'password', label: t('auth.password'), type: 'password', placeholder: '••••••••' },
+            { key: 'confirm', label: t('auth.confirmPassword'), type: 'password', placeholder: '••••••••' },
           ].map(({ key, label, type, placeholder }) => (
             <div key={key}>
               <label style={{ fontSize: 12, fontWeight: 600, color: c.isDark ? 'oklch(0.75 0.005 270)' : '#6b7280', display: 'block', marginBottom: 6 }}>{label}</label>
@@ -106,16 +108,16 @@ export function SignupPage() {
               {errors[key] && <div style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)', marginTop: 4 }}>{errors[key]}</div>}
             </div>
           ))}
-          <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', marginTop: 4 }}>{loading ? 'Creating account…' : 'Create account'}</button>
+          <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', marginTop: 4 }}>{loading ? t('auth.creatingAccount') : t('auth.createAccountBtn')}</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
-          <div style={{ flex: 1, height: 1, background: c.border }} /><span style={{ fontSize: 12, color: c.textMuted }}>or</span><div style={{ flex: 1, height: 1, background: c.border }} />
+          <div style={{ flex: 1, height: 1, background: c.border }} /><span style={{ fontSize: 12, color: c.textMuted }}>{t('auth.or')}</span><div style={{ flex: 1, height: 1, background: c.border }} />
         </div>
         <button onClick={signUpWithGoogle} style={{ width: '100%', padding: '11px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-          <GoogleIcon /> Continue with Google
+          <GoogleIcon /> {t('auth.continueGoogle')}
         </button>
         <p style={{ textAlign: 'center', fontSize: 13, color: c.textMuted, marginTop: 22, marginBottom: 0 }}>
-          Have an account? <Link to="/login" style={{ color: '#F97316', textDecoration: 'none', fontWeight: 500 }}>Sign in</Link>
+          {t('auth.haveAccount')} <Link to="/login" style={{ color: '#F97316', textDecoration: 'none', fontWeight: 500 }}>{t('auth.signIn')}</Link>
         </p>
       </div>
     </div>
