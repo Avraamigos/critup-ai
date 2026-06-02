@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Plus, Search, MoreHorizontal, Trash2, ExternalLink } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
-// Map DB enum → display label + color
-const STAGE_META: Record<string, { label: string; color: string }> = {
-  'pre-design':      { label: 'Pre-Design',      color: '#6366f1' },
-  'initial-concept': { label: 'Initial Concept',  color: '#F97316' },
-  'finalized-design':{ label: 'Finalized Design', color: 'oklch(0.72 0.17 145)' },
-  'jury-prep':       { label: 'Jury Prep',         color: 'oklch(0.65 0.18 25)' },
+// Map DB enum → color (label resolved via i18n)
+const STAGE_COLOR: Record<string, string> = {
+  'pre-design':       '#6366f1',
+  'initial-concept':  '#F97316',
+  'finalized-design': 'oklch(0.72 0.17 145)',
+  'jury-prep':        'oklch(0.65 0.18 25)',
 }
+const stageLabel = (stage: string, t: TFunction) => t(`stages.${stage}`, { defaultValue: stage })
 
 type Project = {
   id: string
@@ -43,19 +46,20 @@ function ScoreBox({ label, score, theme }: { label: string; score: number | null
   )
 }
 
-function timeAgo(dateStr: string) {
+function timeAgo(dateStr: string, t: TFunction) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const d = Math.floor(diff / 86400000)
-  if (d === 0) return 'Today'
-  if (d === 1) return 'Yesterday'
-  if (d < 7) return `${d}d ago`
-  if (d < 30) return `${Math.floor(d / 7)}w ago`
-  return `${Math.floor(d / 30)}mo ago`
+  if (d === 0) return t('time.today')
+  if (d === 1) return t('time.yesterday')
+  if (d < 7) return t('time.daysAgo', { count: d })
+  if (d < 30) return t('time.weeksAgo', { count: Math.floor(d / 7) })
+  return t('time.monthsAgo', { count: Math.floor(d / 30) })
 }
 
 export function ProjectsPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
@@ -163,17 +167,17 @@ export function ProjectsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0, fontFamily: FONT }}>
-            My Projects
+            {t('projects.title')}
           </h1>
           <p style={{ fontSize: 14, color: c.textMuted, margin: '4px 0 0' }}>
-            {loading ? 'Loading…' : `${projects.length} project${projects.length !== 1 ? 's' : ''} · sorted by recent`}
+            {loading ? t('common.loading') : t('projects.countSorted', { count: projects.length })}
           </p>
         </div>
         <button
           onClick={() => navigate({ to: '/projects/new' })}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)' }}
         >
-          <Plus size={16} /> New project
+          <Plus size={16} /> {t('projects.newProject')}
         </button>
       </div>
 
@@ -184,7 +188,7 @@ export function ProjectsPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search projects..."
+            placeholder={t('projects.searchPlaceholder')}
             style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: 10, boxSizing: 'border-box', background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, outline: 'none', fontFamily: "'Inter',sans-serif" }}
             onFocus={e => e.target.style.borderColor = '#F97316'}
             onBlur={e => e.target.style.borderColor = c.border}
@@ -198,7 +202,7 @@ export function ProjectsPage() {
               border: filter === f ? 'none' : `1px solid ${c.border}`,
               color: filter === f ? '#fff' : c.textMuted,
             }}>
-              {f === 'all' ? 'All' : STAGE_META[f]?.label ?? f}
+              {f === 'all' ? t('projects.all') : stageLabel(f, t)}
             </button>
           ))}
         </div>
@@ -217,8 +221,8 @@ export function ProjectsPage() {
       {!loading && projects.length === 0 && (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>📂</div>
-          <p style={{ fontSize: 16, fontWeight: 600, color: c.textPrimary, margin: '0 0 6px' }}>No projects yet</p>
-          <p style={{ fontSize: 14, color: c.textMuted, margin: 0 }}>Hit <strong style={{ color: c.textPrimary }}>+ New project</strong> above to upload your first design and get AI critique.</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: c.textPrimary, margin: '0 0 6px' }}>{t('projects.noProjectsTitle')}</p>
+          <p style={{ fontSize: 14, color: c.textMuted, margin: 0 }}>{t('projects.emptyHintPre')}<strong style={{ color: c.textPrimary }}>{t('projects.emptyHintAction')}</strong>{t('projects.emptyHintPost')}</p>
         </div>
       )}
 
@@ -226,7 +230,7 @@ export function ProjectsPage() {
       {!loading && filtered.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {filtered.map(p => {
-            const stage = STAGE_META[p.stage] ?? { label: p.stage, color: '#F97316' }
+            const stageColor = STAGE_COLOR[p.stage] ?? '#F97316'
             // Get latest complete analysis
             const latestAnalysis = p.analyses
               ?.filter(a => a.status === 'complete')
@@ -243,8 +247,8 @@ export function ProjectsPage() {
               >
                 {/* Stage badge */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: stage.color, background: `${stage.color}20`, padding: '3px 10px', borderRadius: 100 }}>
-                    {stage.label}
+                  <span style={{ fontSize: 11, fontWeight: 700, color: stageColor, background: `${stageColor}20`, padding: '3px 10px', borderRadius: 100 }}>
+                    {stageLabel(p.stage, t)}
                   </span>
                   {/* Context menu */}
                   <div style={{ position: 'relative' }} ref={menuOpen === p.id ? menuRef : undefined}>
@@ -264,7 +268,7 @@ export function ProjectsPage() {
                           onMouseEnter={e => (e.currentTarget.style.background = c.isDark ? 'oklch(0.22 0.004 270)' : '#f3f4f6')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                         >
-                          <ExternalLink size={13} /> Open analysis
+                          <ExternalLink size={13} /> {t('projects.openAnalysis')}
                         </button>
                         <div style={{ height: 1, background: c.border, margin: '2px 4px' }} />
                         <button
@@ -273,7 +277,7 @@ export function ProjectsPage() {
                           onMouseEnter={e => (e.currentTarget.style.background = 'oklch(0.65 0.18 25/0.08)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                         >
-                          <Trash2 size={13} /> Delete project
+                          <Trash2 size={13} /> {t('projects.deleteProject')}
                         </button>
                       </div>
                     )}
@@ -282,7 +286,7 @@ export function ProjectsPage() {
 
                 {/* Title */}
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 4px', letterSpacing: '-0.02em' }}>{p.name}</h3>
-                <p style={{ fontSize: 12, color: c.textMuted, margin: '0 0 16px' }}>{timeAgo(p.created_at)}</p>
+                <p style={{ fontSize: 12, color: c.textMuted, margin: '0 0 16px' }}>{timeAgo(p.created_at, t)}</p>
 
                 {/* Scores or status */}
                 {latestAnalysis ? (
@@ -294,15 +298,15 @@ export function ProjectsPage() {
                 ) : (
                   <div style={{ marginBottom: 14, padding: '12px', borderRadius: 10, background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f8fafc', border: `1px solid ${c.border}`, textAlign: 'center' }}>
                     {isPending ? (
-                      <span style={{ fontSize: 12, color: '#F97316', fontWeight: 600 }}>⏳ Analysis in progress…</span>
+                      <span style={{ fontSize: 12, color: '#F97316', fontWeight: 600 }}>⏳ {t('projects.analysisInProgress')}</span>
                     ) : (
-                      <span style={{ fontSize: 12, color: c.textMuted }}>No analysis yet</span>
+                      <span style={{ fontSize: 12, color: c.textMuted }}>{t('projects.noAnalysisYet')}</span>
                     )}
                   </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: 12, color: c.textMuted }}>{timeAgo(p.created_at)}</span>
+                  <span style={{ fontSize: 12, color: c.textMuted }}>{timeAgo(p.created_at, t)}</span>
                 </div>
               </div>
             )
@@ -318,14 +322,14 @@ export function ProjectsPage() {
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'oklch(0.72 0.18 45 / 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Plus size={20} color="#F97316" />
             </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: c.textMuted }}>New project</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: c.textMuted }}>{t('projects.newProject')}</span>
           </div>
         </div>
       )}
 
       {!loading && projects.length > 0 && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: c.textMuted }}>
-          <p style={{ fontSize: 14 }}>No projects match your search.</p>
+          <p style={{ fontSize: 14 }}>{t('projects.noMatch')}</p>
         </div>
       )}
 
@@ -341,23 +345,23 @@ export function ProjectsPage() {
               <Trash2 size={20} color="oklch(0.65 0.18 25)" />
             </div>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: c.textPrimary, margin: '0 0 8px' }}>
-              Delete "{confirmDelete.name}"?
+              {t('projects.deleteConfirmTitle', { name: confirmDelete.name })}
             </h2>
             <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 24px', lineHeight: 1.5 }}>
-              This will permanently delete the project and all its analyses. This cannot be undone.
+              {t('projects.deleteConfirmBody')}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 onClick={() => setConfirmDelete(null)}
                 style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: `1px solid ${c.border}`, background: 'transparent', color: c.textPrimary, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => { deleteProject(confirmDelete.id); setConfirmDelete(null) }}
                 style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: 'oklch(0.65 0.18 25)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
