@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText, Link, Check, Users, Globe } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
@@ -45,11 +46,11 @@ type ProjectData = {
   analyses: AnalysisData[]
 }
 
-const STAGE_META: Record<string, { label: string; color: string }> = {
-  'pre-design':       { label: 'Pre-Design',       color: '#6366f1' },
-  'initial-concept':  { label: 'Initial Concept',  color: '#F97316' },
-  'finalized-design': { label: 'Finalized Design', color: 'oklch(0.72 0.17 145)' },
-  'jury-prep':        { label: 'Jury Prep',         color: 'oklch(0.65 0.18 25)' },
+const STAGE_COLOR: Record<string, string> = {
+  'pre-design':       '#6366f1',
+  'initial-concept':  '#F97316',
+  'finalized-design': 'oklch(0.72 0.17 145)',
+  'jury-prep':        'oklch(0.65 0.18 25)',
 }
 
 // ─── Module-level audio cache ─────────────────────────────────────────────────
@@ -74,6 +75,8 @@ function cleanForTTS(raw: string): string {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function AnalysisPage() {
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
   const { theme } = useTheme()
   const c = useColors(theme)
   const params   = useParams({ from: '/app/analysis/$projectId' })
@@ -189,7 +192,7 @@ export function AnalysisPage() {
         .select('id, name, stage, discipline, analyses(id, status, concept_score, spatial_score, presentation_score, feedback, jury_questions, pdf_path, is_public, caption, error_message, created_at)')
         .eq('id', params.projectId)
         .single()
-      if (err || !data) { setError('Project not found.'); setLoading(false); return }
+      if (err || !data) { setError(t('analysis.projectNotFound')); setLoading(false); return }
       const proj = data as unknown as ProjectData
       setProject(proj)
       setLoading(false)
@@ -204,7 +207,7 @@ export function AnalysisPage() {
         if (pollTimer) clearTimeout(pollTimer)
         if (timeoutTimer) clearTimeout(timeoutTimer)
         localStorage.removeItem(`critup_analysis_start_${params.projectId}`)
-        setError(failed.error_message || 'Analysis failed. Please try re-uploading your PDF.')
+        setError(failed.error_message || t('analysis.analysisFailedReupload'))
         return
       }
 
@@ -219,7 +222,7 @@ export function AnalysisPage() {
           const remaining = Math.max(10_000, 7 * 60 * 1000 - (Date.now() - startedAt))
           timeoutTimer = setTimeout(() => {
             if (pollTimer) clearTimeout(pollTimer)
-            setError('Analysis is taking longer than expected. Please try re-uploading your PDF.')
+            setError(t('analysis.analysisTimeout'))
           }, remaining)
         }
       } else {
@@ -276,7 +279,7 @@ export function AnalysisPage() {
         .insert({ project_id: params.projectId, user_id: user.id, status: 'pending', pdf_path: pdfPath })
         .select('id')
         .single()
-      if (rowErr || !newAnalysis) throw new Error(rowErr?.message ?? 'Failed to create analysis row')
+      if (rowErr || !newAnalysis) throw new Error(rowErr?.message ?? t('analysis.errCreateRow'))
 
       const newId = (newAnalysis as { id: string }).id
 
@@ -300,11 +303,11 @@ export function AnalysisPage() {
       setReuploadFile(null)
       setSlideIdx(0)
     } catch (err) {
-      setReuploadError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+      setReuploadError(err instanceof Error ? err.message : t('analysis.uploadFailed'))
     } finally {
       setReuploadSaving(false)
     }
-  }, [reuploadFile, user, reuploadSaving, params.projectId])
+  }, [reuploadFile, user, reuploadSaving, params.projectId, t])
 
   // ── Get signed PDF URL ──
   useEffect(() => {
@@ -314,7 +317,7 @@ export function AnalysisPage() {
   }, [latestAnalysis?.pdf_path])
 
   const isPending = project?.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
-  const stage     = project ? (STAGE_META[project.stage] ?? { label: project.stage, color: '#F97316' }) : null
+  const stage     = project ? { label: t(`stages.${project.stage}`, { defaultValue: project.stage }), color: STAGE_COLOR[project.stage] ?? '#F97316' } : null
 
   const feedbackItems: FeedbackItem[] = Array.isArray(latestAnalysis?.feedback)
     ? latestAnalysis.feedback as unknown as FeedbackItem[]
@@ -546,7 +549,7 @@ export function AnalysisPage() {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: c.textMuted }}>
       <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: 14 }}>Loading…</span>
+      <span style={{ fontSize: 14 }}>{t('common.loading')}</span>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
@@ -558,16 +561,16 @@ export function AnalysisPage() {
         <AlertCircle size={26} color="oklch(0.65 0.18 25)" />
       </div>
       <div>
-        <p style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 6px' }}>Something went wrong</p>
-        <p style={{ fontSize: 13, color: c.textMuted, margin: 0, maxWidth: 320 }}>{error || 'Project not found.'}</p>
+        <p style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 6px' }}>{t('analysis.somethingWrong')}</p>
+        <p style={{ fontSize: 13, color: c.textMuted, margin: 0, maxWidth: 320 }}>{error || t('analysis.projectNotFound')}</p>
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={() => navigate({ to: '/projects' })} style={{ padding: '9px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          ← My Projects
+          ← {t('analysis.myProjects')}
         </button>
         {error && (
           <button onClick={() => setRetryKey(k => k + 1)} style={{ padding: '9px 20px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 14px oklch(0.72 0.18 45 / 0.3)' }}>
-            Try again
+            {t('analysis.tryAgain')}
           </button>
         )}
       </div>
@@ -578,7 +581,7 @@ export function AnalysisPage() {
   if (!latestAnalysis) return (
     <div style={{ padding: '24px 28px' }}>
       <button onClick={() => navigate({ to: '/projects' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 13, padding: 0, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
-        <ChevronLeft size={14} /> My Projects
+        <ChevronLeft size={14} /> {t('analysis.myProjects')}
       </button>
       <h1 style={{ fontSize: 20, fontWeight: 800, color: c.textPrimary, margin: '0 0 4px', fontFamily: FONT }}>{project.name}</h1>
       <div style={{ marginTop: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
@@ -597,12 +600,12 @@ export function AnalysisPage() {
 
             {/* Stage label */}
             <p style={{ fontSize: 13, fontWeight: 600, color: '#F97316', margin: '0 0 20px', letterSpacing: '0.01em', fontFamily: FONT }}>
-              {progress < 8  ? 'Receiving your drawings…'
-              : progress < 22 ? 'Reading every page…'
-              : progress < 52 ? 'Studying your design…'
-              : progress < 75 ? 'Writing critique…'
-              : progress < 90 ? 'Checking quality…'
-              : 'Almost ready…'}
+              {progress < 8  ? t('analysis.progressReceiving')
+              : progress < 22 ? t('analysis.progressReading')
+              : progress < 52 ? t('analysis.progressStudying')
+              : progress < 75 ? t('analysis.progressWriting')
+              : progress < 90 ? t('analysis.progressChecking')
+              : t('analysis.progressAlmost')}
             </p>
 
             {/* Bar track */}
@@ -632,30 +635,30 @@ export function AnalysisPage() {
               </div>
             </div>
 
-            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>Analysis in progress</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '28px 0 0', color: c.textPrimary, fontFamily: FONT }}>{t('analysis.inProgressTitle')}</h2>
             <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 340, margin: '8px 0 0', lineHeight: 1.6 }}>
-              Crit is reading every page of your drawings in detail.<br/>
-              This usually takes <strong style={{ color: c.textPrimary }}>3–5 minutes</strong> — longer projects take a bit more.
+              {t('analysis.inProgressBody1')}<br/>
+              {t('analysis.inProgressBody2Pre')}<strong style={{ color: c.textPrimary }}>{t('analysis.inProgressBody2Bold')}</strong>{t('analysis.inProgressBody2Post')}
             </p>
             <p style={{ fontSize: 12, color: c.textMuted, maxWidth: 300, margin: '14px 0 0', lineHeight: 1.5, opacity: 0.7 }}>
-              You can leave this tab open in the background.<br/>Your results will be here when it's done.
+              {t('analysis.inProgressHint1')}<br/>{t('analysis.inProgressHint2')}
             </p>
           </>
         ) : latestFailed ? (
           <>
             <div style={{ fontSize: 48 }}>⚠️</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.textPrimary }}>Analysis failed</h2>
-            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 300, textAlign: 'center', lineHeight: 1.6, margin: '4px 0 0' }}>Something went wrong while processing your drawings. Please try uploading again.</p>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.textPrimary }}>{t('analysis.failedTitle')}</h2>
+            <p style={{ fontSize: 14, color: c.textMuted, maxWidth: 300, textAlign: 'center', lineHeight: 1.6, margin: '4px 0 0' }}>{t('analysis.failedBody')}</p>
             <button onClick={() => navigate({ to: '/projects/new' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              <Plus size={15} /> Try again
+              <Plus size={15} /> {t('analysis.tryAgain')}
             </button>
           </>
         ) : (
           <>
             <div style={{ fontSize: 48 }}>📐</div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.textPrimary }}>No analysis yet</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.textPrimary }}>{t('analysis.noAnalysisYet')}</h2>
             <button onClick={() => navigate({ to: '/projects/new' })} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              <Plus size={15} /> Upload drawings
+              <Plus size={15} /> {t('analysis.uploadDrawings')}
             </button>
           </>
         )}
@@ -676,9 +679,9 @@ export function AnalysisPage() {
   const zoomLevel = (current?.zoom ?? 1) > 1.15 ? (current?.zoom ?? 1) : 1
 
   const scoreRings = [
-    { label: 'Concept',      score: latestAnalysis.concept_score ?? 0 },
-    { label: 'Spatial',      score: latestAnalysis.spatial_score ?? 0 },
-    { label: 'Presentation', score: latestAnalysis.presentation_score ?? 0 },
+    { label: t('scores.concept'),      score: latestAnalysis.concept_score ?? 0 },
+    { label: t('scores.spatial'),      score: latestAnalysis.spatial_score ?? 0 },
+    { label: t('scores.presentation'), score: latestAnalysis.presentation_score ?? 0 },
   ]
   const ringSummaries = [
     feedbackItems.find((_, i) => i % 3 === 0)?.title ?? '—',
@@ -696,7 +699,7 @@ export function AnalysisPage() {
 
   const handleExport = () => {
     track.pdfExported(params.projectId)
-    const date = new Date(latestAnalysis.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    const date = new Date(latestAnalysis.created_at).toLocaleDateString(dateLocale, { year: 'numeric', month: 'long', day: 'numeric' })
     const stageLabel = stage?.label ?? project.stage
     const scoreColor = (s: number) => s >= 7.5 ? '#1a9e4a' : s >= 5 ? '#F97316' : '#d93025'
     const SF = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif`
@@ -760,7 +763,7 @@ export function AnalysisPage() {
     <div class="brand-name">Critup<span>.ai</span></div>
   </div>
   <div class="header-right">
-    <div class="header-date">AI Critique Report</div>
+    <div class="header-date">${t('analysis.exportReportTitle')}</div>
     <div class="header-date">${date}</div>
   </div>
 </div>
@@ -778,26 +781,26 @@ export function AnalysisPage() {
     <div class="avg-denom">/ 10</div>
   </div>
   <div class="avg-text">
-    <h3>Overall Score</h3>
-    <p>Average across Concept, Spatial &amp; Presentation</p>
+    <h3>${t('analysis.exportOverallScore')}</h3>
+    <p>${t('analysis.exportAverageAcross')}</p>
   </div>
 </div>
 
-<div class="section-title">Detailed Feedback</div>
+<div class="section-title">${t('analysis.exportDetailedFeedback')}</div>
 ${feedbackItems.map((fb, i) => `
 <div class="feedback-item">
-  <div class="fb-num">Point ${i + 1} of ${feedbackItems.length}</div>
+  <div class="fb-num">${t('analysis.exportPointOf', { n: i + 1, total: feedbackItems.length })}</div>
   <div class="fb-title">${fb.title}</div>
   <div class="fb-text">${fb.text}</div>
-  ${fb.suggestion ? `<div class="fb-suggestion"><span>Suggestion</span>${fb.suggestion}</div>` : ''}
+  ${fb.suggestion ? `<div class="fb-suggestion"><span>${t('analysis.exportSuggestion')}</span>${fb.suggestion}</div>` : ''}
 </div>`).join('')}
 
 ${juryQuestions.length > 0 ? `
-<div class="section-title">Likely Jury Questions</div>
+<div class="section-title">${t('analysis.exportJuryQuestions')}</div>
 ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
 
 <div class="footer">
-  <div class="footer-brand">${logoSvg.replace('width="36" height="36"','width="20" height="20"')} Critup.ai — AI Jury Feedback</div>
+  <div class="footer-brand">${logoSvg.replace('width="36" height="36"','width="20" height="20"')} ${t('analysis.exportFooter')}</div>
   <div class="footer-right">critup.ai</div>
 </div>
 
@@ -892,7 +895,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       track.postedToCommunity(analysisId)
       setShowPostModal(false)
     } catch {
-      window.alert('Could not post to the community. Please try again.')
+      window.alert(t('analysis.postError'))
     } finally {
       setSharing(false)
       setSlideProgress(null)
@@ -915,7 +918,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       }))
       setShowUnpublishModal(false)
     } catch {
-      window.alert('Could not remove the post. Please try again.')
+      window.alert(t('analysis.unpublishError'))
     } finally {
       setSharing(false)
     }
@@ -944,7 +947,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       <div style={{ padding: isMobile ? '8px 14px' : '10px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, borderBottom: `1px solid ${c.border}` }}>
         <div>
           <button onClick={() => navigate({ to: '/projects' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, fontSize: 12, padding: 0, marginBottom: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ChevronLeft size={13} /> My Projects
+            <ChevronLeft size={13} /> {t('analysis.myProjects')}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h1 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? 140 : 'none' }}>{project.name}</h1>
@@ -956,20 +959,20 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           {isPro ? (
             <button
               onClick={() => setVoiceOn(v => !v)}
-              title={voiceOn ? 'Turn off voice' : 'Turn on AI voice narration'}
+              title={voiceOn ? t('analysis.voiceOff') : t('analysis.voiceOnTitle')}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: voiceOn ? 'oklch(0.72 0.18 45/0.12)' : c.cardBg, border: `1px solid ${voiceOn ? '#F97316' : c.border}`, color: voiceOn ? '#F97316' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
             >
               {speaking ? <Volume2 size={13} style={{ animation: 'pulse-ring 0.8s ease-in-out infinite' }} /> : voiceOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
-              {!isMobile && (voiceOn ? (speaking ? 'Speaking…' : 'Voice ON') : 'Voice')}
+              {!isMobile && (voiceOn ? (speaking ? t('analysis.speaking') : t('analysis.voiceOnLabel')) : t('analysis.voice'))}
             </button>
           ) : (
             <button
               onClick={() => navigate({ to: '/pricing' })}
-              title="Voice narration is available on Pro"
+              title={t('analysis.voiceProTitle')}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s', opacity: 0.7 }}
             >
               <VolumeX size={13} />
-              {!isMobile && <span>Voice <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span></span>}
+              {!isMobile && <span>{t('analysis.voice')} <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span></span>}
             </button>
           )}
           <button
@@ -978,14 +981,14 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
           >
-            <Upload size={13} />{!isMobile && ' New version'}
+            <Upload size={13} />{!isMobile && ` ${t('analysis.newVersion')}`}
           </button>
           {!isMobile && (
             <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
             >
-              <Download size={13} /> Export PDF
+              <Download size={13} /> {t('analysis.exportPdf')}
             </button>
           )}
           {/* Post to / manage in the community feed. The shareable link only
@@ -995,27 +998,27 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             <>
               <button
                 onClick={() => { if (!sharing) setShowUnpublishModal(true) }}
-                title="Posted to the Community feed — click to remove"
+                title={t('analysis.postedTitle')}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: 'oklch(0.72 0.17 145 / 0.15)', border: '1px solid oklch(0.72 0.17 145)', color: 'oklch(0.72 0.17 145)', fontSize: 12, cursor: sharing ? 'default' : 'pointer', transition: 'all 0.2s', opacity: sharing ? 0.6 : 1 }}
               >
                 {sharing ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={13} />}
-                {!isMobile && (sharing ? ' Removing…' : ' Posted')}
+                {!isMobile && (sharing ? ` ${t('analysis.removing')}` : ` ${t('analysis.posted')}`)}
               </button>
               <button
                 onClick={handleCopyLink}
-                title="Copy the public link to this critique"
+                title={t('analysis.copyLinkTitle')}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: linkCopied ? 'oklch(0.72 0.17 145 / 0.15)' : c.cardBg, border: `1px solid ${linkCopied ? 'oklch(0.72 0.17 145)' : c.border}`, color: linkCopied ? 'oklch(0.72 0.17 145)' : c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
               >
-                {linkCopied ? <><Check size={13} />{!isMobile && ' Copied!'}</> : <><Link size={13} />{!isMobile && ' Copy link'}</>}
+                {linkCopied ? <><Check size={13} />{!isMobile && ` ${t('analysis.copied')}`}</> : <><Link size={13} />{!isMobile && ` ${t('analysis.copyLink')}`}</>}
               </button>
             </>
           ) : (
             <button
               onClick={openPostModal}
-              title="Share this critique with the Critup community"
+              title={t('analysis.postToCommunityTitle')}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: '#F97316', border: '1px solid #F97316', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)' }}
             >
-              <Users size={13} />{!isMobile && ' Post to Community'}
+              <Users size={13} />{!isMobile && ` ${t('analysis.postToCommunity')}`}
             </button>
           )}
         </div>
@@ -1048,7 +1051,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: c.textMuted, fontSize: 13 }}>
-                Loading PDF…
+                {t('analysis.loadingPdf')}
               </div>
             )}
 
@@ -1072,7 +1075,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             )}
             {isSummary && (
               <div style={{ position: 'absolute', top: 12, right: 12, background: 'oklch(0.72 0.17 145/0.85)', backdropFilter: 'blur(8px)', borderRadius: 100, padding: '3px 12px', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>
-                SUMMARY
+                {t('analysis.summary')}
               </div>
             )}
             {!isSummary && current?.page && (
@@ -1106,7 +1109,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             <div key={`panel-${slideIdx}`} style={{ animation: 'slide-up 0.3s ease-out', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ background: c.cardBg, borderRadius: 16, padding: '16px', border: `1.5px solid #F97316`, boxShadow: '0 0 20px oklch(0.72 0.18 45/0.1)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 6 }}>
-                  FEEDBACK {slideIdx + 1} OF {feedbackItems.length}
+                  {t('analysis.feedbackOf', { n: slideIdx + 1, total: feedbackItems.length })}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: c.textPrimary, lineHeight: 1.35, marginBottom: 8, fontFamily: FONT }}>
                   {current?.title}
@@ -1144,7 +1147,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             </div>
           ) : (
             <div key="summary" style={{ animation: 'slide-up 0.4s ease-out', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.72 0.17 145)', letterSpacing: '0.12em' }}>OVERALL ANALYSIS</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'oklch(0.72 0.17 145)', letterSpacing: '0.12em' }}>{t('analysis.overallAnalysis')}</div>
               <div style={{ display: 'flex', justifyContent: 'space-around', padding: '8px 0' }}>
                 {scoreRings.map(r => (
                   <div key={r.label} style={{ textAlign: 'center' }}>
@@ -1153,12 +1156,12 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 ))}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 0', background: c.cardBg, borderRadius: 16, border: `1px solid ${c.border}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 10 }}>AVERAGE SCORE</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 10 }}>{t('analysis.averageScore')}</div>
                 <ScoreRing score={avg} label="" size={88} theme={theme} />
                 <div style={{ fontSize: 22, fontWeight: 900, color: c.textPrimary, marginTop: 4, fontFamily: FONT }}>{avg.toFixed(1)}<span style={{ fontSize: 12, fontWeight: 400, color: c.textMuted }}> / 10</span></div>
               </div>
               <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px', border: `1px solid ${c.border}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 8 }}>KEY FINDINGS</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 8 }}>{t('analysis.keyFindings')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {feedbackItems.slice(0, 5).map((fb, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -1170,10 +1173,10 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               </div>
               {juryQuestions.length > 0 && (
                 <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px', border: `1px solid ${c.border}` }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 8 }}>JURY WILL ASK</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 8 }}>{t('analysis.juryWillAsk')}</div>
                   <p style={{ fontSize: 12, color: c.textPrimary, margin: '0 0 10px', lineHeight: 1.5 }}>"{juryQuestions[0]}"</p>
                   <button onClick={() => navigate({ to: '/jury' })} style={{ padding: '6px 14px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    Practise answers →
+                    {t('analysis.practiseAnswers')}
                   </button>
                 </div>
               )}
@@ -1190,14 +1193,14 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5, flex: 1, minHeight: '1.5em' }}>
             {!isPro
               ? <span style={{ color: c.textMuted }}>
-                  Voice narration is available on{' '}
+                  {t('analysis.captionFreePre')}
                   <span
                     onClick={() => navigate({ to: '/pricing' })}
                     style={{ color: '#F97316', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                   >
-                    Pro
+                    {t('common.pro')}
                   </span>
-                  {' '}— use ← → to read critiques below
+                  {t('analysis.captionFreePost')}
                 </span>
               : speaking && captionWords.length > 0
                 ? captionWords.map((word, i) => (
@@ -1213,10 +1216,10 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                     </span>
                   ))
                 : isSummary
-                  ? <span style={{ color: c.textMuted }}>Analysis complete — {feedbackItems.length} critiques · {avg.toFixed(1)} / 10</span>
+                  ? <span style={{ color: c.textMuted }}>{t('analysis.analysisComplete', { count: feedbackItems.length, avg: avg.toFixed(1) })}</span>
                   : current
                     ? <span style={{ color: c.textMuted }}>{current.title}</span>
-                    : <span style={{ color: c.textMuted }}>Press play to begin</span>
+                    : <span style={{ color: c.textMuted }}>{t('analysis.pressPlay')}</span>
             }
           </p>
         </div>
@@ -1228,13 +1231,13 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             disabled={slideIdx === 0}
             style={{ padding: '8px 18px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, cursor: slideIdx === 0 ? 'not-allowed' : 'pointer', opacity: slideIdx === 0 ? 0.35 : 1, transition: 'all 0.15s' }}
           >
-            ← Previous
+            {t('analysis.previous')}
           </button>
           {/* Play button — Pro only; free users see an upgrade button */}
           {isPro ? (
           <button
             onClick={handlePlayPause}
-            title={!audioReady && voiceOn && !isPlaying ? 'Loading audio…' : undefined}
+            title={!audioReady && voiceOn && !isPlaying ? t('analysis.loadingAudio') : undefined}
             style={{ width: 48, height: 48, borderRadius: '50%', background: isPlaying ? 'oklch(0.65 0.18 25)' : '#F97316', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${isPlaying ? 'oklch(0.65 0.18 25/0.5)' : 'oklch(0.72 0.18 45/0.5)'}`, transition: 'all 0.2s', flexShrink: 0, opacity: (!audioReady && voiceOn && !isPlaying) ? 0.65 : 1 }}
           >
             {(!audioReady && voiceOn && !isPlaying)
@@ -1245,7 +1248,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           ) : (
             <button
               onClick={() => navigate({ to: '/pricing' })}
-              title="Upgrade to Pro for voice narration"
+              title={t('analysis.upgradeForVoice')}
               style={{ width: 48, height: 48, borderRadius: '50%', background: c.cardBg, border: `1.5px solid ${c.border}`, color: c.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0, position: 'relative' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
@@ -1259,7 +1262,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             disabled={slideIdx >= totalSlides - 1}
             style={{ padding: '8px 18px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 13, fontWeight: 500, cursor: slideIdx >= totalSlides - 1 ? 'not-allowed' : 'pointer', opacity: slideIdx >= totalSlides - 1 ? 0.35 : 1, transition: 'all 0.15s' }}
           >
-            Next →
+            {t('analysis.next')}
           </button>
         </div>
       </div>
@@ -1274,7 +1277,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
               <div>
-                <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Upload new version</h2>
+                <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>{t('analysis.reuploadTitle')}</h2>
                 <p style={{ fontSize: 12, color: c.textMuted, margin: '4px 0 0' }}>{project.name} — {stage?.label}</p>
               </div>
               <button onClick={() => { if (!reuploadSaving) { setShowReupload(false); setReuploadFile(null); setReuploadError(null) } }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, lineHeight: 1 }}>
@@ -1283,7 +1286,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             </div>
 
             <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.6, margin: '0 0 20px' }}>
-              The previous analysis is kept. Scores and feedback for the new version will appear once analysis completes.
+              {t('analysis.reuploadBody')}
             </p>
 
             {/* Drop zone */}
@@ -1298,8 +1301,8 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'oklch(0.72 0.18 45/0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                   <Upload size={20} color="#F97316" />
                 </div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>Drop your updated PDF here</p>
-                <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>or click to browse</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 4px' }}>{t('analysis.dropUpdatedPdf')}</p>
+                <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{t('analysis.orClickBrowse')}</p>
                 <input id="reupload-input" type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setReuploadFile(f) }} />
               </div>
             ) : (
@@ -1327,7 +1330,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => { if (!reuploadSaving) { setShowReupload(false); setReuploadFile(null); setReuploadError(null) } }} disabled={reuploadSaving} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleReupload}
@@ -1335,7 +1338,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 style={{ padding: '10px 24px', borderRadius: 100, background: reuploadFile && !reuploadSaving ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), border: 'none', color: reuploadFile && !reuploadSaving ? '#fff' : c.textMuted, fontSize: 13, fontWeight: 600, cursor: reuploadFile && !reuploadSaving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7, boxShadow: reuploadFile && !reuploadSaving ? '0 0 16px oklch(0.72 0.18 45/0.35)' : 'none', transition: 'all 0.15s' }}
               >
                 {reuploadSaving && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
-                {reuploadSaving ? 'Uploading…' : 'Start analysis →'}
+                {reuploadSaving ? t('analysis.uploading') : t('analysis.startAnalysis')}
               </button>
             </div>
           </div>
@@ -1356,9 +1359,9 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                   <Users size={18} color="#F97316" />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Post to Community</h2>
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>{t('analysis.postToCommunity')}</h2>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: '3px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Globe size={11} /> Public · anyone on Critup can see it
+                    <Globe size={11} /> {t('analysis.publicVisibility')}
                   </p>
                 </div>
               </div>
@@ -1368,11 +1371,11 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             </div>
 
             {/* Caption */}
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: c.textMuted, margin: '20px 0 8px' }}>Add a caption (optional)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: c.textMuted, margin: '20px 0 8px' }}>{t('analysis.addCaption')}</label>
             <textarea
               value={postCaption}
               onChange={e => setPostCaption(e.target.value.slice(0, 280))}
-              placeholder="Say something about your project…"
+              placeholder={t('analysis.captionPlaceholder')}
               rows={3}
               autoFocus
               style={{ width: '100%', boxSizing: 'border-box', resize: 'none', borderRadius: 12, border: `1px solid ${c.border}`, background: c.cardBg, color: c.textPrimary, fontSize: 14, fontFamily: FONT, padding: '12px 14px', outline: 'none', lineHeight: 1.5 }}
@@ -1381,10 +1384,10 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
 
             {/* Preview of what gets shared */}
             <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: c.cardBg, border: `1px solid ${c.border}` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>What you're sharing</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{t('analysis.whatSharing')}</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, marginBottom: 8 }}>{project.name}</div>
               <div style={{ display: 'flex', gap: 16 }}>
-                {([['Concept', latestAnalysis.concept_score], ['Spatial', latestAnalysis.spatial_score], ['Presentation', latestAnalysis.presentation_score]] as const).map(([label, score]) => (
+                {([[t('scores.concept'), latestAnalysis.concept_score], [t('scores.spatial'), latestAnalysis.spatial_score], [t('scores.presentation'), latestAnalysis.presentation_score]] as const).map(([label, score]) => (
                   <div key={label}>
                     <div style={{ fontSize: 16, fontWeight: 800, color: '#F97316' }}>{(score ?? 0).toFixed(1)}</div>
                     <div style={{ fontSize: 10, color: c.textMuted, fontWeight: 600 }}>{label}</div>
@@ -1393,13 +1396,13 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               </div>
             </div>
             <p style={{ fontSize: 11, color: c.textMuted, lineHeight: 1.5, margin: '12px 0 0' }}>
-              Your scores, feedback and drawings become viewable by the community. You can remove the post anytime.
+              {t('analysis.postDisclaimer')}
             </p>
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => { if (!sharing) setShowPostModal(false) }} disabled={sharing} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: sharing ? 'default' : 'pointer' }}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirmPost}
@@ -1408,8 +1411,8 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               >
                 {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
                 {sharing
-                  ? (slideProgress ? `Preparing slides ${slideProgress.done}/${slideProgress.total}…` : 'Posting…')
-                  : 'Post to Community'}
+                  ? (slideProgress ? t('analysis.preparingSlides', { done: slideProgress.done, total: slideProgress.total }) : t('analysis.posting'))
+                  : t('analysis.postToCommunity')}
               </button>
             </div>
           </div>
@@ -1427,14 +1430,14 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'oklch(0.65 0.18 25/0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <AlertCircle size={18} color="oklch(0.65 0.18 25)" />
               </div>
-              <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>Remove from Community?</h2>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: c.textPrimary, margin: 0, fontFamily: FONT }}>{t('analysis.removeTitle')}</h2>
             </div>
             <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.55, margin: 0 }}>
-              This takes <strong style={{ color: c.textPrimary }}>{project.name}</strong> off the Community feed. Anyone with the link will no longer be able to see it. You can post it again anytime.
+              {t('analysis.removeBodyPre')}<strong style={{ color: c.textPrimary }}>{project.name}</strong>{t('analysis.removeBodyPost')}
             </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
               <button onClick={() => { if (!sharing) setShowUnpublishModal(false) }} disabled={sharing} style={{ padding: '10px 20px', borderRadius: 100, background: 'none', border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, cursor: sharing ? 'default' : 'pointer' }}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleUnpublish}
@@ -1442,7 +1445,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 style={{ padding: '10px 24px', borderRadius: 100, background: 'oklch(0.65 0.18 25)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: sharing ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7, opacity: sharing ? 0.7 : 1 }}
               >
                 {sharing && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
-                {sharing ? 'Removing…' : 'Remove post'}
+                {sharing ? t('analysis.removing') : t('analysis.removePost')}
               </button>
             </div>
           </div>
