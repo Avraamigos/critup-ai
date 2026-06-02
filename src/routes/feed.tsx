@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check } from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
+import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { sharePost } from '@/lib/share'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,22 +57,73 @@ function initials(name: string) {
 
 // ─── Post card ────────────────────────────────────────────────────────────────
 
+type CardComment = { id: string; body: string; created_at: string; author_name: string | null }
+
 function PostCard({
-  post, c, theme, liked, likeCount, commentCount, onToggleLike, onCopy,
+  post, c, theme, user, liked, likeCount, commentCount, onToggleLike, onCopied, onCommentCountChange,
 }: {
   post: Post
   c: ReturnType<typeof useColors>
   theme: 'dark' | 'light'
+  user: User | null
   liked: boolean
   likeCount: number
   commentCount: number
   onToggleLike: (id: string) => void
-  onCopy: (id: string) => void
+  onCopied: () => void
+  onCommentCountChange: (id: string, delta: number) => void
 }) {
-  const navigate = useNavigate()
   const stageLabel = STAGE_LABELS[post.project_stage] ?? post.project_stage
   const dateStr = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const name = post.owner_name ?? 'Anonymous'
+
+  // Inline comments — lazy-loaded the first time the thread is opened.
+  const [expanded, setExpanded]   = useState(false)
+  const [comments, setComments]   = useState<CardComment[]>([])
+  const [loaded, setLoaded]       = useState(false)
+  const [loadingC, setLoadingC]   = useState(false)
+  const [body, setBody]           = useState('')
+  const [posting, setPosting]     = useState(false)
+  const { profile } = useAuth()
+
+  const toggleComments = async () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && !loaded) {
+      setLoadingC(true)
+      const { data } = await supabase
+        .from('post_comments')
+        .select('id, body, created_at, author_name')
+        .eq('analysis_id', post.id)
+        .order('created_at', { ascending: true })
+      setComments((data as CardComment[] | null) ?? [])
+      setLoaded(true)
+      setLoadingC(false)
+    }
+  }
+
+  const addComment = async () => {
+    const text = body.trim()
+    if (!text || posting || !user) return
+    setPosting(true)
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({ analysis_id: post.id, user_id: user.id, body: text.slice(0, 1000), author_name: profile?.full_name ?? null })
+      .select('id, created_at')
+      .single()
+    setPosting(false)
+    if (error || !data) return
+    setComments(prev => [...prev, { id: data.id, body: text.slice(0, 1000), created_at: data.created_at, author_name: profile?.full_name ?? null }])
+    setBody('')
+    onCommentCountChange(post.id, 1)
+  }
+
+  const handleShare = async () => {
+    const result = await sharePost(post.id, { text: `Check out "${post.project_name}" on Critup.ai` })
+    if (result === 'copied') onCopied()
+  }
+
+  const liveCommentCount = loaded ? comments.length : commentCount
 
   return (
     <div style={{
@@ -145,21 +197,83 @@ function PostCard({
           {likeCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{likeCount}</span>}
         </button>
         <button
-          onClick={() => navigate({ to: `/p/${post.id}` })}
+          onClick={toggleComments}
           aria-label="Comments"
-          style={socialBtn(c.textMuted)}
+          aria-expanded={expanded}
+          style={socialBtn(expanded ? '#F97316' : c.textMuted)}
         >
           <MessageCircle size={18} />
-          {commentCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{commentCount}</span>}
+          {liveCommentCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{liveCommentCount}</span>}
         </button>
         <button
-          onClick={() => onCopy(post.id)}
+          onClick={handleShare}
           aria-label="Share"
           style={{ ...socialBtn(c.textMuted), marginLeft: 'auto' }}
         >
           <Share2 size={18} />
         </button>
       </div>
+
+      {/* ── Inline comments (tap comment to expand) ── */}
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${c.border}`, padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Composer */}
+          {user ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarColor(profile?.full_name ?? '?'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                {initials(profile?.full_name ?? '?')}
+              </div>
+              <input
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment() } }}
+                maxLength={1000}
+                placeholder="Add a comment…"
+                style={{ flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 100, padding: '9px 14px', color: c.textPrimary, fontSize: 13, outline: 'none' }}
+              />
+              <button
+                onClick={addComment}
+                disabled={posting || !body.trim()}
+                aria-label="Post comment"
+                style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', border: 'none', background: body.trim() ? '#F97316' : c.border, color: '#fff', cursor: body.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Send size={14} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>Log in to join the conversation.</div>
+          )}
+
+          {/* Thread */}
+          {loadingC ? (
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>Loading comments…</div>
+          ) : comments.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: c.textMuted }}>No comments yet — be the first.</div>
+          ) : (
+            comments.map(cm => {
+              const cname = cm.author_name ?? 'Anonymous'
+              return (
+                <div key={cm.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                    {initials(cname)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: c.textPrimary }}>
+                      <span style={{ fontWeight: 700 }}>{cname}</span>
+                      <span style={{ color: c.textMuted, fontSize: 11, marginLeft: 8 }}>
+                        {new Date(cm.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {cm.body}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -314,11 +428,13 @@ export function FeedPage() {
     }
   }
 
-  const handleCopy = async (id: string) => {
-    const url = `${window.location.origin}/p/${id}`
-    try { await navigator.clipboard.writeText(url) } catch { /* ignore */ }
-    setCopiedId(id)
+  const showCopiedToast = () => {
+    setCopiedId('x')
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const bumpCommentCount = (id: string, delta: number) => {
+    setCommentCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }))
   }
 
   return (
@@ -397,11 +513,13 @@ export function FeedPage() {
                 post={post}
                 c={c}
                 theme={theme}
+                user={user}
                 liked={likedByMe.has(post.id)}
                 likeCount={likeCounts[post.id] ?? 0}
                 commentCount={commentCounts[post.id] ?? 0}
                 onToggleLike={handleToggleLike}
-                onCopy={handleCopy}
+                onCopied={showCopiedToast}
+                onCommentCountChange={bumpCommentCount}
               />
             ))}
           </div>

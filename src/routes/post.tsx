@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, AlertCircle, Heart, Send } from 'lucide-react'
+import { ArrowRight, AlertCircle, Heart, Send, MessageCircle, Share2, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
 import { CritupLogo } from '@/components/CritupLogo'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { sharePost } from '@/lib/share'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,14 @@ function initials(name: string) {
   return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
 }
 
+function actionBtn(color: string): React.CSSProperties {
+  return {
+    display: 'flex', alignItems: 'center', gap: 7,
+    padding: '8px 12px', borderRadius: 100, border: 'none',
+    background: 'transparent', color, cursor: 'pointer',
+  }
+}
+
 function DotGrid() {
   return (
     <div style={{
@@ -87,6 +96,14 @@ export function PostPage() {
   const [comments, setComments]   = useState<Comment[]>([])
   const [commentBody, setCommentBody] = useState('')
   const [posting, setPosting]     = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [copied, setCopied]       = useState(false)
+
+  const handleShare = async () => {
+    if (!post) return
+    const result = await sharePost(post.id, { text: `Check out "${post.project.name}" on Critup.ai` })
+    if (result === 'copied') { setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  }
 
   const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif"
 
@@ -286,19 +303,33 @@ export function PostPage() {
           </div>
         ) : null}
 
-        {/* ── Like bar ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+        {/* ── Action row: Like · Comment · Share ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showComments ? 20 : 24, paddingBottom: 18, borderBottom: '1px solid oklch(0.18 0.004 270)' }}>
           <button
             onClick={handleToggleLike}
             aria-label={liked ? 'Unlike' : 'Like'}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 100, border: `1px solid ${liked ? 'oklch(0.65 0.22 20 / 0.5)' : 'oklch(0.22 0.004 270)'}`, background: liked ? 'oklch(0.65 0.22 20 / 0.12)' : 'transparent', color: liked ? 'oklch(0.7 0.2 20)' : 'oklch(0.65 0.004 270)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={actionBtn(liked ? 'oklch(0.7 0.2 20)' : 'oklch(0.7 0.004 270)')}
           >
-            <Heart size={17} fill={liked ? 'oklch(0.7 0.2 20)' : 'none'} />
-            {likeCount > 0 ? likeCount : 'Like'}
+            <Heart size={20} fill={liked ? 'oklch(0.7 0.2 20)' : 'none'} />
+            {likeCount > 0 && <span style={{ fontSize: 14, fontWeight: 600 }}>{likeCount}</span>}
           </button>
-          <div style={{ fontSize: 13, color: 'oklch(0.55 0.004 270)' }}>
-            {comments.length > 0 ? `${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'Be the first to comment'}
-          </div>
+          <button
+            onClick={() => setShowComments(v => !v)}
+            aria-label="Comments"
+            aria-expanded={showComments}
+            style={actionBtn(showComments ? '#F97316' : 'oklch(0.7 0.004 270)')}
+          >
+            <MessageCircle size={20} />
+            {comments.length > 0 && <span style={{ fontSize: 14, fontWeight: 600 }}>{comments.length}</span>}
+          </button>
+          <button
+            onClick={handleShare}
+            aria-label="Share"
+            style={{ ...actionBtn('oklch(0.7 0.004 270)'), marginLeft: 'auto' }}
+          >
+            <Share2 size={20} />
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Share</span>
+          </button>
         </div>
 
         {/* ── Score rings ── */}
@@ -362,7 +393,8 @@ export function PostPage() {
           </div>
         )}
 
-        {/* ── Comments ── */}
+        {/* ── Comments (toggled by the Comment action above) ── */}
+        {showComments && (
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'oklch(0.55 0.004 270)', marginBottom: 12 }}>
             Comments {comments.length > 0 && `(${comments.length})`}
@@ -427,6 +459,7 @@ export function PostPage() {
             })}
           </div>
         </div>
+        )}
 
         {/* ── CTA ── */}
         <div style={{ background: 'linear-gradient(135deg, oklch(0.72 0.18 45 / 0.1), oklch(0.72 0.18 45 / 0.04))', border: '1px solid oklch(0.72 0.18 45 / 0.2)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' }}>
@@ -450,6 +483,13 @@ export function PostPage() {
           Critup.ai · AI critique for architecture students
         </div>
       </div>
+
+      {/* Copied toast (shown when native share isn't available and we fall back to copy) */}
+      {copied && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'oklch(0.72 0.17 145)', color: '#fff', padding: '10px 20px', borderRadius: 100, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 999 }}>
+          <Check size={14} /> Link copied
+        </div>
+      )}
     </div>
   )
 }
