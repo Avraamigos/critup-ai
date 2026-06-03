@@ -1,0 +1,24 @@
+{
+  "name": "critup-video",
+  "version": "1.0.0",
+  "description": "Remotion video compositions for Critup.AI ad",
+  "scripts": {
+    "start": "npx remotion studio",
+    "render:mascot":   "npx remotion render src/index.ts Mascot out/mascot.mp4   --codec=prores",
+    "render:scores":   "npx remotion render src/index.ts Scores out/scores.mp4   --codec=prores",
+    "render:chat":     "npx remotion render src/index.ts Chat   out/chat.mp4     --codec=prores",
+    "render:jury":     "npx remotion render src/index.ts Jury   out/jury.mp4     --codec=prores",
+    "render:all":      "mkdir -p out && npm run render:mascot && npm run render:scores && npm run render:chat && npm run render:jury"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0",
+    "@remotion/cli": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
