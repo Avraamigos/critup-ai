@@ -8,7 +8,11 @@
     "render:scores":   "npx remotion render src/index.ts Scores out/scores.mp4   --codec=prores",
     "render:chat":     "npx remotion render src/index.ts Chat   out/chat.mp4     --codec=prores",
     "render:jury":     "npx remotion render src/index.ts Jury   out/jury.mp4     --codec=prores",
-    "render:all":      "mkdir -p out && npm run render:mascot && npm run render:scores && npm run render:chat && npm run render:jury"
+    "render:scorreveal": "npx remotion render src/index.ts ScoreReveal out/score-reveal.mp4 --codec=prores",
+    "render:beforeafter": "npx remotion render src/index.ts BeforeAfter out/before-after.mp4 --codec=prores",
+    "render:features":   "npx remotion render src/index.ts Features    out/features.mp4    --codec=prores",
+    "render:cta":        "npx remotion render src/index.ts CTA         out/cta.mp4         --codec=prores",
+    "render:all":        "mkdir -p out && npm run render:mascot && npm run render:scores && npm run render:chat && npm run render:jury && npm run render:scorreveal && npm run render:beforeafter && npm run render:features && npm run render:cta"
   },
   "dependencies": {
     "react": "^18.2.0",
