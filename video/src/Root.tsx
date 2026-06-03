@@ -13,7 +13,8 @@ export function RemotionRoot() {
   return (
     <>
       {/* Original scenes */}
-      <Composition id="Mascot"      component={MascotComp}      durationInFrames={FPS * 8}  fps={FPS} width={W} height={H} />
+      <Composition id="Mascot"         component={MascotComp}      durationInFrames={FPS * 8}  fps={FPS} width={W} height={H} />
+      <Composition id="MascotOnly"     component={MascotComp}      durationInFrames={FPS * 8}  fps={FPS} width={W} height={H} defaultProps={{ showText: false }} />
       <Composition id="Scores"      component={ScoresComp}      durationInFrames={FPS * 7}  fps={FPS} width={W} height={H} />
       <Composition id="Chat"        component={ChatComp}        durationInFrames={FPS * 12} fps={FPS} width={W} height={H} />
       <Composition id="Jury"        component={JuryComp}        durationInFrames={FPS * 14} fps={FPS} width={W} height={H} />

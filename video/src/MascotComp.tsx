@@ -1,7 +1,7 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
 import { FONT, ORANGE } from './constants'
 
-export function MascotComp() {
+export function MascotComp({ showText = true }: { showText?: boolean }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -99,20 +99,22 @@ export function MascotComp() {
         </div>
       </div>
 
-      {/* Name */}
-      <div style={{
-        marginTop: 48,
-        opacity: textOpacity,
-        transform: `translateY(${textY}px)`,
-        textAlign: 'center',
-      }}>
-        <div style={{ fontSize: 80, fontWeight: 900, letterSpacing: '-0.04em', color: '#0f172a', lineHeight: 1 }}>
-          Crit
+      {/* Name (only shown when showText=true) */}
+      {showText && (
+        <div style={{
+          marginTop: 48,
+          opacity: textOpacity,
+          transform: `translateY(${textY}px)`,
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 80, fontWeight: 900, letterSpacing: '-0.04em', color: '#0f172a', lineHeight: 1 }}>
+            Crit
+          </div>
+          <div style={{ fontSize: 22, color: '#64748b', fontWeight: 500, marginTop: 12, letterSpacing: '-0.01em' }}>
+            Your AI architecture jury — always ready
+          </div>
         </div>
-        <div style={{ fontSize: 22, color: '#64748b', fontWeight: 500, marginTop: 12, letterSpacing: '-0.01em' }}>
-          Your AI architecture jury — always ready
-        </div>
-      </div>
+      )}
     </AbsoluteFill>
   )
 }
