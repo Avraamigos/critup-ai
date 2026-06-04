@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
+import { useToast } from '@/components/Toast'
 import { ChevronLeft, Play, Pause, Download, Loader2, AlertCircle, Plus, Volume2, VolumeX, Upload, X, FileText, Link, Check, Users, Globe } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { PDFViewer } from '@/components/PDFViewer'
@@ -77,6 +78,7 @@ function cleanForTTS(raw: string): string {
 export function AnalysisPage() {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
+  const { error: toastError } = useToast()
   const { theme } = useTheme()
   const c = useColors(theme)
   const params   = useParams({ from: '/app/analysis/$projectId' })
@@ -896,7 +898,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       track.postedToCommunity(analysisId)
       setShowPostModal(false)
     } catch {
-      window.alert(t('analysis.postError'))
+      toastError(t('analysis.postError'))
     } finally {
       setSharing(false)
       setSlideProgress(null)
@@ -919,7 +921,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       }))
       setShowUnpublishModal(false)
     } catch {
-      window.alert(t('analysis.unpublishError'))
+      toastError(t('analysis.unpublishError'))
     } finally {
       setSharing(false)
     }

@@ -3,6 +3,7 @@ import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { Database } from './database.types'
 import i18n from './i18n'
+import { setSentryUser } from './sentry'
 
 // Keep the UI language in sync with the profile's saved language (en/ru/tr).
 function syncUiLanguage(profile: { language?: string | null } | null) {
@@ -97,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update user + loading immediately (synchronous) — lock released right away
       setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }))
       if (session?.user) {
+        // Tag Sentry with the logged-in user
+        setSentryUser(session.user.id, session.user.email)
         // Fetch profile OUTSIDE the auth lock via .then() — never blocks lock
         const sessionUser = session.user
         fetchProfile(sessionUser).then(profile => {
@@ -105,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setState(s => ({ ...s, profile: resolved }))
         })
       } else {
+        setSentryUser(null)
         setState(s => ({ ...s, profile: null }))
       }
     })

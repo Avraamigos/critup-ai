@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useToast } from '@/components/Toast'
 import {
   Users, BarChart2, TrendingUp, Zap, Crown, RefreshCw,
   ShieldCheck, AlertTriangle, DollarSign, ExternalLink, StickyNote, Trash2, Plus,
@@ -229,6 +230,7 @@ export function AdminPage() {
   const navigate = useNavigate()
   const { theme } = useTheme()
   const c = useColors(theme)
+  const { error: toastError, success: toastSuccess } = useToast()
 
   const [stats, setStats]       = useState<AdminStats | null>(null)
   const [loading, setLoading]   = useState(true)
@@ -288,8 +290,9 @@ export function AdminPage() {
         ...s,
         recentSignups: s.recentSignups.map(u => u.id === userId ? { ...u, plan: newPlan } : u),
       } : s)
+      toastSuccess(`Plan updated → ${newPlan}`)
     } catch (e) {
-      alert('Failed to update plan: ' + e)
+      toastError('Failed to update plan: ' + e)
     } finally {
       setTogglingId(null)
     }
@@ -308,8 +311,9 @@ export function AdminPage() {
         ...s,
         recentSignups: s.recentSignups.map(u => u.id === userId ? { ...u, analyses_used: 0 } : u),
       } : s)
+      toastSuccess('Analyses reset to 0')
     } catch (e) {
-      alert('Failed to reset: ' + e)
+      toastError('Failed to reset: ' + e)
     } finally {
       setTogglingId(null)
     }
@@ -331,7 +335,7 @@ export function AdminPage() {
         users: { ...s.users, total: s.users.total - 1, free: s.users.free - 1 },
       } : s)
     } catch (e) {
-      alert('Failed to delete: ' + e)
+      toastError('Failed to delete: ' + e)
     } finally {
       setTogglingId(null)
     }

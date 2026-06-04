@@ -3,13 +3,19 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
 import { AuthProvider } from './lib/auth'
+import { ToastProvider } from './components/Toast'
+import { initSentry } from './lib/sentry'
 import './lib/i18n'
 import './styles.css'
+
+initSentry()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </AuthProvider>
   </StrictMode>,
 )
