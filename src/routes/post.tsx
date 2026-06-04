@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
+
 import { ArrowRight, AlertCircle, Heart, Send, MessageCircle, Share2, Check } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
@@ -34,6 +35,7 @@ type PostData = {
     stage: string
   }
   owner_name: string | null
+  owner_avatar_url: string | null
   caption: string | null
   slides: string[]
   pdf_url: string | null
@@ -55,6 +57,21 @@ function avatarColor(name: string) {
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).slice(0, 2)
   return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+}
+
+function Avatar({ name, avatarUrl, size = 32 }: { name: string; avatarUrl: string | null; size?: number }) {
+  const [err, setErr] = useState(false)
+  if (avatarUrl && !err) {
+    return (
+      <img src={avatarUrl} alt={name} onError={() => setErr(true)}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    )
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, background: avatarColor(name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700 }}>
+      {initials(name)}
+    </div>
+  )
 }
 
 function actionBtn(color: string): React.CSSProperties {
@@ -110,7 +127,7 @@ export function PostPage() {
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score,
           feedback, jury_questions, created_at, caption, pdf_path, slide_count,
-          owner_name, project_name, project_stage
+          owner_name, owner_avatar_url, project_name, project_stage
         `)
         .eq('id', analysisId)
         .eq('is_public', true)
@@ -131,6 +148,8 @@ export function PostPage() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ownerName = ((data as any).owner_name as string | null) ?? null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ownerAvatarUrl = ((data as any).owner_avatar_url as string | null) ?? null
 
       // Pre-rendered slides are public; only sign the raw PDF for legacy posts.
       const slides = slideCount > 0
@@ -154,6 +173,7 @@ export function PostPage() {
         created_at: data.created_at,
         project: { name: proj?.name ?? t('post.untitledProject'), stage: proj?.stage ?? '' },
         owner_name: ownerName,
+        owner_avatar_url: ownerAvatarUrl,
         caption: (data as { caption?: string | null }).caption ?? null,
         slides,
         pdf_url: pdfUrl,
@@ -275,12 +295,21 @@ export function PostPage() {
               {stageLabel}
             </div>
           )}
-          <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 8, color: '#fff' }}>
+          <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12, color: '#fff' }}>
             {post.project.name}
           </h1>
-          <div style={{ fontSize: 13, color: 'oklch(0.55 0.004 270)' }}>
-            {post.owner_name ? `${post.owner_name} · ` : ''}{dateStr}
-          </div>
+          {post.owner_name && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <Avatar name={post.owner_name} avatarUrl={post.owner_avatar_url} size={36} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{post.owner_name}</div>
+                <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.004 270)' }}>{dateStr}</div>
+              </div>
+            </div>
+          )}
+          {!post.owner_name && (
+            <div style={{ fontSize: 13, color: 'oklch(0.55 0.004 270)', marginBottom: 4 }}>{dateStr}</div>
+          )}
           {post.caption && (
             <p style={{ fontSize: 15, color: 'oklch(0.82 0.004 270)', lineHeight: 1.6, margin: '16px 0 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {post.caption}
@@ -399,9 +428,7 @@ export function PostPage() {
           {/* Add comment */}
           {user ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: comments.length ? 20 : 0 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: avatarColor(myProfile?.full_name ?? '?'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
-                {initials(myProfile?.full_name ?? '?')}
-              </div>
+              <Avatar name={myProfile?.full_name ?? '?'} avatarUrl={(user?.user_metadata?.avatar_url as string | null) ?? null} size={32} />
               <div style={{ flex: 1, display: 'flex', gap: 8 }}>
                 <input
                   value={commentBody}
@@ -436,9 +463,7 @@ export function PostPage() {
               const cname = cm.author_name ?? t('feed.anonymous')
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
-                    {initials(cname)}
-                  </div>
+                  <Avatar name={cname} avatarUrl={null} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, color: '#fff' }}>
                       <span style={{ fontWeight: 700 }}>{cname}</span>

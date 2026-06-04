@@ -853,7 +853,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
         if (srcUrl) {
           setSlideProgress({ done: 0, total: 1 })
           const blobs = await renderPdfToJpegBlobs(srcUrl, {
-            maxPages: 12,
+            maxPages: 50,
             onProgress: (done, total) => setSlideProgress({ done, total }),
           })
           for (let i = 0; i < blobs.length; i++) {
@@ -880,6 +880,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
           caption,
           slide_count: slideCount,
           owner_name:         profile?.full_name ?? null,
+          owner_avatar_url:   (user?.user_metadata?.avatar_url as string | null) ?? null,
           project_name:       project?.name ?? null,
           project_stage:      project?.stage ?? null,
           project_discipline: project?.discipline ?? null,

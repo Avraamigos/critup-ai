@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { User } from '@supabase/supabase-js'
-import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send } from 'lucide-react'
-import { ScoreRing } from '@/components/ScoreRing'
+import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send, Flame } from 'lucide-react'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
 import { useTheme, useColors } from '@/lib/theme'
@@ -24,6 +23,7 @@ type Post = {
   project_stage: string
   project_discipline: string | null
   owner_name: string | null
+  owner_avatar_url: string | null
   caption: string | null
   slides: string[]
   pdf_url: string | null
@@ -49,9 +49,41 @@ function initials(name: string) {
   return parts.map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
 }
 
+function Avatar({ name, avatarUrl, size = 40 }: { name: string; avatarUrl: string | null; size?: number }) {
+  const [imgError, setImgError] = useState(false)
+  if (avatarUrl && !imgError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        onError={() => setImgError(true)}
+        style={{
+          width: size, height: size, borderRadius: '50%',
+          objectFit: 'cover', flexShrink: 0,
+          border: '2px solid rgba(255,255,255,0.1)',
+        }}
+      />
+    )
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: avatarColor(name), color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.35, fontWeight: 700,
+    }}>
+      {initials(name)}
+    </div>
+  )
+}
+
+function scoreColor(s: number) {
+  return s >= 8 ? '#22c55e' : s >= 6 ? '#F97316' : '#ef4444'
+}
+
 // ─── Post card ────────────────────────────────────────────────────────────────
 
-type CardComment = { id: string; body: string; created_at: string; author_name: string | null }
+type CardComment = { id: string; body: string; created_at: string; author_name: string | null; author_avatar_url?: string | null }
 
 function PostCard({
   post, c, theme, user, liked, likeCount, commentCount, onToggleLike, onCopied, onCommentCountChange,
@@ -70,17 +102,20 @@ function PostCard({
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
   const stageLabel = post.project_stage ? t(`stages.${post.project_stage}`, { defaultValue: post.project_stage }) : ''
-  const dateStr = new Date(post.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
   const name = post.owner_name ?? t('feed.anonymous')
+  const avg = (post.concept_score + post.spatial_score + post.presentation_score) / 3
+  const isHot = avg >= 8.0
 
-  // Inline comments — lazy-loaded the first time the thread is opened.
   const [expanded, setExpanded]   = useState(false)
   const [comments, setComments]   = useState<CardComment[]>([])
   const [loaded, setLoaded]       = useState(false)
   const [loadingC, setLoadingC]   = useState(false)
   const [body, setBody]           = useState('')
   const [posting, setPosting]     = useState(false)
+  const [likeAnim, setLikeAnim]   = useState(false)
   const { profile } = useAuth()
+
+  const myAvatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
 
   const toggleComments = async () => {
     const next = !expanded
@@ -119,122 +154,173 @@ function PostCard({
     if (result === 'copied') onCopied()
   }
 
+  const handleLike = () => {
+    if (!liked) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400) }
+    onToggleLike(post.id)
+  }
+
   const liveCommentCount = loaded ? comments.length : commentCount
+
+  const timeAgo = () => {
+    const diff = (Date.now() - new Date(post.created_at).getTime()) / 1000
+    if (diff < 3600) return `${Math.max(1, Math.floor(diff / 60))}m`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`
+    return new Date(post.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
+  }
 
   return (
     <div style={{
       background: c.cardBg,
-      border: `1px solid ${c.border}`,
-      borderRadius: 18,
-      padding: 0,
-      display: 'flex',
-      flexDirection: 'column',
+      border: `1px solid ${c.isDark ? 'oklch(0.22 0.005 270)' : '#e5e7eb'}`,
+      borderRadius: 16,
       overflow: 'hidden',
+      boxShadow: c.isDark ? '0 1px 12px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.06)',
     }}>
+
       {/* ── Author header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 12px' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-          background: avatarColor(name), color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 700,
-        }}>{initials(name)}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+        <Avatar name={name} avatarUrl={post.owner_avatar_url} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-          <div style={{ fontSize: 11.5, color: c.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.project_name}</span>
-            {stageLabel && <span style={{ color: '#F97316' }}>· {stageLabel}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary }}>{name}</span>
+            {isHot && <Flame size={13} color="#F97316" />}
+          </div>
+          <div style={{ fontSize: 11.5, color: c.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{post.project_name}</span>
+            {stageLabel && <>
+              <span style={{ color: c.isDark ? 'oklch(0.4 0.005 270)' : '#d1d5db' }}>·</span>
+              <span style={{ color: '#F97316', fontWeight: 600, whiteSpace: 'nowrap' }}>{stageLabel}</span>
+            </>}
           </div>
         </div>
-        <div style={{ fontSize: 11.5, color: c.textMuted, flexShrink: 0 }}>{dateStr}</div>
+        <span style={{ fontSize: 11, color: c.textMuted, flexShrink: 0 }}>{timeAgo()}</span>
       </div>
 
-      {/* ── Slides ── */}
-      {post.slides.length > 0 ? (
-        <div style={{ padding: '0 12px' }}>
-          <ImageCarousel images={post.slides} aspect={0.7} />
-        </div>
-      ) : post.pdf_url ? (
-        <div style={{ padding: '0 12px' }}>
-          <SlideCarousel url={post.pdf_url} aspect={0.7} renderScale={1.5} />
-        </div>
-      ) : (
-        <div style={{ margin: '0 12px', borderRadius: 14, height: 160, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted, fontSize: 12 }}>
-          {t('feed.drawingsUnavailable')}
-        </div>
-      )}
+      {/* ── Slides — edge-to-edge ── */}
+      <div style={{ position: 'relative' }}>
+        {post.slides.length > 0 ? (
+          <ImageCarousel images={post.slides} aspect={0.72} />
+        ) : post.pdf_url ? (
+          <SlideCarousel url={post.pdf_url} aspect={0.72} renderScale={1.5} />
+        ) : (
+          <div style={{ height: 200, background: c.isDark ? 'oklch(0.16 0.005 270)' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.textMuted, fontSize: 12 }}>
+            {t('feed.drawingsUnavailable')}
+          </div>
+        )}
 
-      {/* ── Score row ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-around', padding: '14px 16px 6px' }}>
+        {/* Average score badge — top-right overlay */}
+        <div style={{
+          position: 'absolute', top: 10, right: 10,
+          background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(8px)',
+          borderRadius: 100, padding: '4px 10px',
+          display: 'flex', alignItems: 'center', gap: 5,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: scoreColor(avg), fontVariantNumeric: 'tabular-nums' }}>{avg.toFixed(1)}</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>/ 10</span>
+        </div>
+      </div>
+
+      {/* ── Compact score pills ── */}
+      <div style={{ display: 'flex', gap: 6, padding: '10px 14px 4px', alignItems: 'center' }}>
         {[
-          { label: t('scores.concept'),      score: post.concept_score },
-          { label: t('scores.spatial'),      score: post.spatial_score },
-          { label: t('scores.presentation'), score: post.presentation_score },
+          { label: t('scores.concept'),      score: post.concept_score,      abbr: 'C' },
+          { label: t('scores.spatial'),      score: post.spatial_score,      abbr: 'S' },
+          { label: t('scores.presentation'), score: post.presentation_score, abbr: 'P' },
         ].map(r => (
-          <ScoreRing key={r.label} score={r.score} label={r.label} size={58} theme={theme} animated={false} />
+          <div key={r.abbr} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '3px 9px', borderRadius: 100,
+            background: c.isDark ? 'oklch(0.2 0.005 270)' : '#f3f4f6',
+            border: `1px solid ${c.isDark ? 'oklch(0.28 0.005 270)' : '#e5e7eb'}`,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: c.textMuted }}>{r.abbr}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: scoreColor(r.score), fontVariantNumeric: 'tabular-nums' }}>{r.score.toFixed(1)}</span>
+          </div>
         ))}
       </div>
 
       {/* ── Caption ── */}
       {post.caption && (
-        <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, padding: '4px 16px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          <span style={{ fontWeight: 700 }}>{name}</span> {post.caption}
+        <div style={{ fontSize: 13.5, color: c.textPrimary, lineHeight: 1.55, padding: '6px 14px 2px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <span style={{ fontWeight: 700 }}>{name}</span>{' '}
+          <span style={{ color: c.textMuted }}>{post.caption}</span>
         </div>
       )}
 
       {/* ── Social bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 10px 10px', gap: 2 }}>
         <button
-          onClick={() => onToggleLike(post.id)}
+          onClick={handleLike}
           aria-label={liked ? t('feed.unlike') : t('feed.like')}
-          style={socialBtn(liked ? 'oklch(0.65 0.22 20)' : c.textMuted)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 10px', borderRadius: 100, border: 'none',
+            background: 'transparent', cursor: 'pointer',
+            color: liked ? '#ef4444' : c.textMuted,
+            transform: likeAnim ? 'scale(1.3)' : 'scale(1)',
+            transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1), color 0.15s',
+          }}
         >
-          <Heart size={18} fill={liked ? 'oklch(0.65 0.22 20)' : 'none'} />
-          {likeCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{likeCount}</span>}
+          <Heart size={20} fill={liked ? '#ef4444' : 'none'} strokeWidth={liked ? 0 : 1.8} />
+          {likeCount > 0 && <span style={{ fontSize: 13, fontWeight: 700 }}>{likeCount}</span>}
         </button>
+
         <button
           onClick={toggleComments}
           aria-label={t('feed.comments')}
           aria-expanded={expanded}
-          style={socialBtn(expanded ? '#F97316' : c.textMuted)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 10px', borderRadius: 100, border: 'none',
+            background: 'transparent', cursor: 'pointer',
+            color: expanded ? '#F97316' : c.textMuted,
+            transition: 'color 0.15s',
+          }}
         >
-          <MessageCircle size={18} />
-          {liveCommentCount > 0 && <span style={{ fontSize: 13, fontWeight: 600 }}>{liveCommentCount}</span>}
+          <MessageCircle size={20} strokeWidth={1.8} />
+          {liveCommentCount > 0 && <span style={{ fontSize: 13, fontWeight: 700 }}>{liveCommentCount}</span>}
         </button>
+
         <button
           onClick={handleShare}
           aria-label={t('feed.share')}
-          style={{ ...socialBtn(c.textMuted), marginLeft: 'auto' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 10px', borderRadius: 100, border: 'none',
+            background: 'transparent', cursor: 'pointer',
+            color: c.textMuted, marginLeft: 'auto',
+          }}
         >
-          <Share2 size={18} />
+          <Share2 size={18} strokeWidth={1.8} />
         </button>
       </div>
 
-      {/* ── Inline comments (tap comment to expand) ── */}
+      {/* ── Inline comments ── */}
       {expanded && (
-        <div style={{ borderTop: `1px solid ${c.border}`, padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ borderTop: `1px solid ${c.isDark ? 'oklch(0.22 0.005 270)' : '#f0f0f0'}`, padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Composer */}
           {user ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarColor(profile?.full_name ?? '?'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-                {initials(profile?.full_name ?? '?')}
+              <Avatar name={profile?.full_name ?? '?'} avatarUrl={myAvatarUrl} size={30} />
+              <div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'center', background: c.isDark ? 'oklch(0.19 0.005 270)' : '#f3f4f6', borderRadius: 100, padding: '0 12px 0 14px' }}>
+                <input
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment() } }}
+                  maxLength={1000}
+                  placeholder={t('feed.addComment')}
+                  style={{ flex: 1, background: 'transparent', border: 'none', color: c.textPrimary, fontSize: 13, outline: 'none', padding: '9px 0' }}
+                />
+                <button
+                  onClick={addComment}
+                  disabled={posting || !body.trim()}
+                  aria-label={t('feed.postComment')}
+                  style={{ background: 'none', border: 'none', cursor: body.trim() ? 'pointer' : 'default', color: body.trim() ? '#F97316' : c.textMuted, display: 'flex', padding: 0, transition: 'color 0.15s' }}
+                >
+                  <Send size={15} />
+                </button>
               </div>
-              <input
-                value={body}
-                onChange={e => setBody(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addComment() } }}
-                maxLength={1000}
-                placeholder={t('feed.addComment')}
-                style={{ flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 100, padding: '9px 14px', color: c.textPrimary, fontSize: 13, outline: 'none' }}
-              />
-              <button
-                onClick={addComment}
-                disabled={posting || !body.trim()}
-                aria-label={t('feed.postComment')}
-                style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', border: 'none', background: body.trim() ? '#F97316' : c.border, color: '#fff', cursor: body.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Send size={14} />
-              </button>
             </div>
           ) : (
             <div style={{ fontSize: 12.5, color: c.textMuted }}>{t('feed.loginToComment')}</div>
@@ -250,18 +336,13 @@ function PostCard({
               const cname = cm.author_name ?? t('feed.anonymous')
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: avatarColor(cname), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-                    {initials(cname)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: c.textPrimary }}>
-                      <span style={{ fontWeight: 700 }}>{cname}</span>
-                      <span style={{ color: c.textMuted, fontSize: 11, marginLeft: 8 }}>
-                        {new Date(cm.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5, marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {cm.body}
+                  <Avatar name={cname} avatarUrl={cm.author_avatar_url ?? null} size={28} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: c.textPrimary }}>{cname}</span>
+                    {' '}
+                    <span style={{ fontSize: 13, color: c.textPrimary, lineHeight: 1.5 }}>{cm.body}</span>
+                    <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3 }}>
+                      {new Date(cm.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                     </div>
                   </div>
                 </div>
@@ -272,14 +353,6 @@ function PostCard({
       )}
     </div>
   )
-}
-
-function socialBtn(color: string): React.CSSProperties {
-  return {
-    display: 'flex', alignItems: 'center', gap: 6,
-    padding: '6px 8px', borderRadius: 100, border: 'none',
-    background: 'transparent', color, cursor: 'pointer',
-  }
 }
 
 // ─── Feed page ────────────────────────────────────────────────────────────────
@@ -308,7 +381,7 @@ export function FeedPage() {
         .from('analyses')
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path, slide_count,
-          owner_name, project_name, project_stage, project_discipline
+          owner_name, owner_avatar_url, project_name, project_stage, project_discipline
         `)
         .eq('is_public', true)
         .eq('status', 'complete')
@@ -327,12 +400,6 @@ export function FeedPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = data as any[]
 
-      // Author name + project meta are denormalized onto the analysis row at
-      // publish time (see migration 013). We can't read them from profiles /
-      // projects here because those tables are owner-only under RLS.
-
-      // Pre-rendered slides are public images — only fall back to signing the
-      // raw PDF for legacy posts that have no rendered slides yet.
       const fallbackPaths = rows
         .filter(r => !(r.slide_count > 0) && r.pdf_path)
         .map(r => r.pdf_path) as string[]
@@ -356,6 +423,7 @@ export function FeedPage() {
         project_stage: row.project_stage ?? '',
         project_discipline: row.project_discipline ?? null,
         owner_name: row.owner_name ?? null,
+        owner_avatar_url: row.owner_avatar_url ?? null,
         caption: row.caption ?? null,
         slides: row.slide_count > 0 ? slideUrls(row.id, row.slide_count) : [],
         pdf_url: row.pdf_path ? (urlByPath[row.pdf_path] ?? null) : null,
@@ -376,7 +444,6 @@ export function FeedPage() {
       setPosts(mapped)
       setLoading(false)
 
-      // Batch-load like & comment counts for the visible posts
       const ids = mapped.map(p => p.id)
       if (ids.length) {
         const [{ data: likes }, { data: comments }] = await Promise.all([
@@ -402,51 +469,39 @@ export function FeedPage() {
   const handleToggleLike = async (id: string) => {
     if (!user) return
     const isLiked = likedByMe.has(id)
-    // Optimistic
-    setLikedByMe(prev => {
-      const next = new Set(prev)
-      if (isLiked) next.delete(id); else next.add(id)
-      return next
-    })
+    setLikedByMe(prev => { const n = new Set(prev); if (isLiked) n.delete(id); else n.add(id); return n })
     setLikeCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (isLiked ? -1 : 1)) }))
-
     const { error } = isLiked
       ? await supabase.from('post_likes').delete().eq('analysis_id', id).eq('user_id', user.id)
       : await supabase.from('post_likes').insert({ analysis_id: id, user_id: user.id })
-
     if (error) {
-      // Revert on failure
-      setLikedByMe(prev => {
-        const next = new Set(prev)
-        if (isLiked) next.add(id); else next.delete(id)
-        return next
-      })
+      setLikedByMe(prev => { const n = new Set(prev); if (isLiked) n.add(id); else n.delete(id); return n })
       setLikeCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + (isLiked ? 1 : -1)) }))
     }
   }
 
-  const showCopiedToast = () => {
-    setCopiedId('x')
-    setTimeout(() => setCopiedId(null), 2000)
-  }
-
+  const showCopiedToast = () => { setCopiedId('x'); setTimeout(() => setCopiedId(null), 2000) }
   const bumpCommentCount = (id: string, delta: number) => {
     setCommentCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }))
   }
 
   return (
     <div style={{ height: 'calc(100vh - 54px)', display: 'flex', flexDirection: 'column', fontFamily: FONT, background: c.bg, overflow: 'hidden' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes slide-up { from { opacity:0; transform:translateX(-50%) translateY(8px) } to { opacity:1; transform:translateX(-50%) translateY(0) } }
+      `}</style>
 
       {/* ── Header ── */}
-      <div style={{ padding: '20px 28px 0', borderBottom: `1px solid ${c.border}`, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ padding: '16px 20px 0', borderBottom: `1px solid ${c.border}`, flexShrink: 0, background: c.bg }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0 }}>{t('feed.title')}</h1>
-            <div style={{ fontSize: 13, color: c.textMuted, marginTop: 2 }}>{t('feed.subtitle')}</div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: c.textPrimary, margin: 0 }}>{t('feed.title')}</h1>
+            <div style={{ fontSize: 12.5, color: c.textMuted, marginTop: 2 }}>{t('feed.subtitle')}</div>
           </div>
 
-          {/* Sort toggle */}
-          <div style={{ display: 'flex', background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 100, padding: 3, gap: 2 }}>
+          {/* Sort toggle — pill style */}
+          <div style={{ display: 'flex', background: c.isDark ? 'oklch(0.2 0.005 270)' : '#f3f4f6', borderRadius: 100, padding: 3, gap: 2 }}>
             {(['recent', 'top'] as const).map(s => (
               <button
                 key={s}
@@ -454,10 +509,11 @@ export function FeedPage() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 100, border: 'none',
-                  background: sort === s ? '#F97316' : 'transparent',
-                  color: sort === s ? '#fff' : c.textMuted,
+                  background: sort === s ? (s === 'top' ? '#F97316' : c.cardBg) : 'transparent',
+                  color: sort === s ? (s === 'top' ? '#fff' : c.textPrimary) : c.textMuted,
                   fontSize: 12, fontWeight: 600, cursor: 'pointer',
                   transition: 'all 0.15s',
+                  boxShadow: sort === s ? (s === 'top' ? '0 0 14px oklch(0.72 0.18 45/0.35)' : '0 1px 4px rgba(0,0,0,0.1)') : 'none',
                 }}
               >
                 {s === 'recent' ? <><Clock size={11} /> {t('feed.recent')}</> : <><TrendingUp size={11} /> {t('feed.top')}</>}
@@ -467,43 +523,42 @@ export function FeedPage() {
         </div>
 
         {/* Discipline tabs */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 2 }}>
           {DISCIPLINE_TABS.map(tab => (
             <button
               key={tab.v}
               onClick={() => setDiscipline(tab.v)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                padding: '7px 14px', borderRadius: '10px 10px 0 0',
-                border: `1px solid ${discipline === tab.v ? c.border : 'transparent'}`,
-                borderBottom: discipline === tab.v ? `2px solid #F97316` : '2px solid transparent',
-                background: discipline === tab.v ? c.cardBg : 'transparent',
+                padding: '7px 13px', borderRadius: '10px 10px 0 0',
+                border: 'none',
+                borderBottom: discipline === tab.v ? '2px solid #F97316' : '2px solid transparent',
+                background: 'transparent',
                 color: discipline === tab.v ? '#F97316' : c.textMuted,
                 fontSize: 13, fontWeight: discipline === tab.v ? 700 : 500,
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
-              <span style={{ fontSize: 14 }}>{tab.emoji}</span> {t(tab.labelKey)}
+              <span style={{ fontSize: 13 }}>{tab.emoji}</span> {t(tab.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
       {/* ── Feed ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 40px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 40px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
             <div style={{ width: 28, height: 28, border: `3px solid ${c.border}`, borderTopColor: '#F97316', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
           </div>
         ) : posts.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: 80 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🏛️</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🏛️</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, marginBottom: 6 }}>{t('feed.noPostsTitle')}</div>
-            <div style={{ fontSize: 13, color: c.textMuted }}>{t('feed.noPostsBody')}</div>
+            <div style={{ fontSize: 13, color: c.textMuted, maxWidth: 280, margin: '0 auto', lineHeight: 1.6 }}>{t('feed.noPostsBody')}</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 540, margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 580, margin: '0 auto' }}>
             {posts.map(post => (
               <PostCard
                 key={post.id}
@@ -527,7 +582,6 @@ export function FeedPage() {
       {copiedId && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'oklch(0.72 0.17 145)', color: '#fff', padding: '10px 20px', borderRadius: 100, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 999, animation: 'slide-up 0.2s ease' }}>
           <Check size={14} /> {t('feed.linkCopied')}
-          <style>{`@keyframes slide-up { from { opacity:0; transform:translateX(-50%) translateY(8px) } to { opacity:1; transform:translateX(-50%) translateY(0) } }`}</style>
         </div>
       )}
     </div>

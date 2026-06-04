@@ -101,6 +101,7 @@ export interface Database {
           caption: string | null
           slide_count: number
           owner_name: string | null
+          owner_avatar_url: string | null
           project_name: string | null
           project_stage: string | null
           project_discipline: string | null
@@ -123,6 +124,7 @@ export interface Database {
           caption?: string | null
           slide_count?: number
           owner_name?: string | null
+          owner_avatar_url?: string | null
           project_name?: string | null
           project_stage?: string | null
           project_discipline?: string | null
@@ -141,6 +143,7 @@ export interface Database {
           caption?: string | null
           slide_count?: number
           owner_name?: string | null
+          owner_avatar_url?: string | null
           project_name?: string | null
           project_stage?: string | null
           project_discipline?: string | null
