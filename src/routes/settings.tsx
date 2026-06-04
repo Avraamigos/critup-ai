@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import i18n from '@/lib/i18n'
 import { useNavigate } from '@tanstack/react-router'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 type Tab = 'profile' | 'notifications' | 'language' | 'account'
 
@@ -28,6 +29,7 @@ export function SettingsPage() {
   const { t } = useTranslation()
   const { user, profile, refreshProfile, signOut } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [activeTab, setActiveTab]     = useState<Tab>('profile')
   const [form, setForm]               = useState({ name: '', email: '', university: '' })
@@ -204,17 +206,17 @@ export function SettingsPage() {
 
   return (
     <>
-    <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
+    <div style={{ padding: isMobile ? '16px 14px' : '28px 32px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
       <h1 style={{
-        fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary,
-        margin: '0 0 28px',
+        fontSize: isMobile ? 20 : 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary,
+        margin: isMobile ? '0 0 16px' : '0 0 24px',
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif",
       }}>{t('settings.title')}</h1>
 
-      <div style={{ display: 'flex', gap: 20 }}>
-        {/* Sidebar tabs */}
-        <div style={{ width: 180, flexShrink: 0 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 20 }}>
+        {/* Sidebar tabs — horizontal scroll on mobile */}
+        <div style={{ width: isMobile ? '100%' : 180, flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: isMobile ? 4 : 2, overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 4 : 0 }}>
             {TABS.map(({ id, labelKey, icon: Icon }) => (
               <button key={id} onClick={() => setActiveTab(id)} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',

@@ -6,6 +6,7 @@ import { Plus, Search, MoreHorizontal, Trash2, ExternalLink } from 'lucide-react
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 // Map DB enum → color (label resolved via i18n)
 const STAGE_COLOR: Record<string, string> = {
@@ -62,6 +63,7 @@ export function ProjectsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isMobile = useIsMobile()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -161,29 +163,29 @@ export function ProjectsPage() {
   })
 
   return (
-    <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ padding: isMobile ? '16px 14px' : '28px 32px', fontFamily: "'Inter',sans-serif" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? 16 : 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0, fontFamily: FONT }}>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0, fontFamily: FONT }}>
             {t('projects.title')}
           </h1>
-          <p style={{ fontSize: 14, color: c.textMuted, margin: '4px 0 0' }}>
+          <p style={{ fontSize: 13, color: c.textMuted, margin: '4px 0 0' }}>
             {loading ? t('common.loading') : t('projects.countSorted', { count: projects.length })}
           </p>
         </div>
         <button
           onClick={() => navigate({ to: '/projects/new' })}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '9px 14px' : '10px 18px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: isMobile ? 13 : 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', flexShrink: 0 }}
         >
-          <Plus size={16} /> {t('projects.newProject')}
+          <Plus size={15} /> {isMobile ? '' : t('projects.newProject')}
         </button>
       </div>
 
       {/* Search + Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+        <div style={{ position: 'relative', width: '100%' }}>
           <Search size={14} color={c.textMuted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           <input
             value={search}
@@ -194,7 +196,7 @@ export function ProjectsPage() {
             onBlur={e => e.target.style.borderColor = c.border}
           />
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 4 : 0 }}>
           {filters.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: '8px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s',
@@ -210,7 +212,7 @@ export function ProjectsPage() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
           {[1, 2, 3].map(i => (
             <div key={i} style={{ background: c.cardBg, borderRadius: 18, padding: '20px 22px', border: `1px solid ${c.border}`, height: 200, opacity: 0.5 }} />
           ))}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTheme, useColors } from '@/lib/theme'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 const FAQ_KEYS = ['faq1', 'faq2', 'faq3', 'faq4', 'faq5', 'faq6', 'faq7', 'faq8']
 
@@ -16,6 +17,7 @@ export function HelpPage() {
   const { t } = useTranslation()
   const { theme } = useTheme()
   const c = useColors(theme)
+  const isMobile = useIsMobile()
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<number | null>(null)
 
@@ -27,7 +29,7 @@ export function HelpPage() {
   )
 
   return (
-    <div style={{ padding: '32px 36px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
+    <div style={{ padding: isMobile ? '16px 14px' : '28px 32px', fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
       <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif" }}>{t('help.title')}</h1>
       <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 28px' }}>{t('help.subtitle')}</p>
 
@@ -48,7 +50,7 @@ export function HelpPage() {
       {!search && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary, margin: '0 0 14px', letterSpacing: '-0.01em' }}>{t('help.quickGuides')}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 10 }}>
             {GUIDES.map(g => (
               <div key={g.title} style={{ background: c.cardBg, borderRadius: 14, padding: '14px 16px', border: `1px solid ${c.border}`, cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#F97316'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 20px oklch(0.72 0.18 45 / 0.08)' }}

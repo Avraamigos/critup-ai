@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mic, MicOff, ChevronRight, RotateCcw, Plus, AlertCircle, Loader2 } from 'lucide-react'
+import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +28,7 @@ const speechSupported = !!SpeechRecognition
 
 export function JuryPage() {
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const { theme } = useTheme()
   const c = useColors(theme)
   const navigate = useNavigate()
@@ -238,7 +240,7 @@ export function JuryPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '28px 32px', fontFamily: "'Inter',sans-serif", height: 'calc(100vh - 54px)', overflowY: 'auto', boxSizing: 'border-box' }}>
+    <div style={{ padding: isMobile ? '16px 14px' : '24px 28px', fontFamily: "'Inter',sans-serif", height: 'calc(100vh - 54px)', overflowY: 'auto', boxSizing: 'border-box' }}>
       <style>{`
         @keyframes wave-jury { 0%,100%{height:6px} 50%{height:22px} }
         @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -281,7 +283,7 @@ export function JuryPage() {
 
       {/* Main layout */}
       {!loading && questions.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 18, maxWidth: 960, height: 'calc(100% - 80px)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '280px 1fr', gap: 14, maxWidth: 960, height: isMobile ? 'auto' : 'calc(100% - 80px)' }}>
 
           {/* Left — question bank */}
           <div style={{ background: c.cardBg, borderRadius: 18, border: `1px solid ${c.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
