@@ -377,23 +377,22 @@ export function FeedPage() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const query = supabase
-        .from('analyses')
-        .select(`
+      // Resilient column list: drop owner_avatar_url if it isn't migrated yet.
+      const buildQuery = (withAvatar: boolean) => {
+        const cols = `
           id, user_id, concept_score, spatial_score, presentation_score, created_at, caption, pdf_path, slide_count,
-          owner_name, owner_avatar_url, project_name, project_stage, project_discipline
-        `)
-        .eq('is_public', true)
-        .eq('status', 'complete')
-        .limit(50)
-
-      if (sort === 'recent') {
-        query.order('created_at', { ascending: false })
-      } else {
-        query.order('concept_score', { ascending: false })
+          owner_name, ${withAvatar ? 'owner_avatar_url,' : ''} project_name, project_stage, project_discipline
+        `
+        const q = supabase.from('analyses').select(cols).eq('is_public', true).eq('status', 'complete').limit(50)
+        if (sort === 'recent') q.order('created_at', { ascending: false })
+        else q.order('concept_score', { ascending: false })
+        return q
       }
 
-      const { data, error } = await query
+      let { data, error } = await buildQuery(true)
+      if (error && /owner_avatar_url/.test(error.message ?? '')) {
+        ;({ data, error } = await buildQuery(false))
+      }
       if (error) console.warn('feed query error', error)
       if (!data) { setLoading(false); return }
 

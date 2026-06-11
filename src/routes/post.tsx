@@ -122,17 +122,22 @@ export function PostPage() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
+      const fetchPost = (withAvatar: boolean) => supabase
         .from('analyses')
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score,
           feedback, jury_questions, created_at, caption, pdf_path, slide_count,
-          owner_name, owner_avatar_url, project_name, project_stage
+          owner_name, ${withAvatar ? 'owner_avatar_url,' : ''} project_name, project_stage
         `)
         .eq('id', analysisId)
         .eq('is_public', true)
         .eq('status', 'complete')
         .single()
+
+      let { data, error } = await fetchPost(true)
+      if (error && /owner_avatar_url/.test(error.message ?? '')) {
+        ;({ data, error } = await fetchPost(false))
+      }
 
       if (error || !data) { setNotFound(true); setLoading(false); return }
 

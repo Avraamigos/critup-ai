@@ -875,19 +875,24 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
       //    (author name + project meta) onto the row so the feed and shared
       //    post pages can render them without reading the author's profile or
       //    project — both of which are protected by owner-only RLS.
-      const { error: pubErr } = await supabase
-        .from('analyses')
-        .update({
-          is_public: true,
-          caption,
-          slide_count: slideCount,
-          owner_name:         profile?.full_name ?? null,
-          owner_avatar_url:   (user?.user_metadata?.avatar_url as string | null) ?? null,
-          project_name:       project?.name ?? null,
-          project_stage:      project?.stage ?? null,
-          project_discipline: project?.discipline ?? null,
-        })
-        .eq('id', analysisId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const publishFields: Record<string, any> = {
+        is_public: true,
+        caption,
+        slide_count: slideCount,
+        owner_name:         profile?.full_name ?? null,
+        owner_avatar_url:   (user?.user_metadata?.avatar_url as string | null) ?? null,
+        project_name:       project?.name ?? null,
+        project_stage:      project?.stage ?? null,
+        project_discipline: project?.discipline ?? null,
+      }
+      let { error: pubErr } = await supabase.from('analyses').update(publishFields).eq('id', analysisId)
+      // Resilience: if the optional avatar column isn't migrated yet, retry
+      // without it so posting still succeeds (avatar just won't show until migrated).
+      if (pubErr && /owner_avatar_url/.test(pubErr.message ?? '')) {
+        delete publishFields.owner_avatar_url
+        ;({ error: pubErr } = await supabase.from('analyses').update(publishFields).eq('id', analysisId))
+      }
       if (pubErr) throw pubErr
 
       // Reflect immediately in local state so the UI flips to "Posted" without a refetch.
