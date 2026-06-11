@@ -56,6 +56,8 @@ export const en = {
     email: 'Email',
     university: 'University',
     emailReadonly: "Email can't be changed here",
+    bio: 'Bio',
+    bioPlaceholder: 'A short line about you — year, focus, interests…',
     appearance: 'Appearance',
     dark: 'Dark',
     light: 'Light',
@@ -491,6 +493,7 @@ export const en = {
     comments: 'Comments',
     share: 'Share',
     postComment: 'Post comment',
+    removeFromCommunity: 'Remove from community',
   },
   post: {
     notFoundTitle: 'Project not found',

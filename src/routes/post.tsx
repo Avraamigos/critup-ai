@@ -7,6 +7,7 @@ import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
 import { CritupLogo } from '@/components/CritupLogo'
+import { ProfilePopover } from '@/components/ProfilePopover'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { sharePost } from '@/lib/share'
@@ -24,6 +25,7 @@ type Comment = {
 
 type PostData = {
   id: string
+  user_id: string
   concept_score: number
   spatial_score: number
   presentation_score: number
@@ -122,22 +124,17 @@ export function PostPage() {
 
   useEffect(() => {
     async function load() {
-      const fetchPost = (withAvatar: boolean) => supabase
+      const { data, error } = await supabase
         .from('analyses')
         .select(`
           id, user_id, concept_score, spatial_score, presentation_score,
           feedback, jury_questions, created_at, caption, pdf_path, slide_count,
-          owner_name, ${withAvatar ? 'owner_avatar_url,' : ''} project_name, project_stage
+          owner_name, owner_avatar_url, project_name, project_stage
         `)
         .eq('id', analysisId)
         .eq('is_public', true)
         .eq('status', 'complete')
         .single()
-
-      let { data, error } = await fetchPost(true)
-      if (error && /owner_avatar_url/.test(error.message ?? '')) {
-        ;({ data, error } = await fetchPost(false))
-      }
 
       if (error || !data) { setNotFound(true); setLoading(false); return }
 
@@ -170,6 +167,8 @@ export function PostPage() {
 
       setPost({
         id: data.id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        user_id: (data as any).user_id,
         concept_score: Number(data.concept_score) || 0,
         spatial_score: Number(data.spatial_score) || 0,
         presentation_score: Number(data.presentation_score) || 0,
@@ -305,9 +304,13 @@ export function PostPage() {
           </h1>
           {post.owner_name && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <Avatar name={post.owner_name} avatarUrl={post.owner_avatar_url} size={36} />
+              <ProfilePopover userId={post.user_id} name={post.owner_name} avatarUrl={post.owner_avatar_url} theme="dark">
+                <Avatar name={post.owner_name} avatarUrl={post.owner_avatar_url} size={36} />
+              </ProfilePopover>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{post.owner_name}</div>
+                <ProfilePopover userId={post.user_id} name={post.owner_name} avatarUrl={post.owner_avatar_url} theme="dark">
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{post.owner_name}</div>
+                </ProfilePopover>
                 <div style={{ fontSize: 11.5, color: 'oklch(0.55 0.004 270)' }}>{dateStr}</div>
               </div>
             </div>

@@ -19,6 +19,9 @@ export interface Database {
           discipline: string | null
           year: string | null
           university: string | null
+          bio: string | null
+          instagram: string | null
+          linkedin: string | null
           challenges: string[]
           onboarding_complete: boolean
           created_at: string
@@ -33,6 +36,9 @@ export interface Database {
           discipline?: string | null
           year?: string | null
           university?: string | null
+          bio?: string | null
+          instagram?: string | null
+          linkedin?: string | null
           challenges?: string[]
           onboarding_complete?: boolean
           created_at?: string
@@ -46,6 +52,9 @@ export interface Database {
           discipline?: string | null
           year?: string | null
           university?: string | null
+          bio?: string | null
+          instagram?: string | null
+          linkedin?: string | null
           challenges?: string[]
           onboarding_complete?: boolean
           updated_at?: string

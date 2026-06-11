@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { User } from '@supabase/supabase-js'
-import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send, Flame } from 'lucide-react'
+import { TrendingUp, Clock, Heart, MessageCircle, Share2, Check, Send, Flame, MoreHorizontal, Trash2 } from 'lucide-react'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
+import { ProfilePopover } from '@/components/ProfilePopover'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -15,6 +16,7 @@ type Discipline = 'all' | 'architecture' | 'interior' | 'urban'
 
 type Post = {
   id: string
+  user_id: string
   concept_score: number
   spatial_score: number
   presentation_score: number
@@ -86,7 +88,7 @@ function scoreColor(s: number) {
 type CardComment = { id: string; body: string; created_at: string; author_name: string | null; author_avatar_url?: string | null }
 
 function PostCard({
-  post, c, theme, user, liked, likeCount, commentCount, onToggleLike, onCopied, onCommentCountChange,
+  post, c, theme, user, liked, likeCount, commentCount, onToggleLike, onCopied, onCommentCountChange, onRemoved,
 }: {
   post: Post
   c: ReturnType<typeof useColors>
@@ -98,6 +100,7 @@ function PostCard({
   onToggleLike: (id: string) => void
   onCopied: () => void
   onCommentCountChange: (id: string, delta: number) => void
+  onRemoved: (id: string) => void
 }) {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'tr' ? 'tr-TR' : 'en-US'
@@ -113,9 +116,21 @@ function PostCard({
   const [body, setBody]           = useState('')
   const [posting, setPosting]     = useState(false)
   const [likeAnim, setLikeAnim]   = useState(false)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const [removing, setRemoving]   = useState(false)
   const { profile } = useAuth()
 
   const myAvatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
+  const isOwner = !!user && post.user_id === user.id
+
+  const removePost = async () => {
+    if (removing) return
+    setRemoving(true)
+    const { error } = await supabase.from('analyses').update({ is_public: false }).eq('id', post.id)
+    setRemoving(false)
+    setMenuOpen(false)
+    if (!error) onRemoved(post.id)
+  }
 
   const toggleComments = async () => {
     const next = !expanded
@@ -179,10 +194,14 @@ function PostCard({
 
       {/* ── Author header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
-        <Avatar name={name} avatarUrl={post.owner_avatar_url} size={40} />
+        <ProfilePopover userId={post.user_id} name={name} avatarUrl={post.owner_avatar_url} theme={theme}>
+          <Avatar name={name} avatarUrl={post.owner_avatar_url} size={40} />
+        </ProfilePopover>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary }}>{name}</span>
+            <ProfilePopover userId={post.user_id} name={name} avatarUrl={post.owner_avatar_url} theme={theme}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: c.textPrimary }}>{name}</span>
+            </ProfilePopover>
             {isHot && <Flame size={13} color="#F97316" />}
           </div>
           <div style={{ fontSize: 11.5, color: c.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
@@ -194,6 +213,31 @@ function PostCard({
           </div>
         </div>
         <span style={{ fontSize: 11, color: c.textMuted, flexShrink: 0 }}>{timeAgo()}</span>
+        {isOwner && (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="Post options"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, display: 'flex', borderRadius: 6 }}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 50, background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 10, padding: 4, minWidth: 190, boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
+                  <button
+                    onClick={removePost}
+                    disabled={removing}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.65 0.18 25)', fontSize: 13, fontWeight: 500, borderRadius: 7, textAlign: 'left' }}
+                  >
+                    <Trash2 size={14} /> {removing ? t('analysis.removing') : t('feed.removeFromCommunity')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Slides — edge-to-edge ── */}
@@ -414,6 +458,7 @@ export function FeedPage() {
 
       let mapped: Post[] = rows.map(row => ({
         id: row.id,
+        user_id: row.user_id,
         concept_score: Number(row.concept_score) || 0,
         spatial_score: Number(row.spatial_score) || 0,
         presentation_score: Number(row.presentation_score) || 0,
@@ -571,6 +616,7 @@ export function FeedPage() {
                 onToggleLike={handleToggleLike}
                 onCopied={showCopiedToast}
                 onCommentCountChange={bumpCommentCount}
+                onRemoved={(id) => setPosts(prev => prev.filter(p => p.id !== id))}
               />
             ))}
           </div>

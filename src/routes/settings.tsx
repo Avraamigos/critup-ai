@@ -32,11 +32,13 @@ export function SettingsPage() {
   const isMobile = useIsMobile()
 
   const [activeTab, setActiveTab]     = useState<Tab>('profile')
-  const [form, setForm]               = useState({ name: '', email: '', university: '' })
+  const [form, setForm]               = useState({ name: '', email: '', university: '', bio: '', instagram: '', linkedin: '' })
   const [saved, setSaved]             = useState(false)
   const [saving, setSaving]           = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
   const [language, setLanguage]       = useState('en')
+  // Snapshot of last-saved values, so the Save button only enables when something changed.
+  const [snapshot, setSnapshot]       = useState({ name: '', university: '', bio: '', instagram: '', linkedin: '', language: 'en' })
   const [notifications, setNotifications] = useState({
     analysis: true, jury: true, updates: true,
   })
@@ -92,18 +94,29 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (profile || user) {
-      setForm({
-        name:       profile?.full_name  || user?.user_metadata?.full_name || '',
-        email:      user?.email         || '',
-        university: profile?.university || '',
-      })
-      if (profile?.language) setLanguage(profile.language)
+      const name = profile?.full_name || user?.user_metadata?.full_name || ''
+      const university = profile?.university || ''
+      const bio = profile?.bio || ''
+      const instagram = profile?.instagram || ''
+      const linkedin = profile?.linkedin || ''
+      const lang = profile?.language || 'en'
+      setForm({ name, email: user?.email || '', university, bio, instagram, linkedin })
+      setLanguage(lang)
+      setSnapshot({ name, university, bio, instagram, linkedin, language: lang })
       // Load avatar from user metadata
       const meta = user?.user_metadata
       if (meta?.avatar_url) setAvatarUrl(meta.avatar_url as string)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.full_name, profile?.university, profile?.language, user?.id, user?.email])
+  }, [profile?.id, profile?.full_name, profile?.university, profile?.bio, profile?.instagram, profile?.linkedin, profile?.language, user?.id, user?.email])
+
+  const isDirty =
+    form.name !== snapshot.name ||
+    form.university !== snapshot.university ||
+    form.bio !== snapshot.bio ||
+    form.instagram !== snapshot.instagram ||
+    form.linkedin !== snapshot.linkedin ||
+    language !== snapshot.language
 
   const initials = form.name
     ? form.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -123,7 +136,7 @@ export function SettingsPage() {
     setSaveError(null)
     try {
       const result = await Promise.race([
-        supabase.from('profiles').update({ full_name: form.name, university: form.university, language }).eq('id', user.id),
+        supabase.from('profiles').update({ full_name: form.name, university: form.university, bio: form.bio || null, instagram: form.instagram || null, linkedin: form.linkedin || null, language }).eq('id', user.id),
         new Promise<{ error: Error }>(resolve => setTimeout(() => resolve({ error: new Error(t('settings.requestTimedOut')) }), 8000)),
       ]) as { error: Error | null }
       setSaving(false)
@@ -131,6 +144,7 @@ export function SettingsPage() {
       // Switch the UI language immediately to match the saved preference.
       if (i18n.language !== language) i18n.changeLanguage(language)
       refreshProfile().catch(() => {})
+      setSnapshot({ name: form.name, university: form.university, bio: form.bio, instagram: form.instagram, linkedin: form.linkedin, language })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
@@ -286,6 +300,40 @@ export function SettingsPage() {
                   </div>
                 ))}
 
+                {/* Bio */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, display: 'block', marginBottom: 6 }}>{t('settings.bio')}</label>
+                  <textarea
+                    value={form.bio}
+                    onChange={e => setForm(f => ({ ...f, bio: e.target.value.slice(0, 200) }))}
+                    placeholder={t('settings.bioPlaceholder')}
+                    rows={3}
+                    style={{ ...inp, resize: 'vertical', lineHeight: 1.5 }}
+                    onFocus={e => e.target.style.borderColor = '#F97316'}
+                    onBlur={e => e.target.style.borderColor = c.border}
+                  />
+                  <p style={{ fontSize: 11, color: c.textMuted, margin: '4px 0 0', textAlign: 'right' }}>{form.bio.length}/200</p>
+                </div>
+
+                {/* Instagram + LinkedIn */}
+                {([
+                  { label: 'Instagram', key: 'instagram' as const, prefix: '@', placeholder: 'username' },
+                  { label: 'LinkedIn',  key: 'linkedin'  as const, prefix: '', placeholder: 'linkedin.com/in/you' },
+                ]).map(({ label, key, prefix, placeholder }) => (
+                  <div key={key}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, display: 'block', marginBottom: 6 }}>{label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, ...inp, padding: 0, overflow: 'hidden' }}>
+                      {prefix && <span style={{ padding: '10px 0 10px 14px', color: c.textMuted, fontSize: 14 }}>{prefix}</span>}
+                      <input
+                        value={form[key]}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value.trim() }))}
+                        placeholder={placeholder}
+                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: c.textPrimary, fontSize: 14, padding: prefix ? '10px 14px 10px 2px' : '10px 14px', fontFamily: "'Inter',sans-serif" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
                 {/* Theme toggle */}
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, display: 'block', marginBottom: 6 }}>{t('settings.appearance')}</label>
@@ -307,12 +355,14 @@ export function SettingsPage() {
 
                 {saveError && <p style={{ fontSize: 13, color: 'oklch(0.65 0.18 25)', margin: 0 }}>{saveError}</p>}
 
-                <button onClick={save} disabled={saving} style={{
-                  padding: '11px', borderRadius: 100, background: '#F97316', border: 'none',
-                  color: '#fff', fontSize: 14, fontWeight: 600,
-                  cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
+                <button onClick={save} disabled={saving || (!isDirty && !saved)} style={{
+                  padding: '11px', borderRadius: 100,
+                  background: saved ? 'oklch(0.72 0.17 145)' : (isDirty ? '#F97316' : (c.isDark ? 'oklch(0.26 0.004 270)' : '#e5e7eb')),
+                  border: 'none',
+                  color: (saved || isDirty) ? '#fff' : c.textMuted, fontSize: 14, fontWeight: 600,
+                  cursor: saving ? 'not-allowed' : (isDirty ? 'pointer' : 'default'), opacity: saving ? 0.7 : 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)', transition: 'all 0.2s', marginTop: 4,
+                  boxShadow: isDirty ? '0 0 18px oklch(0.72 0.18 45 / 0.3)' : 'none', transition: 'all 0.2s', marginTop: 4,
                 }}>
                   {saved ? <><Check size={15} /> {t('common.saved')}</> : saving ? t('common.saving') : t('settings.saveChanges')}
                 </button>
@@ -424,13 +474,15 @@ export function SettingsPage() {
                   </button>
                 ))}
               </div>
-              <button onClick={save} disabled={saving} style={{
-                marginTop: 20, padding: '11px 24px', borderRadius: 100, background: '#F97316',
-                border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.3)',
+              <button onClick={save} disabled={saving || (!isDirty && !saved)} style={{
+                marginTop: 20, padding: '11px 24px', borderRadius: 100,
+                background: saved ? 'oklch(0.72 0.17 145)' : (isDirty ? '#F97316' : (c.isDark ? 'oklch(0.26 0.004 270)' : '#e5e7eb')),
+                border: 'none', color: (saved || isDirty) ? '#fff' : c.textMuted, fontSize: 14, fontWeight: 600,
+                cursor: saving ? 'not-allowed' : (isDirty ? 'pointer' : 'default'),
+                opacity: saving ? 0.7 : 1, boxShadow: isDirty ? '0 0 18px oklch(0.72 0.18 45 / 0.3)' : 'none',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                {saved ? <><Check size={15} /> {t('common.saved')}</> : t('settings.saveLanguage')}
+                {saved ? <><Check size={15} /> {t('common.saved')}</> : saving ? t('common.saving') : t('settings.saveLanguage')}
               </button>
             </div>
           )}

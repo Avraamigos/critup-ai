@@ -56,6 +56,8 @@ export const ru: TranslationSchema = {
     email: 'Эл. почта',
     university: 'Университет',
     emailReadonly: 'Эл. почту здесь изменить нельзя',
+    bio: 'О себе',
+    bioPlaceholder: 'Коротко о вас — курс, направление, интересы…',
     appearance: 'Оформление',
     dark: 'Тёмное',
     light: 'Светлое',
@@ -491,6 +493,7 @@ export const ru: TranslationSchema = {
     comments: 'Комментарии',
     share: 'Поделиться',
     postComment: 'Отправить комментарий',
+    removeFromCommunity: 'Убрать из сообщества',
   },
   post: {
     notFoundTitle: 'Проект не найден',

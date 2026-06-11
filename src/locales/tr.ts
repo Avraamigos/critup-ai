@@ -56,6 +56,8 @@ export const tr: TranslationSchema = {
     email: 'E-posta',
     university: 'Üniversite',
     emailReadonly: 'E-posta buradan değiştirilemez',
+    bio: 'Hakkında',
+    bioPlaceholder: 'Kendiniz hakkında kısa bir satır — sınıf, odak, ilgi alanları…',
     appearance: 'Görünüm',
     dark: 'Koyu',
     light: 'Açık',
@@ -491,6 +493,7 @@ export const tr: TranslationSchema = {
     comments: 'Yorumlar',
     share: 'Paylaş',
     postComment: 'Yorum gönder',
+    removeFromCommunity: 'Topluluktan kaldır',
   },
   post: {
     notFoundTitle: 'Proje bulunamadı',

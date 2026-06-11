@@ -58,7 +58,7 @@ async function generateAllAudio(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>
 ) {
-  const voiceId = 'oXxZrNLpn6nWkEBAMSJs'
+  const voiceId = 'iEBOK9alpKauGRvBSsFi'
 
   await Promise.allSettled(
     feedback.map(async (fb, idx) => {

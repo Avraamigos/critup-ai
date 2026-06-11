@@ -44,7 +44,7 @@ export default async function handler(
   const apiKey  = process.env.ELEVENLABS_API_KEY || ''
   // Voice ID is hardcoded — the ELEVENLABS_VOICE_ID env var is intentionally
   // NOT used so a stale Vercel env var can't override it.
-  const voiceId = reqVoiceId || 'oXxZrNLpn6nWkEBAMSJs'
+  const voiceId = reqVoiceId || 'iEBOK9alpKauGRvBSsFi'
   const supabaseUrl   = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
   const serviceKey    = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
