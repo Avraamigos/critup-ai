@@ -11,6 +11,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
     "@paddle/paddle-js": "^1.6.4",
+    "@sentry/react": "^10.56.0",
     "@supabase/supabase-js": "^2.105.1",
     "@tanstack/react-router": "^1.114.22",
     "i18next": "^26.3.0",
