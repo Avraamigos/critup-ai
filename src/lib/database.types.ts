@@ -184,6 +184,7 @@ export interface Database {
           user_id: string
           body: string
           author_name: string | null
+          author_avatar_url: string | null
           created_at: string
         }
         Insert: {
@@ -192,6 +193,7 @@ export interface Database {
           user_id: string
           body: string
           author_name?: string | null
+          author_avatar_url?: string | null
           created_at?: string
         }
         Update: {

@@ -21,6 +21,7 @@ type Comment = {
   body: string
   created_at: string
   author_name: string | null
+  author_avatar_url: string | null
 }
 
 type PostData = {
@@ -102,6 +103,7 @@ export function PostPage() {
   const { analysisId } = useParams({ from: '/p/$analysisId' })
   const navigate = useNavigate()
   const { user, profile: myProfile } = useAuth()
+  const myAvatarUrl = (user?.user_metadata?.avatar_url as string | null) ?? null
   const [post, setPost] = useState<PostData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -188,7 +190,7 @@ export function PostPage() {
       const [{ data: likes }, { data: cmts }] = await Promise.all([
         supabase.from('post_likes').select('user_id').eq('analysis_id', analysisId),
         supabase.from('post_comments')
-          .select('id, body, created_at, author_name')
+          .select('id, body, created_at, author_name, author_avatar_url')
           .eq('analysis_id', analysisId)
           .order('created_at', { ascending: true }),
       ])
@@ -198,6 +200,7 @@ export function PostPage() {
       setComments((cmts as any[] ?? []).map(r => ({
         id: r.id, body: r.body, created_at: r.created_at,
         author_name: r.author_name ?? null,
+        author_avatar_url: r.author_avatar_url ?? null,
       })))
     }
     load()
@@ -221,7 +224,7 @@ export function PostPage() {
     setPosting(true)
     const { data, error } = await supabase
       .from('post_comments')
-      .insert({ analysis_id: analysisId, user_id: user.id, body: body.slice(0, 1000), author_name: myProfile?.full_name ?? null })
+      .insert({ analysis_id: analysisId, user_id: user.id, body: body.slice(0, 1000), author_name: myProfile?.full_name ?? null, author_avatar_url: myAvatarUrl })
       .select('id, created_at')
       .single()
     setPosting(false)
@@ -229,6 +232,7 @@ export function PostPage() {
     setComments(prev => [...prev, {
       id: data.id, body: body.slice(0, 1000), created_at: data.created_at,
       author_name: myProfile?.full_name ?? null,
+      author_avatar_url: myAvatarUrl,
     }])
     setCommentBody('')
   }
@@ -471,7 +475,7 @@ export function PostPage() {
               const cname = cm.author_name ?? t('feed.anonymous')
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <Avatar name={cname} avatarUrl={null} size={32} />
+                  <Avatar name={cname} avatarUrl={cm.author_avatar_url} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, color: '#fff' }}>
                       <span style={{ fontWeight: 700 }}>{cname}</span>

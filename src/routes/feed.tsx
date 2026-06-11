@@ -139,7 +139,7 @@ function PostCard({
       setLoadingC(true)
       const { data } = await supabase
         .from('post_comments')
-        .select('id, body, created_at, author_name')
+        .select('id, body, created_at, author_name, author_avatar_url')
         .eq('analysis_id', post.id)
         .order('created_at', { ascending: true })
       setComments((data as CardComment[] | null) ?? [])
@@ -154,12 +154,12 @@ function PostCard({
     setPosting(true)
     const { data, error } = await supabase
       .from('post_comments')
-      .insert({ analysis_id: post.id, user_id: user.id, body: text.slice(0, 1000), author_name: profile?.full_name ?? null })
+      .insert({ analysis_id: post.id, user_id: user.id, body: text.slice(0, 1000), author_name: profile?.full_name ?? null, author_avatar_url: myAvatarUrl })
       .select('id, created_at')
       .single()
     setPosting(false)
     if (error || !data) return
-    setComments(prev => [...prev, { id: data.id, body: text.slice(0, 1000), created_at: data.created_at, author_name: profile?.full_name ?? null }])
+    setComments(prev => [...prev, { id: data.id, body: text.slice(0, 1000), created_at: data.created_at, author_name: profile?.full_name ?? null, author_avatar_url: myAvatarUrl }])
     setBody('')
     onCommentCountChange(post.id, 1)
   }

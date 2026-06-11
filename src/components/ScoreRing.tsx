@@ -51,7 +51,11 @@ export function ScoreRing({ score, label, size = 80, animated = true, theme = 'd
           />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: size * 0.28, color: textColor, lineHeight: 1 }}>
+          <span style={{
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",
+            fontWeight: 600, fontSize: size * 0.30, color: textColor, lineHeight: 1,
+            letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums',
+          }}>
             {displayScore.toFixed(displayScore % 1 === 0 ? 0 : 1)}
           </span>
         </div>
