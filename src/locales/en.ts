@@ -143,7 +143,7 @@ export const en = {
     analyses: 'Analyses',
     freeUsed: 'Free analysis used — ',
     upgradeForAccess: 'upgrade for full access',
-    freeRemaining: '1 free analysis remaining · Jury Practice, chat & more with Pro',
+    freeRemaining: '1 free analysis remaining · voiceover, chat & more with Pro',
     upgradeNow: 'Upgrade now',
     upgradeToPro: 'Upgrade to Pro',
     activeProject: 'Active project',

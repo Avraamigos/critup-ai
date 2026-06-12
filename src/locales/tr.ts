@@ -143,7 +143,7 @@ export const tr: TranslationSchema = {
     analyses: 'Analizler',
     freeUsed: 'Ücretsiz analiz kullanıldı — ',
     upgradeForAccess: 'tam erişim için yükseltin',
-    freeRemaining: '1 ücretsiz analiz kaldı · Jüri Pratiği, sohbet ve daha fazlası Pro ile',
+    freeRemaining: '1 ücretsiz analiz kaldı · seslendirme, sohbet ve daha fazlası Pro ile',
     upgradeNow: 'Şimdi yükselt',
     upgradeToPro: "Pro'ya yükselt",
     activeProject: 'Aktif proje',

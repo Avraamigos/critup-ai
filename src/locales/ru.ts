@@ -143,7 +143,7 @@ export const ru: TranslationSchema = {
     analyses: 'Анализы',
     freeUsed: 'Бесплатный анализ использован — ',
     upgradeForAccess: 'улучшите для полного доступа',
-    freeRemaining: 'Остался 1 бесплатный анализ · Практика жюри, чат и другое с Pro',
+    freeRemaining: 'Остался 1 бесплатный анализ · озвучка, чат и другое с Pro',
     upgradeNow: 'Улучшить сейчас',
     upgradeToPro: 'Перейти на Pro',
     activeProject: 'Активный проект',
