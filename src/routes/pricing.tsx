@@ -129,8 +129,9 @@ export function PricingPage() {
           borderTop: `1px solid ${c.border}`, paddingTop: 20,
           lineHeight: 1.6,
         }}>
-          <strong style={{ color: c.textPrimary }}>{t('pricing.refundTitle')}</strong>{t('pricing.refundBody')}
-          <a href="mailto:hello@critup.ai" style={{ color: '#F97316' }}>hello@critup.ai</a>
+          <Link to="/terms" style={{ color: c.textMuted, textDecoration: 'underline' }}>{t('landing.terms')}</Link>
+          <span style={{ margin: '0 8px' }}>·</span>
+          <Link to="/privacy" style={{ color: c.textMuted, textDecoration: 'underline' }}>{t('landing.privacy')}</Link>
         </div>
       </div>
     </div>

@@ -374,9 +374,25 @@ export function DashboardPage() {
             position: 'relative', zIndex: 1,
           }}>
             {[
-              { icon: Mic, label: t('dashboard.juryPractice'), sub: t('dashboard.juryPracticeSub'), to: '/jury' },
-              { icon: TrendingUp, label: t('dashboard.allProjects'), sub: t('dashboard.projectsCount', { count: projects.length }), to: '/projects' },
-            ].map(({ icon: Icon, label, sub, to }) => (
+              { icon: Mic, label: t('dashboard.juryPractice'), sub: t('nav.comingSoon'), to: '/jury', disabled: true },
+              { icon: TrendingUp, label: t('dashboard.allProjects'), sub: t('dashboard.projectsCount', { count: projects.length }), to: '/projects', disabled: false },
+            ].map(({ icon: Icon, label, sub, to, disabled }) => disabled ? (
+              <div key={label} style={{
+                background: c.cardBg, borderRadius: 14, padding: isMobile ? '14px' : '16px 18px',
+                border: `1px solid ${c.border}`, opacity: 0.55,
+                display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? 8 : 12, cursor: 'default',
+              }}>
+                <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f3f4f6', borderRadius: 9, flexShrink: 0 }}>
+                  <Icon size={16} color={c.textMuted} strokeWidth={1.6} />
+                </div>
+                <div>
+                  <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 600, color: c.textMuted, marginBottom: 1 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: c.textMuted }}>{sub}</div>
+                </div>
+              </div>
+            ) : (
               <Link key={label} to={to} style={{
                 background: c.cardBg, borderRadius: 14, padding: isMobile ? '14px' : '16px 18px',
                 border: `1px solid ${c.border}`,

@@ -26,7 +26,35 @@ const speechSupported = !!SpeechRecognition
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+// Jury practice is paused for launch — direct visits (old links, bookmarks)
+// see a coming-soon card instead of the feature.
+const JURY_ENABLED = false
+
+function JuryComingSoon() {
+  const { t } = useTranslation()
+  const { theme } = useTheme()
+  const c = useColors(theme)
+  const navigate = useNavigate()
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: 24, textAlign: 'center' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: c.isDark ? 'oklch(0.26 0.004 270)' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+        <Mic size={24} color={c.textMuted} strokeWidth={1.6} />
+      </div>
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: c.textPrimary, margin: '0 0 8px' }}>{t('nav.jury')}</h2>
+      <p style={{ fontSize: 14, color: c.textMuted, margin: '0 0 20px' }}>{t('nav.comingSoon')}</p>
+      <button onClick={() => navigate({ to: '/' })} style={{ padding: '9px 22px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        {t('nav.dashboard')}
+      </button>
+    </div>
+  )
+}
+
 export function JuryPage() {
+  if (!JURY_ENABLED) return <JuryComingSoon />
+  return <JuryPracticeInner />
+}
+
+function JuryPracticeInner() {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const { theme } = useTheme()

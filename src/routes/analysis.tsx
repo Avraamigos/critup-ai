@@ -1178,9 +1178,9 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
                 <div style={{ background: c.cardBg, borderRadius: 14, padding: '14px', border: `1px solid ${c.border}` }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', marginBottom: 8 }}>{t('analysis.juryWillAsk')}</div>
                   <p style={{ fontSize: 12, color: c.textPrimary, margin: '0 0 10px', lineHeight: 1.5 }}>"{juryQuestions[0]}"</p>
-                  <button onClick={() => navigate({ to: '/jury' })} style={{ padding: '6px 14px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    {t('analysis.practiseAnswers')}
-                  </button>
+                  <span style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 100, background: c.isDark ? 'oklch(0.28 0.004 270)' : '#f3f4f6', color: c.textMuted, fontSize: 12, fontWeight: 600 }}>
+                    {t('analysis.practiseAnswers')} · {t('nav.comingSoon')}
+                  </span>
                 </div>
               )}
             </div>

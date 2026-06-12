@@ -4,6 +4,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './components/Toast'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { initSentry } from './lib/sentry'
 import './lib/i18n'
 import './styles.css'
@@ -12,10 +13,12 @@ initSentry()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
