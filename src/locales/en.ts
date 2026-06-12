@@ -479,6 +479,7 @@ export const en = {
     discArchitecture: 'Architecture',
     discInterior: 'Interior',
     discUrban: 'Urban',
+    discLandscape: 'Landscape',
     noPostsTitle: 'No posts yet',
     noPostsBody: 'Be the first to share your project critique with the community.',
     drawingsUnavailable: 'Drawings unavailable',

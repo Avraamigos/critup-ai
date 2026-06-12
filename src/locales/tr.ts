@@ -479,6 +479,7 @@ export const tr: TranslationSchema = {
     discArchitecture: 'Mimarlık',
     discInterior: 'İç Mekân',
     discUrban: 'Kentsel',
+    discLandscape: 'Peyzaj',
     noPostsTitle: 'Henüz gönderi yok',
     noPostsBody: 'Proje eleştirinizi toplulukla paylaşan ilk kişi olun.',
     drawingsUnavailable: 'Çizimler kullanılamıyor',

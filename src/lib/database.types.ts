@@ -67,7 +67,7 @@ export interface Database {
           user_id: string
           name: string
           stage: ProjectStage
-          discipline: 'architecture' | 'interior' | 'urban' | null
+          discipline: 'architecture' | 'interior' | 'urban' | 'landscape' | null
           focus_areas: string[]
           brief_text: string | null
           created_at: string
@@ -78,7 +78,7 @@ export interface Database {
           user_id: string
           name: string
           stage: ProjectStage
-          discipline?: 'architecture' | 'interior' | 'urban' | null
+          discipline?: 'architecture' | 'interior' | 'urban' | 'landscape' | null
           focus_areas?: string[]
           brief_text?: string | null
           created_at?: string
@@ -87,7 +87,7 @@ export interface Database {
         Update: {
           name?: string
           stage?: ProjectStage
-          discipline?: 'architecture' | 'interior' | 'urban' | null
+          discipline?: 'architecture' | 'interior' | 'urban' | 'landscape' | null
           focus_areas?: string[]
           brief_text?: string | null
           updated_at?: string

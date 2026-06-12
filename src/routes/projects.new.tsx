@@ -324,7 +324,7 @@ export function NewProjectPage() {
         user_id:     user.id,
         name:        form.name.trim(),
         stage:       form.stage as import('@/lib/database.types').ProjectStage,
-        discipline:  ({ arch: 'architecture', architecture: 'architecture', interior: 'interior', urban: 'urban' } as Record<string, string>)[profile?.discipline ?? ''] as 'architecture' | 'interior' | 'urban' | null ?? null,
+        discipline:  ({ arch: 'architecture', architecture: 'architecture', interior: 'interior', urban: 'urban', landscape: 'landscape' } as Record<string, string>)[profile?.discipline ?? ''] as 'architecture' | 'interior' | 'urban' | 'landscape' | null ?? null,
         focus_areas: form.focuses,
         brief_text:  form.briefText.trim() || null,
       }

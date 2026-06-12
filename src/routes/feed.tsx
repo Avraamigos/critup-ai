@@ -12,7 +12,7 @@ import { sharePost } from '@/lib/share'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Discipline = 'all' | 'architecture' | 'interior' | 'urban'
+type Discipline = 'all' | 'architecture' | 'interior' | 'urban' | 'landscape'
 
 type Post = {
   id: string
@@ -31,11 +31,12 @@ type Post = {
   pdf_url: string | null
 }
 
-const DISCIPLINE_TABS: { v: Discipline; labelKey: string; emoji: string }[] = [
-  { v: 'all',          labelKey: 'feed.discAll',          emoji: '🌍' },
-  { v: 'architecture', labelKey: 'feed.discArchitecture', emoji: '🏛️' },
-  { v: 'interior',     labelKey: 'feed.discInterior',     emoji: '🛋️' },
-  { v: 'urban',        labelKey: 'feed.discUrban',        emoji: '🏙️' },
+const DISCIPLINE_TABS: { v: Discipline; labelKey: string }[] = [
+  { v: 'all',          labelKey: 'feed.discAll'          },
+  { v: 'architecture', labelKey: 'feed.discArchitecture' },
+  { v: 'interior',     labelKey: 'feed.discInterior'     },
+  { v: 'urban',        labelKey: 'feed.discUrban'        },
+  { v: 'landscape',    labelKey: 'feed.discLandscape'    },
 ]
 
 const AVATAR_COLORS = ['#F97316', 'oklch(0.6 0.18 250)', 'oklch(0.62 0.17 160)', 'oklch(0.62 0.2 320)', 'oklch(0.65 0.18 25)']
@@ -118,6 +119,7 @@ function PostCard({
   const [likeAnim, setLikeAnim]   = useState(false)
   const [menuOpen, setMenuOpen]   = useState(false)
   const [removing, setRemoving]   = useState(false)
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null)
   const { profile } = useAuth()
 
   const myAvatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
@@ -168,6 +170,7 @@ function PostCard({
     if (!user) return
     const { error } = await supabase.from('post_comments').delete().eq('id', commentId).eq('user_id', user.id)
     if (error) return
+    setConfirmDelId(null)
     setComments(prev => prev.filter(cm => cm.id !== commentId))
     onCommentCountChange(post.id, -1)
   }
@@ -399,13 +402,30 @@ function PostCard({
                     </div>
                   </div>
                   {isMine && (
-                    <button
-                      onClick={() => deleteComment(cm.id)}
-                      aria-label={t('feed.deleteComment')}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    confirmDelId === cm.id ? (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+                        <button
+                          onClick={() => deleteComment(cm.id)}
+                          style={{ background: 'oklch(0.65 0.18 25)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6 }}
+                        >
+                          {t('common.delete')}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'none', border: `1px solid ${c.border}`, cursor: 'pointer', color: c.textMuted, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6 }}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelId(cm.id)}
+                        aria-label={t('feed.deleteComment')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )
                   )}
                 </div>
               )
@@ -601,7 +621,7 @@ export function FeedPage() {
                 cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
-              <span style={{ fontSize: 13 }}>{tab.emoji}</span> {t(tab.labelKey)}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>

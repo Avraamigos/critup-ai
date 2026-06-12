@@ -479,6 +479,7 @@ export const ru: TranslationSchema = {
     discArchitecture: 'Архитектура',
     discInterior: 'Интерьер',
     discUrban: 'Урбанистика',
+    discLandscape: 'Ландшафт',
     noPostsTitle: 'Постов пока нет',
     noPostsBody: 'Станьте первым, кто поделится критикой своего проекта с сообществом.',
     drawingsUnavailable: 'Чертежи недоступны',

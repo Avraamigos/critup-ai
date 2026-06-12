@@ -116,6 +116,7 @@ export function PostPage() {
   const [posting, setPosting]     = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [copied, setCopied]       = useState(false)
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null)
 
   const handleShare = async () => {
     if (!post) return
@@ -244,6 +245,7 @@ export function PostPage() {
     if (!user) return
     const { error } = await supabase.from('post_comments').delete().eq('id', commentId).eq('user_id', user.id)
     if (error) return
+    setConfirmDelId(null)
     setComments(prev => prev.filter(cm => cm.id !== commentId))
   }
 
@@ -499,13 +501,30 @@ export function PostPage() {
                     </div>
                   </div>
                   {isMine && (
-                    <button
-                      onClick={() => handleDeleteComment(cm.id)}
-                      aria-label={t('feed.deleteComment')}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.004 270)', padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    confirmDelId === cm.id ? (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleDeleteComment(cm.id)}
+                          style={{ background: 'oklch(0.65 0.18 25)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6 }}
+                        >
+                          {t('common.delete')}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'none', border: '1px solid oklch(0.3 0.004 270)', cursor: 'pointer', color: 'oklch(0.6 0.004 270)', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6 }}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelId(cm.id)}
+                        aria-label={t('feed.deleteComment')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.004 270)', padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )
                   )}
                 </div>
               )
