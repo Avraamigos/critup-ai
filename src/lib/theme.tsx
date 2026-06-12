@@ -26,6 +26,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   })
 
   const setTheme = (t: Theme) => {
+    // Freeze transitions so every element recolors in a single paint rather than
+    // each one animating its color change at its own duration (staggered look).
+    document.documentElement.classList.add('theme-switching')
     setThemeState(t)
     try { localStorage.setItem('critup-theme', t) } catch {}
   }
@@ -34,6 +37,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.body.className = theme === 'light' ? 'light' : ''
+    // Restore transitions only after the new colors have been painted (two frames
+    // to be safe), so subsequent hovers still animate normally.
+    const root = document.documentElement
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => root.classList.remove('theme-switching'))
+    )
+    return () => cancelAnimationFrame(id)
   }, [theme])
 
   return (

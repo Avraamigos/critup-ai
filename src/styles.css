@@ -45,6 +45,14 @@ body.light {
   color: #111827;
 }
 
+/* While toggling theme, freeze every transition so all elements recolor in the
+   same paint instead of each animating its own color shift at its own speed. */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: oklch(0.32 0.004 270); border-radius: 3px; }
