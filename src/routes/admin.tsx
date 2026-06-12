@@ -63,6 +63,10 @@ interface AdminStats {
   analysesChart: DayPoint[]
 }
 
+type RevenueData =
+  | { available: true; currency: string; activeSubscriptions: number; mrrGross: number; mrrNet: number; revenue30dGross: number; revenue30dNet: number }
+  | { available: false; reason?: string }
+
 type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses' | 'notes'
 
 interface AdminNote { id: string; text: string; createdAt: string }
@@ -95,7 +99,7 @@ const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
-    text: '📊 Real revenue in admin — MRR is currently estimated from subscriber count × price.\nTo show actual revenue, connect Paddle server API (separate from webhook secret / client token).',
+    text: '✅ Real revenue in admin — DONE.\napi/admin-revenue.ts pulls live MRR and 30-day collected revenue from the Paddle Billing API.\nSet PADDLE_API_KEY in Vercel env (Paddle dashboard → Developer Tools → Authentication) to activate — until then the Expenses tab falls back to the subscriber-count estimate.',
     createdAt: new Date('2026-05-29').toISOString(),
   },
   {
@@ -233,6 +237,7 @@ export function AdminPage() {
   const { error: toastError, success: toastSuccess } = useToast()
 
   const [stats, setStats]       = useState<AdminStats | null>(null)
+  const [revenue, setRevenue]   = useState<RevenueData | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -263,6 +268,11 @@ export function AdminPage() {
       if (!res.ok) throw new Error(await res.text())
       setStats(await res.json())
       setError(null)
+
+      try {
+        const revRes = await fetch('/api/admin-revenue', { headers: { Authorization: `Bearer ${jwt}` } })
+        if (revRes.ok) setRevenue(await revRes.json())
+      } catch { /* revenue is best-effort */ }
     } catch (e) {
       setError(String(e))
     } finally {
@@ -392,13 +402,16 @@ export function AdminPage() {
   const variable30d   = analysisCount30d * (perAnalysisSonnet + perAnalysisHaiku) + ttsCost30d
   const totalCost30d = fixedMonthly + variable30d
 
-  // Revenue estimate
+  // Revenue — live from Paddle when PADDLE_API_KEY is configured, else estimated from subscriber counts
   const subsMonthly  = stats?.planBreakdown?.['monthly'] ?? 0
   const subsYearly   = stats?.planBreakdown?.['yearly']  ?? 0
-  const mrrGross     = subsMonthly * 7 + subsYearly * (45 / 12)
+  const estMrrGross  = subsMonthly * 7 + subsYearly * (45 / 12)
   // Paddle fee: 5% + $0.50 per transaction. Yearly fee amortised monthly.
-  const paddleFees   = subsMonthly * (7 * 0.05 + 0.50) + subsYearly * ((45 * 0.05 + 0.50) / 12)
-  const mrrNet       = mrrGross - paddleFees
+  const estPaddleFees = subsMonthly * (7 * 0.05 + 0.50) + subsYearly * ((45 * 0.05 + 0.50) / 12)
+  const estMrrNet    = estMrrGross - estPaddleFees
+
+  const liveRevenue  = revenue?.available ? revenue : null
+  const mrrNet       = liveRevenue ? liveRevenue.mrrNet : estMrrNet
   const netMargin30d = mrrNet - totalCost30d
   // How many monthly subs needed to break even on current monthly costs
   const netPerSub    = 7 * 0.95 - 0.50   // ~$6.15 after Paddle
@@ -668,7 +681,20 @@ export function AdminPage() {
             <StatCard label="Fixed costs"     value={`$${fixedMonthly.toFixed(2)}`}      sub="recurring"                            icon={DollarSign} c={c} />
             <StatCard label="Variable costs"  value={`$${variable30d.toFixed(2)}`}       sub={`${analysisCount30d} analyses`}       icon={Zap}        c={c} />
             <StatCard label="Total spend"     value={`$${totalCost30d.toFixed(2)}`}      sub="fixed + variable"                     icon={TrendingUp} c={c} />
-            <StatCard label="MRR (est)"       value={`$${mrrNet.toFixed(2)}`}            sub={`${subsMonthly}mo · ${subsYearly}yr subs`} icon={Crown} accent={mrrNet > 0} c={c} />
+            <StatCard
+              label={liveRevenue ? 'MRR (live)' : 'MRR (est)'}
+              value={`$${mrrNet.toFixed(2)}`}
+              sub={liveRevenue ? `${liveRevenue.activeSubscriptions} active subs · Paddle` : `${subsMonthly}mo · ${subsYearly}yr subs`}
+              icon={Crown} accent={mrrNet > 0} c={c}
+            />
+            {liveRevenue && (
+              <StatCard
+                label="Revenue (30d)"
+                value={`$${liveRevenue.revenue30dNet.toFixed(2)}`}
+                sub={`$${liveRevenue.revenue30dGross.toFixed(2)} gross · Paddle`}
+                icon={DollarSign} accent={liveRevenue.revenue30dNet > 0} c={c}
+              />
+            )}
             <StatCard
               label="Net margin"
               value={`${netMargin30d >= 0 ? '+' : ''}$${netMargin30d.toFixed(2)}`}
@@ -773,7 +799,10 @@ export function AdminPage() {
           </div>
 
           <div style={{ fontSize: 12, color: c.textMuted, padding: '0 4px' }}>
-            * Estimates based on average token/character usage. MRR deducts Paddle fees (5% + $0.50/transaction). Update pricing constants at the top of <code style={{ fontFamily: 'monospace', background: c.isDark ? 'oklch(0.24 0.004 270)' : '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>src/routes/admin.tsx</code> when costs change.
+            * Cost estimates based on average token/character usage. {liveRevenue
+              ? 'MRR and 30-day revenue are pulled live from the Paddle Billing API.'
+              : 'MRR is estimated from subscriber counts (5% + $0.50/transaction Paddle fee) — set PADDLE_API_KEY in Vercel env for live revenue.'}
+            {' '}Update pricing constants at the top of <code style={{ fontFamily: 'monospace', background: c.isDark ? 'oklch(0.24 0.004 270)' : '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>src/routes/admin.tsx</code> when costs change.
           </div>
         </div>
       )}

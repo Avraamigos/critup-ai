@@ -27,6 +27,7 @@ export const en = {
     analysis: 'Analysis',
     feed: 'Community',
     jury: 'Jury',
+    comingSoon: 'Coming next semester',
     settings: 'Settings',
     help: 'Help',
     pricing: 'Pricing',
@@ -494,6 +495,7 @@ export const en = {
     share: 'Share',
     postComment: 'Post comment',
     removeFromCommunity: 'Remove from community',
+    deleteComment: 'Delete comment',
   },
   post: {
     notFoundTitle: 'Project not found',

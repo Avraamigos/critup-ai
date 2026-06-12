@@ -27,6 +27,7 @@ export const tr: TranslationSchema = {
     analysis: 'Analiz',
     feed: 'Topluluk',
     jury: 'Jüri',
+    comingSoon: 'Gelecek dönem',
     settings: 'Ayarlar',
     help: 'Yardım',
     pricing: 'Fiyatlandırma',
@@ -494,6 +495,7 @@ export const tr: TranslationSchema = {
     share: 'Paylaş',
     postComment: 'Yorum gönder',
     removeFromCommunity: 'Topluluktan kaldır',
+    deleteComment: 'Yorumu sil',
   },
   post: {
     notFoundTitle: 'Proje bulunamadı',

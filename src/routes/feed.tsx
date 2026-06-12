@@ -85,7 +85,7 @@ function scoreColor(s: number) {
 
 // ─── Post card ────────────────────────────────────────────────────────────────
 
-type CardComment = { id: string; body: string; created_at: string; author_name: string | null; author_avatar_url?: string | null }
+type CardComment = { id: string; body: string; created_at: string; author_name: string | null; author_avatar_url?: string | null; user_id: string }
 
 function PostCard({
   post, c, theme, user, liked, likeCount, commentCount, onToggleLike, onCopied, onCommentCountChange, onRemoved,
@@ -139,7 +139,7 @@ function PostCard({
       setLoadingC(true)
       const { data } = await supabase
         .from('post_comments')
-        .select('id, body, created_at, author_name, author_avatar_url')
+        .select('id, body, created_at, author_name, author_avatar_url, user_id')
         .eq('analysis_id', post.id)
         .order('created_at', { ascending: true })
       setComments((data as CardComment[] | null) ?? [])
@@ -159,9 +159,17 @@ function PostCard({
       .single()
     setPosting(false)
     if (error || !data) return
-    setComments(prev => [...prev, { id: data.id, body: text.slice(0, 1000), created_at: data.created_at, author_name: profile?.full_name ?? null, author_avatar_url: myAvatarUrl }])
+    setComments(prev => [...prev, { id: data.id, body: text.slice(0, 1000), created_at: data.created_at, author_name: profile?.full_name ?? null, author_avatar_url: myAvatarUrl, user_id: user.id }])
     setBody('')
     onCommentCountChange(post.id, 1)
+  }
+
+  const deleteComment = async (commentId: string) => {
+    if (!user) return
+    const { error } = await supabase.from('post_comments').delete().eq('id', commentId).eq('user_id', user.id)
+    if (error) return
+    setComments(prev => prev.filter(cm => cm.id !== commentId))
+    onCommentCountChange(post.id, -1)
   }
 
   const handleShare = async () => {
@@ -378,6 +386,7 @@ function PostCard({
           ) : (
             comments.map(cm => {
               const cname = cm.author_name ?? t('feed.anonymous')
+              const isMine = !!user && cm.user_id === user.id
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <Avatar name={cname} avatarUrl={cm.author_avatar_url ?? null} size={28} />
@@ -389,6 +398,15 @@ function PostCard({
                       {new Date(cm.created_at).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                     </div>
                   </div>
+                  {isMine && (
+                    <button
+                      onClick={() => deleteComment(cm.id)}
+                      aria-label={t('feed.deleteComment')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.textMuted, padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               )
             })

@@ -83,11 +83,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     case 'subscription.updated': {
       const status = data?.status as string
       if (status === 'active' || status === 'trialing') {
+        const interval = data?.billing_cycle?.interval as string | undefined
+        const plan = interval === 'year' ? 'yearly' : 'monthly'
         await supabase
           .from('profiles')
-          .update({ plan: 'pro' })
+          .update({ plan })
           .eq('id', userId)
-        console.log('Paddle: upgraded user', userId, 'to pro')
+        console.log('Paddle: upgraded user', userId, 'to', plan)
       }
       break
     }

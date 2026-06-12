@@ -27,6 +27,7 @@ export const ru: TranslationSchema = {
     analysis: 'Анализ',
     feed: 'Сообщество',
     jury: 'Жюри',
+    comingSoon: 'Скоро, в следующем семестре',
     settings: 'Настройки',
     help: 'Помощь',
     pricing: 'Тарифы',
@@ -494,6 +495,7 @@ export const ru: TranslationSchema = {
     share: 'Поделиться',
     postComment: 'Отправить комментарий',
     removeFromCommunity: 'Убрать из сообщества',
+    deleteComment: 'Удалить комментарий',
   },
   post: {
     notFoundTitle: 'Проект не найден',

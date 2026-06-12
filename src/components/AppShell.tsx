@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/auth'
 
 // `activePath` is what determines the highlighted state — separate from `to`
 // so the Analysis item can always highlight on /analysis/* regardless of its `to`.
-type NavDef = { to: string; activePath: string; icon: React.ElementType; label: string }
+type NavDef = { to: string; activePath: string; icon: React.ElementType; label: string; disabled?: boolean }
 
 // `label` holds an i18n key (resolved with t() at render time).
 const BOTTOM_ITEMS: NavDef[] = [
@@ -109,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'nav.dashboard' },
     { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'nav.projects'  },
     { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'nav.analysis'  },
-    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury'      },
+    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury', disabled: true },
     { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'nav.feed' },
     ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'nav.admin' }] : []),
   ]
@@ -123,8 +123,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pageLabelKey = [...NAV_ITEMS, ...BOTTOM_ITEMS].find(n => isActive(n.activePath))?.label
   const pageLabel = pageLabelKey ? t(pageLabelKey) : 'Critup'
 
-  const NavItem = ({ to, activePath, icon: Icon, label }: NavDef) => {
+  const NavItem = ({ to, activePath, icon: Icon, label, disabled }: NavDef) => {
     const active = isActive(activePath)
+    if (disabled) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+          padding: sidebarOpen ? '9px 14px' : '9px 0', justifyContent: sidebarOpen ? 'flex-start' : 'center',
+          borderRadius: 9, background: 'transparent',
+          color: c.textMuted, opacity: 0.5,
+          fontSize: 13, fontWeight: 400, fontFamily: FONT,
+          borderLeft: '2.5px solid transparent',
+          overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'default',
+        }}>
+          <span style={{ flexShrink: 0, display: 'flex', marginLeft: sidebarOpen ? 0 : 'auto', marginRight: sidebarOpen ? 0 : 'auto' }}>
+            <Icon size={17} color={c.textMuted} strokeWidth={1.6} />
+          </span>
+          {sidebarOpen && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <span>{t(label)}</span>
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 100,
+                background: c.isDark ? 'oklch(0.32 0.004 270)' : '#e5e7eb',
+                color: c.textMuted, whiteSpace: 'nowrap', letterSpacing: '0.01em',
+              }}>{t('nav.comingSoon')}</span>
+            </span>
+          )}
+        </div>
+      )
+    }
     return (
       <Link to={to} style={{
         display: 'flex', alignItems: 'center', gap: 11, width: '100%',
@@ -337,8 +364,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           display: 'flex', alignItems: 'center',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
-          {NAV_ITEMS.map(({ to, activePath, icon: Icon, label }) => {
+          {NAV_ITEMS.map(({ to, activePath, icon: Icon, label, disabled }) => {
             const active = isActive(activePath)
+            if (disabled) {
+              return (
+                <div key={to} style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 3, padding: '6px 0',
+                  color: c.textMuted, opacity: 0.5,
+                }}>
+                  <Icon size={20} color={c.textMuted} strokeWidth={1.6} />
+                  <span style={{ fontSize: 8, fontWeight: 500, fontFamily: FONT, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+                    {t('nav.comingSoon')}
+                  </span>
+                </div>
+              )
+            }
             return (
               <Link key={to} to={to} style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',

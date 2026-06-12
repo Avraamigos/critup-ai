@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
 
-import { ArrowRight, AlertCircle, Heart, Send, MessageCircle, Share2, Check } from 'lucide-react'
+import { ArrowRight, AlertCircle, Heart, Send, MessageCircle, Share2, Check, Trash2 } from 'lucide-react'
 import { ScoreRing } from '@/components/ScoreRing'
 import { SlideCarousel } from '@/components/SlideCarousel'
 import { ImageCarousel } from '@/components/ImageCarousel'
@@ -22,6 +22,7 @@ type Comment = {
   created_at: string
   author_name: string | null
   author_avatar_url: string | null
+  user_id: string
 }
 
 type PostData = {
@@ -190,7 +191,7 @@ export function PostPage() {
       const [{ data: likes }, { data: cmts }] = await Promise.all([
         supabase.from('post_likes').select('user_id').eq('analysis_id', analysisId),
         supabase.from('post_comments')
-          .select('id, body, created_at, author_name, author_avatar_url')
+          .select('id, body, created_at, author_name, author_avatar_url, user_id')
           .eq('analysis_id', analysisId)
           .order('created_at', { ascending: true }),
       ])
@@ -201,6 +202,7 @@ export function PostPage() {
         id: r.id, body: r.body, created_at: r.created_at,
         author_name: r.author_name ?? null,
         author_avatar_url: r.author_avatar_url ?? null,
+        user_id: r.user_id,
       })))
     }
     load()
@@ -233,8 +235,16 @@ export function PostPage() {
       id: data.id, body: body.slice(0, 1000), created_at: data.created_at,
       author_name: myProfile?.full_name ?? null,
       author_avatar_url: myAvatarUrl,
+      user_id: user.id,
     }])
     setCommentBody('')
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return
+    const { error } = await supabase.from('post_comments').delete().eq('id', commentId).eq('user_id', user.id)
+    if (error) return
+    setComments(prev => prev.filter(cm => cm.id !== commentId))
   }
 
   // ── Loading ──
@@ -473,6 +483,7 @@ export function PostPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {comments.map(cm => {
               const cname = cm.author_name ?? t('feed.anonymous')
+              const isMine = !!user && cm.user_id === user.id
               return (
                 <div key={cm.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <Avatar name={cname} avatarUrl={cm.author_avatar_url} size={32} />
@@ -487,6 +498,15 @@ export function PostPage() {
                       {cm.body}
                     </div>
                   </div>
+                  {isMine && (
+                    <button
+                      onClick={() => handleDeleteComment(cm.id)}
+                      aria-label={t('feed.deleteComment')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.004 270)', padding: 4, display: 'flex', flexShrink: 0, borderRadius: 6 }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               )
             })}
