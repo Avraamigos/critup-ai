@@ -8,6 +8,7 @@ import {
 import { useAuth } from '@/lib/auth'
 import { useTheme, useColors } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
+import { AdminCompetitions } from '@/components/AdminCompetitions'
 
 const ADMIN_EMAILS = ['ibro12345@icloud.com']
 
@@ -67,7 +68,7 @@ type RevenueData =
   | { available: true; currency: string; activeSubscriptions: number; mrrGross: number; mrrNet: number; revenue30dGross: number; revenue30dNet: number }
   | { available: false; reason?: string }
 
-type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses' | 'notes'
+type Tab = 'overview' | 'analytics' | 'users' | 'analyses' | 'errors' | 'expenses' | 'competitions' | 'notes'
 
 interface AdminNote { id: string; text: string; createdAt: string }
 const NOTES_KEY = 'critup_admin_notes'
@@ -424,6 +425,7 @@ export function AdminPage() {
     { id: 'analyses',  label: `Analyses${stats ? ` (${stats.analyses.total})` : ''}` },
     { id: 'errors',    label: `Errors${stats?.analyses.failed ? ` (${Math.max(0, stats.analyses.failed - dismissedErrors.length)})` : ''}`, alert: (stats?.analyses.failed ?? 0) > dismissedErrors.length },
     { id: 'expenses',  label: 'Expenses'  },
+    { id: 'competitions', label: 'Competitions' },
     { id: 'notes',     label: `Notes${notes.length ? ` (${notes.length})` : ''}` },
   ]
 
@@ -806,6 +808,9 @@ export function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── COMPETITIONS ── */}
+      {tab === 'competitions' && <AdminCompetitions c={c} />}
 
       {/* ── NOTES ── */}
       {tab === 'notes' && (

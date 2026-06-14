@@ -26,6 +26,7 @@ import { AdminPage } from '@/routes/admin'
 import { PostPage } from '@/routes/post'
 import { FeedPage } from '@/routes/feed'
 import { ShowcasePage } from '@/routes/showcase'
+import { CompetitionsPage } from '@/routes/competitions'
 
 // Root route
 const rootRoute = createRootRoute({
@@ -73,6 +74,7 @@ const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/ass
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: SettingsPage })
 const helpRoute  = createRoute({ getParentRoute: () => appRoute, path: '/help',  component: HelpPage })
 const adminRoute = createRoute({ getParentRoute: () => appRoute, path: '/admin', component: AdminPage })
+const competitionsRoute = createRoute({ getParentRoute: () => appRoute, path: '/competitions', component: CompetitionsPage })
 
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
@@ -81,6 +83,7 @@ const routeTree = rootRoute.addChildren([
     analysisRoute,
     juryRoute,
     feedRoute,
+    competitionsRoute,
     assistantRoute,
     settingsRoute,
     helpRoute,

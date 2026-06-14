@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
-  LayoutGrid, Folder, CircleDot, Mic, Users,
+  LayoutGrid, Folder, CircleDot, Mic, Users, Trophy,
   Settings, HelpCircle, ChevronLeft, ChevronRight,
   Sun, Moon, LogOut, Star, TrendingUp, User, ShieldCheck,
 } from 'lucide-react'
@@ -111,6 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'nav.analysis'  },
     { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury', disabled: true },
     { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'nav.feed' },
+    { to: '/competitions', activePath: '/competitions', icon: Trophy, label: 'nav.competitions' },
     ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'nav.admin' }] : []),
   ]
 

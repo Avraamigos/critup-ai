@@ -5,6 +5,8 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type ProjectStage = 'pre-design' | 'initial-concept' | 'finalized-design' | 'jury-prep'
 export type AnalysisStatus = 'pending' | 'processing' | 'complete' | 'failed'
 export type UserPlan = 'free' | 'monthly' | 'yearly'
+export type CompetitionDiscipline = 'architecture' | 'interior' | 'urban' | 'landscape' | 'multi'
+export type CompetitionLevel = 'beginner' | 'student' | 'professional' | 'any'
 
 export interface Database {
   public: {
@@ -236,6 +238,80 @@ export interface Database {
           content_score?: number | null
           ai_feedback?: string | null
           duration_seconds?: number | null
+        }
+        Relationships: []
+      }
+      competitions: {
+        Row: {
+          id: string
+          title: string
+          image_url: string | null
+          summary: string | null
+          brief_text: string | null
+          discipline: CompetitionDiscipline
+          deadline: string
+          registration_deadline: string | null
+          prize: string | null
+          entry_fee: string | null
+          student_eligible: boolean
+          level: CompetitionLevel
+          team_required: boolean
+          location: string | null
+          organizer_url: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          image_url?: string | null
+          summary?: string | null
+          brief_text?: string | null
+          discipline: CompetitionDiscipline
+          deadline: string
+          registration_deadline?: string | null
+          prize?: string | null
+          entry_fee?: string | null
+          student_eligible?: boolean
+          level?: CompetitionLevel
+          team_required?: boolean
+          location?: string | null
+          organizer_url?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          title?: string
+          image_url?: string | null
+          summary?: string | null
+          brief_text?: string | null
+          discipline?: CompetitionDiscipline
+          deadline?: string
+          registration_deadline?: string | null
+          prize?: string | null
+          entry_fee?: string | null
+          student_eligible?: boolean
+          level?: CompetitionLevel
+          team_required?: boolean
+          location?: string | null
+          organizer_url?: string | null
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      saved_competitions: {
+        Row: {
+          user_id: string
+          competition_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          competition_id: string
+          created_at?: string
+        }
+        Update: {
+          created_at?: string
         }
         Relationships: []
       }
