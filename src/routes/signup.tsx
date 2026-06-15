@@ -116,7 +116,13 @@ export function SignupPage() {
         <button onClick={signUpWithGoogle} style={{ width: '100%', padding: '11px', borderRadius: 100, background: 'transparent', border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <GoogleIcon /> {t('auth.continueGoogle')}
         </button>
-        <p style={{ textAlign: 'center', fontSize: 13, color: c.textMuted, marginTop: 22, marginBottom: 0 }}>
+        <p style={{ textAlign: 'center', fontSize: 11.5, color: c.textMuted, marginTop: 16, marginBottom: 0, lineHeight: 1.55 }}>
+          {t('auth.agreePrefix')}{' '}
+          <Link to="/terms" style={{ color: c.textMuted, textDecoration: 'underline' }}>{t('landing.terms')}</Link>{' '}
+          {t('auth.agreeAnd')}{' '}
+          <Link to="/privacy" style={{ color: c.textMuted, textDecoration: 'underline' }}>{t('landing.privacy')}</Link>{t('auth.agreeSuffix')}
+        </p>
+        <p style={{ textAlign: 'center', fontSize: 13, color: c.textMuted, marginTop: 14, marginBottom: 0 }}>
           {t('auth.haveAccount')} <Link to="/login" style={{ color: '#F97316', textDecoration: 'none', fontWeight: 500 }}>{t('auth.signIn')}</Link>
         </p>
       </div>
