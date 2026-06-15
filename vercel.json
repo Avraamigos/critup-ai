@@ -4,6 +4,7 @@
     "api/tts.ts":     { "maxDuration": 30  },
     "api/chat.ts":          { "maxDuration": 30  },
     "api/jury-script.ts":     { "maxDuration": 300 },
+    "api/jury-script-shorten.ts": { "maxDuration": 30 },
     "api/paddle-webhook.ts":  { "maxDuration": 10  },
     "api/admin-stats.ts":     { "maxDuration": 15  },
     "api/admin-revenue.ts":   { "maxDuration": 15  },
