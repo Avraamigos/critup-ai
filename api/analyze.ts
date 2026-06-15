@@ -237,6 +237,12 @@ Respond with ONLY this exact JSON structure:
   ],
   "jury_questions": [
     "<question string>"
+  ],
+  "jury_qa": [
+    {
+      "question": "<a precise question THIS jury would ask about THIS project>",
+      "answer": "<a short, confident suggested answer (2-4 sentences) the student could give, grounded strictly in what is visible in the drawings — never invent rationale the student didn't show>"
+    }
   ]
 }
 
@@ -245,12 +251,19 @@ Scoring criteria:
 - spatial_score: spatial logic, section quality, circulation flow, programme relationships, structural legibility
 - presentation_score: drawing clarity, line weight hierarchy, notation completeness, scale bars, north arrows, labels
 
+STAGE-CALIBRATED SCORING (important):
+Grade the project RELATIVE TO WHAT IS EXPECTED AT ITS DESIGN STAGE, not against a finished building. Judge whether the work is resolved FOR ITS STAGE.
+- pre-design / initial-concept: reward strong ideas, clear intent, and exploration. Do NOT penalise missing detailed sections, full notation, or technical resolution that isn't expected yet. A well-developed early concept can legitimately score high.
+- finalized-design / jury-prep: hold to a HIGHER bar — coherence, resolution, technical clarity, and presentation completeness are expected. A project that is genuinely resolved at this stage should score high because it has earned it; an unresolved late-stage project should be marked down.
+Never inflate a score simply because the stage is late. The point is fairness to the stage, not a free bonus. A finished, resolved project scores high because it is finished and resolved.
+
 Rules:
 - Be specific to WHAT YOU SEE — reference actual elements in the drawings (rooms, walls, stairs, annotations, dimensions)
 - feedback: provide 6-7 items. Mix: 2 genuine strengths + 4-5 specific problems requiring action
 - For EACH feedback item: set "page" to the exact page number, "focus" to the x,y centre of the element being discussed (0-1 range), "zoom" to how closely to examine it. IMPORTANT: set zoom to exactly 1.0 when the feedback is about overall composition, a missing element, a concept-level issue, or anything not locatable to a specific spot — only use zoom > 1.0 when you are pointing at a specific visible element (a room, wall, stair, annotation, dimension line)
 - jury_questions: 7-8 precise, challenging questions this specific jury would ask. Not generic — reference the actual drawings
-- Scores: be honest and realistic. Most student work scores 5.0-8.0. Reserve 8.5+ for exceptional work. Never inflate.
+- jury_qa: provide 10-12 pairs. Each question must be tied to THIS project's actual weak points, decisions, or visible features (not generic). Each answer must be grounded only in what is visible — confident but honest, the kind of answer that would actually hold up in front of a jury. Do NOT fabricate design rationale the drawings don't support.
+- Scores: be honest and realistic. Apply the stage-calibrated scoring above. Reserve 8.5+ for work that is genuinely exceptional for its stage. Never inflate.
 - If a course brief was provided, evaluate explicitly against those requirements — note what's missing or unresolved`
 
 // Best-effort recovery of a JSON object from a possibly-truncated model response.
@@ -466,7 +479,7 @@ export default async function handler(
     const langCode = (profileData?.language ?? 'en').toLowerCase()
     const languageNote =
       langCode !== 'en' && languageNames[langCode]
-        ? `\n\nLANGUAGE:\nWrite ALL human-readable text — every title, description, suggestion, strength, weakness, and jury question — in ${languageNames[langCode]}. Keep the JSON keys themselves in English exactly as specified. Do not mix languages: the values must be entirely ${languageNames[langCode]}.`
+        ? `\n\nLANGUAGE:\nWrite ALL human-readable text — every title, description, suggestion, strength, weakness, jury question, and jury Q&A question/answer — in ${languageNames[langCode]}. Keep the JSON keys themselves in English exactly as specified. Do not mix languages: the values must be entirely ${languageNames[langCode]}.`
         : ''
 
     // 5. Call Claude
@@ -555,6 +568,13 @@ export default async function handler(
       .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
       .map(q => q.trim())
 
+    // Keep Q&A pairs that have both a question and an answer. This powers the
+    // Jury Prep page; the plain jury_questions array above stays for the export/PDF.
+    const rawQA = Array.isArray(result.jury_qa) ? (result.jury_qa as Record<string, unknown>[]) : []
+    const jury_qa = rawQA
+      .filter(p => p && typeof p === 'object' && typeof p.question === 'string' && typeof p.answer === 'string' && p.question.trim() && p.answer.trim())
+      .map(p => ({ question: String(p.question).trim(), answer: String(p.answer).trim() }))
+
     // Only hard-fail when the response is genuinely unusable (no feedback AND no scores).
     const hasScores = ['concept_score', 'spatial_score', 'presentation_score']
       .some(k => Number.isFinite(Number(result![k])))
@@ -564,7 +584,7 @@ export default async function handler(
       return res.status(500).json({ error: 'AI returned incomplete response, please try again' })
     }
 
-    const validatedResult: Record<string, unknown> = { ...result, feedback, jury_questions }
+    const validatedResult: Record<string, unknown> = { ...result, feedback, jury_questions, jury_qa }
 
     // 8. Extract scores
     const concept_score = Math.min(10, Math.max(0, Number(validatedResult.concept_score) || 0))
@@ -582,6 +602,7 @@ export default async function handler(
         presentation_score,
         feedback: validatedResult.feedback || [],
         jury_questions: validatedResult.jury_questions || [],
+        jury_qa: validatedResult.jury_qa || [],
       })
       .eq('id', analysisId)
 

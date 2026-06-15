@@ -7,6 +7,14 @@ export type AnalysisStatus = 'pending' | 'processing' | 'complete' | 'failed'
 export type UserPlan = 'free' | 'monthly' | 'yearly'
 export type CompetitionDiscipline = 'architecture' | 'interior' | 'urban' | 'landscape' | 'multi'
 export type CompetitionLevel = 'beginner' | 'student' | 'professional' | 'any'
+export type ScriptLanguageLevel = 'simple' | 'natural' | 'academic'
+
+// Bundled into the analysis output (api/analyze.ts) — project-specific jury
+// questions with a suggested answer for each, grounded in the actual drawings.
+export interface JuryQA { question: string; answer: string }
+
+// One section of a generated presentation script (api/jury-script.ts).
+export interface JuryScriptSlide { slideTitle: string; script: string; why: string }
 
 export interface Database {
   public: {
@@ -107,6 +115,7 @@ export interface Database {
           presentation_score: number | null
           feedback: Json | null
           jury_questions: Json | null
+          jury_qa: Json | null
           pdf_path: string | null
           is_public: boolean
           caption: string | null
@@ -130,6 +139,7 @@ export interface Database {
           presentation_score?: number | null
           feedback?: Json | null
           jury_questions?: Json | null
+          jury_qa?: Json | null
           pdf_path?: string | null
           is_public?: boolean
           caption?: string | null
@@ -150,6 +160,7 @@ export interface Database {
           presentation_score?: number | null
           feedback?: Json | null
           jury_questions?: Json | null
+          jury_qa?: Json | null
           is_public?: boolean
           caption?: string | null
           slide_count?: number
@@ -204,40 +215,44 @@ export interface Database {
         }
         Relationships: []
       }
-      jury_sessions: {
+      jury_scripts: {
+        Row: {
+          id: string
+          analysis_id: string
+          user_id: string
+          language_level: ScriptLanguageLevel
+          slides: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          analysis_id: string
+          user_id: string
+          language_level: ScriptLanguageLevel
+          slides?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          slides?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      jury_script_events: {
         Row: {
           id: string
           user_id: string
-          project_id: string | null
-          question: string
-          answer: string | null
-          clarity_score: number | null
-          confidence_score: number | null
-          content_score: number | null
-          ai_feedback: string | null
-          duration_seconds: number | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          project_id?: string | null
-          question: string
-          answer?: string | null
-          clarity_score?: number | null
-          confidence_score?: number | null
-          content_score?: number | null
-          ai_feedback?: string | null
-          duration_seconds?: number | null
           created_at?: string
         }
         Update: {
-          answer?: string | null
-          clarity_score?: number | null
-          confidence_score?: number | null
-          content_score?: number | null
-          ai_feedback?: string | null
-          duration_seconds?: number | null
+          created_at?: string
         }
         Relationships: []
       }

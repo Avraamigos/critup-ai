@@ -374,7 +374,7 @@ export function DashboardPage() {
             position: 'relative', zIndex: 1,
           }}>
             {[
-              { icon: Mic, label: t('dashboard.juryPractice'), sub: t('nav.comingSoon'), to: '/jury', disabled: true },
+              { icon: Mic, label: t('dashboard.juryPractice'), sub: t('dashboard.juryPracticeSub'), to: '/jury', disabled: false },
               { icon: TrendingUp, label: t('dashboard.allProjects'), sub: t('dashboard.projectsCount', { count: projects.length }), to: '/projects', disabled: false },
             ].map(({ icon: Icon, label, sub, to, disabled }) => disabled ? (
               <div key={label} style={{

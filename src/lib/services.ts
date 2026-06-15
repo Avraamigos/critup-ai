@@ -3,7 +3,6 @@ import type { Database, ProjectStage } from './database.types'
 
 type Project = Database['public']['Tables']['projects']['Row']
 type Analysis = Database['public']['Tables']['analyses']['Row']
-type JurySession = Database['public']['Tables']['jury_sessions']['Row']
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
@@ -117,30 +116,6 @@ export function getPDFUrl(path: string) {
     .from('project-pdfs')
     .getPublicUrl(path)
   return data.publicUrl
-}
-
-// ─── Jury Sessions ────────────────────────────────────────────────────────────
-
-export async function getJurySessions(userId: string) {
-  const { data, error } = await supabase
-    .from('jury_sessions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data
-}
-
-export async function saveJurySession(session: Omit<JurySession, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
-    .from('jury_sessions')
-    .insert(session)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
