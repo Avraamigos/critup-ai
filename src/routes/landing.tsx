@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu } from 'lucide-react'
+import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu, Volume2, MapPin, ScrollText, Sparkles, Globe, TrendingUp, Trophy, Users } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { AIOrb } from '@/components/AIOrb'
 import { useTheme, useColors } from '@/lib/theme'
@@ -25,6 +25,20 @@ export function LandingPage() {
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Subtle mouse-tilt on the hero mock — applied directly via ref to avoid re-renders.
+  const heroMockRef = useRef<HTMLDivElement>(null)
+  const onHeroMove = (e: React.MouseEvent) => {
+    const el = heroMockRef.current
+    if (!el) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width - 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5
+    el.style.transform = `perspective(1400px) rotateX(${(2.5 - py * 5).toFixed(2)}deg) rotateY(${(px * 6).toFixed(2)}deg)`
+  }
+  const onHeroLeave = () => {
+    if (heroMockRef.current) heroMockRef.current.style.transform = 'perspective(1400px) rotateX(2.5deg)'
+  }
 
   useEffect(() => {
     const handle = () => setIsMobile(window.innerWidth < 768)
@@ -142,8 +156,8 @@ export function LandingPage() {
 
         {/* App mock — desktop only */}
         {!isMobile && (
-          <div style={{ maxWidth: 960, margin: '60px auto 0', padding: '0 24px', position: 'relative', zIndex: 2 }}>
-            <div style={{ background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', border: `1px solid ${c.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: isDark ? '0 0 0 1px oklch(0.30 0.004 270), 0 40px 100px oklch(0.72 0.18 45 / 0.10)' : '0 40px 100px rgba(0,0,0,0.10)', transform: 'perspective(1400px) rotateX(2.5deg)' }}>
+          <div onMouseMove={onHeroMove} onMouseLeave={onHeroLeave} style={{ maxWidth: 960, margin: '60px auto 0', padding: '0 24px', position: 'relative', zIndex: 2 }}>
+            <div ref={heroMockRef} style={{ background: isDark ? 'oklch(0.20 0.004 270)' : '#fff', border: `1px solid ${c.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: isDark ? '0 0 0 1px oklch(0.30 0.004 270), 0 40px 100px oklch(0.72 0.18 45 / 0.10)' : '0 40px 100px rgba(0,0,0,0.10)', transform: 'perspective(1400px) rotateX(2.5deg)', transition: 'transform 0.18s ease-out', willChange: 'transform' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 18px', borderBottom: `1px solid ${c.border}`, background: isDark ? 'oklch(0.22 0.004 270)' : '#f9fafb' }}>
                 <div style={{ display: 'flex', gap: 5 }}>{['#ef4444','#f59e0b','#22c55e'].map((col,i) => <div key={i} style={{ width:10, height:10, borderRadius:'50%', background:col, opacity:0.8 }} />)}</div>
                 <div style={{ flex:1, background: isDark ? 'oklch(0.18 0.004 270)' : '#e5e7eb', borderRadius:6, height:22, display:'flex', alignItems:'center', paddingLeft:10, fontSize:11, color:c.textMuted }}>critup.ai/analysis/river-pavilion</div>
@@ -285,19 +299,19 @@ export function LandingPage() {
         </div>
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap:14 }}>
           {[
-            { icon:'🎙', title:t('landing.feat1Title'), desc:t('landing.feat1Desc') },
-            { icon:'📌', title:t('landing.feat2Title'), desc:t('landing.feat2Desc') },
-            { icon:'💬', title:t('landing.feat3Title'), desc:t('landing.feat3Desc') },
-            { icon:'✨', title:t('landing.feat4Title'), desc:t('landing.feat4Desc') },
-            { icon:'🌍', title:t('landing.feat5Title'), desc:t('landing.feat5Desc') },
-            { icon:'📈', title:t('landing.feat6Title'), desc:t('landing.feat6Desc') },
-            { icon:'🏆', title:t('landing.feat7Title'), desc:t('landing.feat7Desc') },
-            { icon:'👥', title:t('landing.feat8Title'), desc:t('landing.feat8Desc') },
-          ].map(({ icon, title, desc }) => (
-            <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}` }}>
-              <div style={{ width:36, height:36, borderRadius:9, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, fontSize:18 }}>{icon}</div>
-              <h3 style={{ fontSize:14, fontWeight:700, margin:'0 0 5px', letterSpacing:'-0.01em', color:c.textPrimary }}>{title}</h3>
-              <p style={{ fontSize:12, color:c.textMuted, lineHeight:1.55, margin:0 }}>{desc}</p>
+            { Icon: Volume2,     title:t('landing.feat1Title'), desc:t('landing.feat1Desc') },
+            { Icon: MapPin,      title:t('landing.feat2Title'), desc:t('landing.feat2Desc') },
+            { Icon: ScrollText,  title:t('landing.feat3Title'), desc:t('landing.feat3Desc') },
+            { Icon: Sparkles,    title:t('landing.feat4Title'), desc:t('landing.feat4Desc') },
+            { Icon: Globe,       title:t('landing.feat5Title'), desc:t('landing.feat5Desc') },
+            { Icon: TrendingUp,  title:t('landing.feat6Title'), desc:t('landing.feat6Desc') },
+            { Icon: Trophy,      title:t('landing.feat7Title'), desc:t('landing.feat7Desc') },
+            { Icon: Users,       title:t('landing.feat8Title'), desc:t('landing.feat8Desc') },
+          ].map(({ Icon, title, desc }) => (
+            <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}`, display:'flex', flexDirection:'column' }}>
+              <div style={{ width:40, height:40, borderRadius:11, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, flexShrink:0 }}><Icon size={19} color="#F97316" strokeWidth={2} /></div>
+              <h3 style={{ fontSize:14.5, fontWeight:700, margin:'0 0 5px', letterSpacing:'-0.01em', color:c.textPrimary }}>{title}</h3>
+              <p style={{ fontSize:12.5, color:c.textMuted, lineHeight:1.55, margin:0 }}>{desc}</p>
             </div>
           ))}
         </div>
