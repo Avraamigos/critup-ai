@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle, MessageSquare } from 'lucide-react'
+import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle, MessageSquare, Mic, Lightbulb } from 'lucide-react'
 import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -218,10 +218,18 @@ export function JuryPage() {
 
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: 22 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: '0 0 4px' }}>{t('jury.title')}</h1>
-          <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>{t('jury.subtitle')}</p>
-          {projectName && <p style={{ fontSize: 12, color: '#F97316', fontWeight: 600, margin: '6px 0 0' }}>{t('jury.forProject', { name: projectName })}</p>}
+        <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 14, background: 'linear-gradient(135deg, #F97316, oklch(0.6 0.21 30))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 18px oklch(0.72 0.18 45/0.35)' }}>
+            <Mic size={22} color="#fff" strokeWidth={2} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0 }}>{t('jury.title')}</h1>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '3px 10px', borderRadius: 100 }}>{qa.length} {t('jury.questionCount')}</span>
+            </div>
+            <p style={{ fontSize: 13, color: c.textMuted, margin: '4px 0 0' }}>{t('jury.subtitle')}</p>
+            {projectName && <p style={{ fontSize: 12, color: '#F97316', fontWeight: 600, margin: '6px 0 0' }}>{t('jury.forProject', { name: projectName })}</p>}
+          </div>
         </div>
 
         {/* ── Q&A list ── */}
@@ -234,12 +242,12 @@ export function JuryPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
           {qa.map((pair, i) => (
             <div key={i} style={{ background: c.cardBg, borderRadius: 14, border: `1px solid ${c.border}`, padding: '16px 18px' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: pair.answer ? 10 : 0 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#F97316', minWidth: 18, paddingTop: 1, flexShrink: 0 }}>Q{i + 1}</span>
-                <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: 0, lineHeight: 1.5 }}>{pair.question}</p>
+              <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginBottom: pair.answer ? 11 : 0 }}>
+                <span style={{ width: 24, height: 24, borderRadius: 8, background: 'oklch(0.72 0.18 45/0.12)', color: '#F97316', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: 0, lineHeight: 1.5, paddingTop: 2 }}>{pair.question}</p>
               </div>
               {pair.answer && (
-                <div style={{ marginLeft: 28, paddingLeft: 14, borderLeft: `2px solid ${c.isDark ? 'oklch(0.72 0.18 45/0.35)' : '#fed7aa'}` }}>
+                <div style={{ marginLeft: 35, paddingLeft: 14, borderLeft: `2px solid ${c.isDark ? 'oklch(0.72 0.18 45/0.35)' : '#fed7aa'}` }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', marginBottom: 5 }}>{t('jury.suggestedAnswer')}</div>
                   <p style={{ fontSize: 13, color: c.textPrimary, margin: 0, lineHeight: 1.65 }}>{pair.answer}</p>
                 </div>
@@ -325,7 +333,7 @@ export function JuryPage() {
                     </div>
                     {s.why && (
                       <div style={{ padding: '12px 18px', background: c.isDark ? 'oklch(0.72 0.18 45/0.06)' : '#fff7ed', borderTop: `1px solid ${c.isDark ? 'oklch(0.72 0.18 45/0.2)' : '#fed7aa'}` }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 5 }}>{t('jury.whyFrame')}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, color: '#F97316', letterSpacing: '0.1em', marginBottom: 5 }}><Lightbulb size={11} color="#F97316" /> {t('jury.whyFrame')}</div>
                         <p style={{ fontSize: 12.5, color: c.textMuted, margin: 0, lineHeight: 1.6 }}>{s.why}</p>
                       </div>
                     )}
