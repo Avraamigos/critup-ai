@@ -82,12 +82,34 @@ export function JuryPage() {
     return () => { cancelled = true }
   }, [user?.id])
 
-  // ── Load cached script for the current analysis + level (no charge) ────────
+  // Marker key so a generation that's still running server-side survives navigating
+  // away: the server keeps working + caches the result, and on return we resume polling.
+  const genKey = (lvl: ScriptLanguageLevel) => `critup_script_gen_${analysisId}_${lvl}`
+
+  // Poll the jury_scripts cache until a fresh row appears (or we give up).
+  const pollCache = async (lvl: ScriptLanguageLevel, baseline: string | null, isCancelled: () => boolean, startedAt: number): Promise<JuryScriptSlide[] | null> => {
+    while (!isCancelled() && Date.now() - startedAt < 290_000) {
+      await new Promise(r => setTimeout(r, 4000))
+      if (isCancelled()) return null
+      const { data } = await supabase
+        .from('jury_scripts')
+        .select('slides, updated_at')
+        .eq('analysis_id', analysisId!)
+        .eq('language_level', lvl)
+        .maybeSingle()
+      const row = data as { slides?: unknown; updated_at?: string } | null
+      const s = row?.slides
+      if (Array.isArray(s) && s.length && row?.updated_at !== baseline) return s as JuryScriptSlide[]
+    }
+    return null
+  }
+
+  // ── Load cached script for the current level; resume an in-progress generation ──
   useEffect(() => {
     if (!analysisId || !isPro) { setSlides([]); return }
     let cancelled = false
     setScriptErr(null)
-    const loadCached = async () => {
+    ;(async () => {
       const { data } = await supabase
         .from('jury_scripts')
         .select('slides')
@@ -96,9 +118,25 @@ export function JuryPage() {
         .maybeSingle()
       if (cancelled) return
       const s = (data as { slides?: unknown } | null)?.slides
-      setSlides(Array.isArray(s) ? (s as JuryScriptSlide[]) : [])
-    }
-    loadCached()
+      if (Array.isArray(s) && s.length) {
+        setSlides(s as JuryScriptSlide[])
+        try { localStorage.removeItem(genKey(level)) } catch { /* ignore */ }
+        return
+      }
+      setSlides([])
+      // Nothing cached yet — but if a generation was started before we navigated away
+      // (marker still fresh), the server is likely still working. Resume the spinner + poll.
+      let marker = 0
+      try { marker = Number(localStorage.getItem(genKey(level)) || 0) } catch { /* ignore */ }
+      if (marker && Date.now() - marker < 290_000) {
+        setScriptBusy(true)
+        const result = await pollCache(level, null, () => cancelled, marker)
+        if (cancelled) return
+        setScriptBusy(false)
+        try { localStorage.removeItem(genKey(level)) } catch { /* ignore */ }
+        if (result) setSlides(result)
+      }
+    })()
     return () => { cancelled = true }
   }, [analysisId, level, isPro])
 
@@ -112,9 +150,9 @@ export function JuryPage() {
     if (!analysisId) return
     setScriptBusy(true)
     setScriptErr(null)
+    try { localStorage.setItem(genKey(level), String(Date.now())) } catch { /* ignore */ }
 
     const startedAt = Date.now()
-    const MAX_WAIT = 290_000   // the server function may run up to 300s; out-wait it
     let settled = false
 
     // Baseline updated_at so a regenerate waits for a genuinely NEW row, not the old one.
@@ -129,40 +167,28 @@ export function JuryPage() {
       baseline = (data as { updated_at?: string } | null)?.updated_at ?? null
     }
 
+    const clearMarker = () => { try { localStorage.removeItem(genKey(level)) } catch { /* ignore */ } }
     const finish = (slidesData: JuryScriptSlide[]) => {
       if (settled) return
       settled = true
       setSlides(slidesData)
       setScriptBusy(false)
+      clearMarker()
     }
     const fail = (msg: string) => {
       if (settled) return
       settled = true
       setScriptBusy(false)
       setScriptErr(msg)
+      clearMarker()
     }
 
     // Poll the cache as a safety net / reload-proof path.
-    const poll = async () => {
-      while (!settled && Date.now() - startedAt < MAX_WAIT) {
-        await new Promise(r => setTimeout(r, 4000))
-        if (settled) return
-        const { data } = await supabase
-          .from('jury_scripts')
-          .select('slides, updated_at')
-          .eq('analysis_id', analysisId)
-          .eq('language_level', level)
-          .maybeSingle()
-        const row = data as { slides?: unknown; updated_at?: string } | null
-        const s = row?.slides
-        if (Array.isArray(s) && s.length && row?.updated_at !== baseline) {
-          finish(s as JuryScriptSlide[])
-          return
-        }
-      }
-      if (!settled) fail(t('jury.scriptTimeout'))
-    }
-    poll()
+    ;(async () => {
+      const result = await pollCache(level, baseline, () => settled, startedAt)
+      if (result) finish(result)
+      else if (!settled) fail(t('jury.scriptTimeout'))
+    })()
 
     // Fire the request. If it returns cleanly, use it; if it drops, the poller covers us.
     try {
@@ -192,6 +218,37 @@ export function JuryPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 54px)' }}>
         <Loader2 size={26} color="#F97316" style={{ animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
+
+  // ── Free users: Jury Prep is a Pro feature ───────────────────────────────────
+  if (!isPro) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 54px)', padding: '0 24px', fontFamily: FONT }}>
+        <div style={{ position: 'relative', maxWidth: 460, width: '100%', borderRadius: 24, overflow: 'hidden', border: `1px solid ${c.border}`, background: c.isDark ? 'linear-gradient(180deg, oklch(0.22 0.02 40), oklch(0.2 0.004 270))' : 'linear-gradient(180deg, #fff7ed, ' + c.cardBg + ')' }}>
+          <style>{`@keyframes jp-g1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,14px) scale(1.12)}}@keyframes jp-g2{0%,100%{transform:translate(0,0)}50%{transform:translate(-18px,16px)}}`}</style>
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: -60, left: -20, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.72 0.18 45/0.4), transparent 70%)', filter: 'blur(28px)', animation: 'jp-g1 9s ease-in-out infinite' }} />
+            <div style={{ position: 'absolute', top: -70, right: 10, width: 170, height: 170, borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.6 0.2 30/0.36), transparent 70%)', filter: 'blur(30px)', animation: 'jp-g2 11s ease-in-out infinite' }} />
+          </div>
+          <div style={{ position: 'relative', zIndex: 1, padding: '34px 28px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #F97316, oklch(0.6 0.21 30))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 8px 22px oklch(0.72 0.18 45/0.45)' }}>
+              <Lock size={24} color="#fff" />
+            </div>
+            <h2 style={{ fontSize: 21, fontWeight: 800, color: c.textPrimary, margin: '0 0 10px', letterSpacing: '-0.02em' }}>{t('jury.proGateTitle')}</h2>
+            <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 auto 20px', maxWidth: 380 }}>{t('jury.proGateBody')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, textAlign: 'left', maxWidth: 320, margin: '0 auto 24px' }}>
+              {[t('jury.proGateF1'), t('jury.proGateF2'), t('jury.proGateF3')].map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: c.textPrimary }}>
+                  <span style={{ color: '#F97316', fontWeight: 800 }}>✓</span> {f}
+                </div>
+              ))}
+            </div>
+            <a href="/pricing" style={{ display: 'inline-block', padding: '12px 30px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 22px oklch(0.72 0.18 45/0.45)' }}>{t('jury.upgradeToPro')}</a>
+            <div style={{ marginTop: 11, fontSize: 12, color: c.textMuted }}>{t('jury.priceNote')}</div>
+          </div>
+        </div>
       </div>
     )
   }
