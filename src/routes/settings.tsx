@@ -18,9 +18,19 @@ const TABS: { id: Tab; labelKey: string; icon: typeof User }[] = [
 ]
 
 const LANGUAGES = [
-  { v: 'en', l: 'English',  flag: '🇬🇧' },
-  { v: 'ru', l: 'Русский',  flag: '🇷🇺' },
-  { v: 'tr', l: 'Türkçe',   flag: '🇹🇷' },
+  { v: 'en', l: 'English',  native: 'English',  flag: '🇬🇧' },
+  { v: 'ru', l: 'Russian',  native: 'Русский',  flag: '🇷🇺' },
+  { v: 'tr', l: 'Turkish',  native: 'Türkçe',   flag: '🇹🇷' },
+]
+
+// Not yet available — shown as disabled so users know more is coming.
+const COMING_SOON_LANGS = [
+  { l: 'Spanish',    native: 'Español',    flag: '🇪🇸' },
+  { l: 'French',     native: 'Français',   flag: '🇫🇷' },
+  { l: 'German',     native: 'Deutsch',    flag: '🇩🇪' },
+  { l: 'Arabic',     native: 'العربية',    flag: '🇸🇦' },
+  { l: 'Portuguese', native: 'Português',  flag: '🇵🇹' },
+  { l: 'Chinese',    native: '中文',        flag: '🇨🇳' },
 ]
 
 export function SettingsPage() {
@@ -458,20 +468,44 @@ export function SettingsPage() {
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: c.textPrimary, margin: '0 0 20px' }}>{t('settings.languageHeading')}</h2>
               <p style={{ fontSize: 13, color: c.textMuted, marginBottom: 16 }}>{t('settings.languageSubtitle')}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {LANGUAGES.map(l => (
-                  <button key={l.v} onClick={() => setLanguage(l.v)} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                    background: language === l.v ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.1)' : '#fff7ed') : c.isDark ? 'oklch(0.19 0.004 270)' : '#f9fafb',
-                    border: language === l.v ? '1.5px solid #F97316' : `1px solid ${c.border}`,
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                {LANGUAGES.map(l => {
+                  const sel = language === l.v
+                  return (
+                    <button key={l.v} onClick={() => setLanguage(l.v)} style={{
+                      display: 'flex', alignItems: 'center', gap: 11,
+                      padding: '12px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+                      background: sel ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.08)' : '#fff7ed') : 'transparent',
+                      border: sel ? '1.5px solid #F97316' : `1px solid ${c.border}`,
+                    }}>
+                      <span style={{ fontSize: 20, lineHeight: 1, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, background: c.isDark ? 'oklch(0.22 0.004 270)' : '#fff', flexShrink: 0 }}>{l.flag}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: sel ? '#F97316' : c.textPrimary, lineHeight: 1.2 }}>{l.native}</div>
+                        <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{l.l}</div>
+                      </div>
+                      <span style={{ width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: sel ? 'none' : `1.5px solid ${c.border}`, background: sel ? '#F97316' : 'transparent' }}>
+                        {sel && <Check size={11} color="#fff" strokeWidth={3} />}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Coming soon */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', margin: '24px 0 10px' }}>{t('settings.moreLanguages')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                {COMING_SOON_LANGS.map(l => (
+                  <div key={l.native} title={t('settings.comingSoonShort')} style={{
+                    display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px', borderRadius: 12,
+                    border: `1px dashed ${c.border}`, opacity: 0.6, cursor: 'not-allowed',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 22 }}>{l.flag}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: language === l.v ? '#F97316' : c.textPrimary }}>{l.l}</span>
+                    <span style={{ fontSize: 20, lineHeight: 1, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, background: c.isDark ? 'oklch(0.20 0.004 270)' : '#f3f4f6', flexShrink: 0, filter: 'grayscale(0.4)' }}>{l.flag}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: c.textMuted, lineHeight: 1.2 }}>{l.native}</div>
+                      <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{l.l}</div>
                     </div>
-                    {language === l.v && <Check size={15} color="#F97316" />}
-                  </button>
+                    <span style={{ fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 100, background: c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb', color: c.textMuted, letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('settings.comingSoonShort')}</span>
+                  </div>
                 ))}
               </div>
               <button onClick={save} disabled={saving || (!isDirty && !saved)} style={{

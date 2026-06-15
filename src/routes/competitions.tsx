@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trophy, Clock, ExternalLink, Bookmark, X, Tag } from 'lucide-react'
+import { Trophy, Clock, ExternalLink, Bookmark, X, Tag, ChevronDown, Check, SlidersHorizontal } from 'lucide-react'
 import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -73,6 +73,7 @@ export function CompetitionsPage() {
   const [freeOnly, setFreeOnly] = useState(false)
   const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('all')
   const [savedOnly, setSavedOnly] = useState(false)
+  const [openMenu, setOpenMenu] = useState<'discipline' | 'filters' | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -125,15 +126,37 @@ export function CompetitionsPage() {
     })
   }, [comps, discipline, studentOnly, freeOnly, savedOnly, savedIds, deadlineFilter])
 
-  // ── Sub-components ──
-  const FilterToggle = ({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) => (
+  // ── Filter dropdowns ──
+  const activeFilterCount = (studentOnly ? 1 : 0) + (freeOnly ? 1 : 0) + (deadlineFilter !== 'all' ? 1 : 0) + (savedOnly ? 1 : 0)
+  const selectedDiscipline = DISCIPLINE_TABS.find(d => d.v === discipline)
+
+  const menuBtn = (active: boolean): CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 100, cursor: 'pointer',
+    fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.15s',
+    border: `1px solid ${active ? '#F97316' : c.border}`,
+    background: active ? 'oklch(0.72 0.18 45 / 0.1)' : 'transparent',
+    color: active ? '#F97316' : c.textPrimary,
+  })
+  const popover: CSSProperties = {
+    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50, minWidth: 210,
+    background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 12,
+    boxShadow: '0 10px 34px rgba(0,0,0,0.22)', padding: 6,
+  }
+  const OptionRow = ({ checked, onClick, label, radio }: { checked: boolean; onClick: () => void; label: string; radio?: boolean }) => (
     <button onClick={onClick} style={{
-      padding: '7px 14px', borderRadius: 100, cursor: 'pointer', fontSize: 12.5, fontWeight: active ? 700 : 500,
-      border: `1px solid ${active ? '#F97316' : c.border}`,
-      background: active ? 'oklch(0.72 0.18 45 / 0.12)' : 'transparent',
-      color: active ? '#F97316' : c.textMuted, transition: 'all 0.15s', whiteSpace: 'nowrap',
-    }}>{label}</button>
+      display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 8,
+      background: checked ? (c.isDark ? 'oklch(0.72 0.18 45 / 0.08)' : '#fff7ed') : 'transparent',
+      border: 'none', cursor: 'pointer', textAlign: 'left',
+    }}>
+      <span style={{
+        width: 17, height: 17, flexShrink: 0, borderRadius: radio ? '50%' : 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: checked ? 'none' : `1.5px solid ${c.border}`, background: checked ? '#F97316' : 'transparent',
+      }}>{checked && <Check size={12} color="#fff" strokeWidth={3} />}</span>
+      <span style={{ fontSize: 13, fontWeight: checked ? 600 : 500, color: checked ? c.textPrimary : c.textMuted }}>{label}</span>
+    </button>
   )
+  const divider = <div style={{ height: 1, background: c.border, margin: '5px 8px' }} />
+  const clearAll = () => { setStudentOnly(false); setFreeOnly(false); setDeadlineFilter('all'); setSavedOnly(false) }
 
   return (
     <div style={{ height: 'calc(100vh - 54px)', display: 'flex', flexDirection: 'column', fontFamily: FONT, background: c.bg, overflow: 'hidden' }}>
@@ -146,24 +169,51 @@ export function CompetitionsPage() {
           <div style={{ fontSize: 12.5, color: c.textMuted, marginTop: 2 }}>{t('competitions.subtitle')}</div>
         </div>
 
-        {/* Filter row */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          {DISCIPLINE_TABS.map(tab => (
-            <FilterToggle key={tab.v} active={discipline === tab.v} onClick={() => setDiscipline(tab.v)} label={t(tab.labelKey)} />
-          ))}
-        </div>
+        {/* Click-away backdrop for open menus */}
+        {openMenu && <div onClick={() => setOpenMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />}
+
+        {/* Filter dropdowns */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, alignItems: 'center' }}>
-          <FilterToggle active={studentOnly} onClick={() => setStudentOnly(v => !v)} label={t('competitions.studentOnly')} />
-          <FilterToggle active={freeOnly} onClick={() => setFreeOnly(v => !v)} label={t('competitions.freeOnly')} />
-          <div style={{ width: 1, height: 20, background: c.border, margin: '0 2px' }} />
-          <FilterToggle active={deadlineFilter === 'week'} onClick={() => setDeadlineFilter(f => f === 'week' ? 'all' : 'week')} label={t('competitions.closingWeek')} />
-          <FilterToggle active={deadlineFilter === 'month'} onClick={() => setDeadlineFilter(f => f === 'month' ? 'all' : 'month')} label={t('competitions.closingMonth')} />
-          {user && (
-            <>
-              <div style={{ width: 1, height: 20, background: c.border, margin: '0 2px' }} />
-              <FilterToggle active={savedOnly} onClick={() => setSavedOnly(v => !v)} label={t('competitions.savedFilter')} />
-            </>
-          )}
+          {/* Discipline */}
+          <div style={{ position: 'relative', zIndex: openMenu === 'discipline' ? 45 : undefined }}>
+            <button onClick={() => setOpenMenu(m => m === 'discipline' ? null : 'discipline')} style={menuBtn(discipline !== 'all')}>
+              {discipline === 'all' ? t('competitions.filterDiscipline') : t(selectedDiscipline?.labelKey ?? 'competitions.filterDiscipline')}
+              <ChevronDown size={14} style={{ transform: openMenu === 'discipline' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+            </button>
+            {openMenu === 'discipline' && (
+              <div style={popover}>
+                {DISCIPLINE_TABS.map(tab => (
+                  <OptionRow key={tab.v} radio checked={discipline === tab.v} onClick={() => { setDiscipline(tab.v); setOpenMenu(null) }} label={t(tab.labelKey)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* More filters */}
+          <div style={{ position: 'relative', zIndex: openMenu === 'filters' ? 45 : undefined }}>
+            <button onClick={() => setOpenMenu(m => m === 'filters' ? null : 'filters')} style={menuBtn(activeFilterCount > 0)}>
+              <SlidersHorizontal size={14} />
+              {t('competitions.filterMore')}
+              {activeFilterCount > 0 && (
+                <span style={{ background: '#F97316', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 100, minWidth: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{activeFilterCount}</span>
+              )}
+              <ChevronDown size={14} style={{ transform: openMenu === 'filters' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+            </button>
+            {openMenu === 'filters' && (
+              <div style={{ ...popover, minWidth: 230 }}>
+                <OptionRow checked={studentOnly} onClick={() => setStudentOnly(v => !v)} label={t('competitions.studentOnly')} />
+                <OptionRow checked={freeOnly} onClick={() => setFreeOnly(v => !v)} label={t('competitions.freeOnly')} />
+                {divider}
+                <OptionRow checked={deadlineFilter === 'week'} onClick={() => setDeadlineFilter(f => f === 'week' ? 'all' : 'week')} label={t('competitions.closingWeek')} />
+                <OptionRow checked={deadlineFilter === 'month'} onClick={() => setDeadlineFilter(f => f === 'month' ? 'all' : 'month')} label={t('competitions.closingMonth')} />
+                {user && <>{divider}<OptionRow checked={savedOnly} onClick={() => setSavedOnly(v => !v)} label={t('competitions.savedFilter')} /></>}
+                {activeFilterCount > 0 && <>
+                  {divider}
+                  <button onClick={clearAll} style={{ width: '100%', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 12.5, color: c.textMuted, fontWeight: 600 }}>{t('competitions.clearFilters')}</button>
+                </>}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
