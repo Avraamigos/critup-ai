@@ -317,12 +317,12 @@ export function LandingPage() {
                 cta:t('landing.freeCta'),
               },
               {
-                name:t('landing.planMonthly'), price:'$7', sub:'/mo', featured:true, badge:t('landing.mostPopular'),
+                name:t('landing.planMonthly'), price:'$9', sub:'/mo', featured:true, badge:t('landing.mostPopular'),
                 features:[t('landing.monthlyFeat1'),t('landing.monthlyFeat2'),t('landing.monthlyFeat3'),t('landing.monthlyFeat4'),t('landing.monthlyFeat5')],
                 cta:t('landing.monthlyCta'),
               },
               {
-                name:t('landing.planYearly'), price:'$45', sub:'/yr', crossed:'$84', save:t('landing.save46'), featured:false, badge:t('landing.bestValue'),
+                name:t('landing.planYearly'), price:'$59', sub:'/yr', crossed:'$108', save:t('landing.save46'), featured:false, badge:t('landing.bestValue'),
                 features:[t('landing.yearlyFeat1'),t('landing.yearlyFeat2'),t('landing.yearlyFeat3'),t('landing.yearlyFeat4')],
                 cta:t('landing.yearlyCta'),
               },

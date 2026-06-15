@@ -55,14 +55,14 @@ export function PricingPage() {
       featured: false, action: () => navigate({ to: '/' }),
     },
     {
-      name: t('pricing.planMonthly'), price: '$7', sub: t('pricing.subMonth'), cancel: t('pricing.cancelAnytime'),
+      name: t('pricing.planMonthly'), price: '$9', sub: t('pricing.subMonth'), cancel: t('pricing.cancelAnytime'),
       features: [t('pricing.monthlyFeat1'), t('pricing.monthlyFeat2'), t('pricing.monthlyFeat3'), t('pricing.monthlyFeat4'), t('pricing.monthlyFeat5'), t('pricing.monthlyFeat6')],
       cta: currentPlan === 'monthly' ? t('pricing.currentPlan') : (loadingPlan === 'monthly' ? t('pricing.opening') : t('pricing.startMonthly')),
       featured: true, badge: t('pricing.mostPopular'),
       action: () => { if (currentPlan === 'monthly') return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },
     },
     {
-      name: t('pricing.planYearly'), price: '$45', sub: t('pricing.subYear'), crossed: '$84', save: t('pricing.save46'),
+      name: t('pricing.planYearly'), price: '$59', sub: t('pricing.subYear'), crossed: '$108', save: t('pricing.save46'),
       features: [t('pricing.yearlyFeat1'), t('pricing.yearlyFeat2'), t('pricing.yearlyFeat3'), t('pricing.yearlyFeat4')],
       cta: currentPlan === 'yearly' ? t('pricing.currentPlan') : (loadingPlan === 'yearly' ? t('pricing.opening') : t('pricing.startYearly')),
       featured: false, badge: t('pricing.bestValue'),
