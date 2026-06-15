@@ -26,7 +26,15 @@ export async function renderPdfToJpegBlobs(
   { maxPages = 12, maxWidth = 1400, quality = 0.82, onProgress }: RenderSlidesOptions = {},
 ): Promise<Blob[]> {
   const lib = await getPdfJs()
-  const doc = await lib.getDocument({ url }).promise
+  // cMapUrl + standardFontDataUrl are REQUIRED for PDFs that embed subset/CID
+  // fonts (almost every architecture export from Illustrator/InDesign). Without
+  // them pdf.js can't map the glyphs and renders garbled symbols into the JPEG.
+  const doc = await lib.getDocument({
+    url,
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/standard_fonts/`,
+  }).promise
   const total = Math.min(doc.numPages, maxPages)
   const blobs: Blob[] = []
 

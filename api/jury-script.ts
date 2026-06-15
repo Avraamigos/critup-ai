@@ -205,7 +205,7 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
     const anthropic = new Anthropic({ apiKey: anthropicKey })
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
+      max_tokens: 16000,
       system: systemPrompt,
       messages: [
         {
@@ -230,6 +230,21 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
       const m = raw.match(/\{[\s\S]*\}/)
       if (m) { try { parsed = JSON.parse(m[0]) } catch { /* fall through */ } }
     }
+    // Truncation recovery: if the model hit the token ceiling mid-array, cut back
+    // to the last complete slide object and re-close the JSON so we keep what we got.
+    if (!parsed) {
+      const start = raw.indexOf('{')
+      if (start !== -1) {
+        const body = raw.slice(start)
+        const lastClose = body.lastIndexOf('}')
+        if (lastClose !== -1) {
+          const head = body.slice(0, lastClose + 1)
+          for (const attempt of [head + ']}', head + '}]}', head + '}']) {
+            try { parsed = JSON.parse(attempt); break } catch { /* next */ }
+          }
+        }
+      }
+    }
 
     const slidesRaw = parsed && Array.isArray(parsed.slides) ? (parsed.slides as Record<string, unknown>[]) : []
     const slides = slidesRaw
@@ -242,7 +257,12 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
 
     if (slides.length === 0) {
       console.error('[jury-script] no usable slides. stop_reason:', message.stop_reason, 'raw:', raw.slice(0, 400))
-      return res.status(500).json({ error: 'Could not generate a script, please try again' })
+      return res.status(500).json({
+        error: 'no_slides',
+        message: message.stop_reason === 'max_tokens'
+          ? 'The script was too long and got cut off. Please try the Simple level or try again.'
+          : 'Could not generate a script from this project. Please try again.',
+      })
     }
 
     // 8. Cache the result (upsert per analysis × level) and log the regen event.
@@ -257,6 +277,6 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
     return res.json({ slides, cached: false })
   } catch (err) {
     console.error('[jury-script]', err)
-    return res.status(500).json({ error: 'Script generation failed', detail: String(err) })
+    return res.status(500).json({ error: 'Script generation failed', message: 'Something went wrong generating your script. Please try again.', detail: String(err) })
   }
 }

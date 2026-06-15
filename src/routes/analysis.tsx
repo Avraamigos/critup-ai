@@ -69,6 +69,17 @@ function cleanForTTS(raw: string): string {
     .replace(/#+\s*/g, '')
     .replace(/_{2,}/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Spoken-form fixes for architecture notation ElevenLabs otherwise garbles:
+    .replace(/(\d)\s*[/:]\s*(\d)/g, '$1 to $2')
+    .replace(/(\d)\s*m²/g, '$1 square meters')
+    .replace(/(\d)\s*m2\b/g, '$1 square meters')
+    .replace(/(\d)\s*m³/g, '$1 cubic meters')
+    .replace(/km²/g, ' square kilometers')
+    .replace(/²/g, ' squared').replace(/³/g, ' cubed')
+    .replace(/(\d)\s*[x×]\s*(\d)/g, '$1 by $2')
+    .replace(/(\d)\s*°/g, '$1 degrees')
+    .replace(/%/g, ' percent').replace(/&/g, ' and ')
+    .replace(/\s*\/\s*/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }

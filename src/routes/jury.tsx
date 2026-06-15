@@ -114,7 +114,7 @@ export function JuryPage() {
     setScriptErr(null)
 
     const startedAt = Date.now()
-    const MAX_WAIT = 150_000
+    const MAX_WAIT = 290_000   // the server function may run up to 300s; out-wait it
     let settled = false
 
     // Baseline updated_at so a regenerate waits for a genuinely NEW row, not the old one.
@@ -173,10 +173,16 @@ export function JuryPage() {
       })
       const data = await res.json().catch(() => null)
       if (settled) return
-      if (!res.ok) { fail(data?.message || t('jury.scriptError')); return }
-      if (Array.isArray(data?.slides) && data.slides.length) finish(data.slides as JuryScriptSlide[])
+      if (res.ok) {
+        if (Array.isArray(data?.slides) && data.slides.length) finish(data.slides as JuryScriptSlide[])
+        return
+      }
+      // Explicit business error (paywall, rate limit, no-slides) carries a message → show it.
+      // A gateway timeout (504, no JSON body) means the function may still be finishing —
+      // don't fail; let the poller pick up the cached result.
+      if (data?.message) fail(data.message)
     } catch {
-      // HTTP dropped — leave it to the poller.
+      // HTTP dropped mid-flight — leave it to the poller.
     }
   }
 

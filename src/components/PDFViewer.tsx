@@ -85,7 +85,15 @@ export function PDFViewer({
       if (!pdfjsLib) return
       try {
         if (pdfRef.current) { pdfRef.current.destroy(); pdfRef.current = null }
-        const doc = await pdfjsLib.getDocument({ url, disableRange: false }).promise
+        // cMapUrl + standardFontDataUrl let pdf.js resolve embedded subset/CID
+        // fonts — without them, architecture PDFs render garbled glyphs.
+        const doc = await pdfjsLib.getDocument({
+          url,
+          disableRange: false,
+          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+          cMapPacked: true,
+          standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`,
+        }).promise
         pdfRef.current = doc
         onPageCount?.(doc.numPages)
         await renderPage(pageNumber)
