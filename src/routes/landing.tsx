@@ -291,6 +291,8 @@ export function LandingPage() {
             { icon:'✨', title:t('landing.feat4Title'), desc:t('landing.feat4Desc') },
             { icon:'🌍', title:t('landing.feat5Title'), desc:t('landing.feat5Desc') },
             { icon:'📈', title:t('landing.feat6Title'), desc:t('landing.feat6Desc') },
+            { icon:'🏆', title:t('landing.feat7Title'), desc:t('landing.feat7Desc') },
+            { icon:'👥', title:t('landing.feat8Title'), desc:t('landing.feat8Desc') },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}` }}>
               <div style={{ width:36, height:36, borderRadius:9, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, fontSize:18 }}>{icon}</div>
