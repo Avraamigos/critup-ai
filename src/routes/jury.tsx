@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle } from 'lucide-react'
+import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle, MessageSquare } from 'lucide-react'
 import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -103,26 +103,80 @@ export function JuryPage() {
   }, [analysisId, level, isPro])
 
   // ── Generate (or regenerate) the script ────────────────────────────────────
+  // The Claude call re-reads the whole PDF and can take 60-90s. Rather than rely
+  // on a single long-held HTTP response (which a proxy/timeout or a page reload can
+  // drop — leaving the user with a dead spinner), we fire the request AND poll the
+  // jury_scripts cache. Whichever resolves first wins, and because the server caches
+  // the result, a reload mid-generation simply picks it up. Either path is accepted.
   const generate = async (regenerate = false) => {
     if (!analysisId) return
     setScriptBusy(true)
     setScriptErr(null)
+
+    const startedAt = Date.now()
+    const MAX_WAIT = 150_000
+    let settled = false
+
+    // Baseline updated_at so a regenerate waits for a genuinely NEW row, not the old one.
+    let baseline: string | null = null
+    if (regenerate) {
+      const { data } = await supabase
+        .from('jury_scripts')
+        .select('updated_at')
+        .eq('analysis_id', analysisId)
+        .eq('language_level', level)
+        .maybeSingle()
+      baseline = (data as { updated_at?: string } | null)?.updated_at ?? null
+    }
+
+    const finish = (slidesData: JuryScriptSlide[]) => {
+      if (settled) return
+      settled = true
+      setSlides(slidesData)
+      setScriptBusy(false)
+    }
+    const fail = (msg: string) => {
+      if (settled) return
+      settled = true
+      setScriptBusy(false)
+      setScriptErr(msg)
+    }
+
+    // Poll the cache as a safety net / reload-proof path.
+    const poll = async () => {
+      while (!settled && Date.now() - startedAt < MAX_WAIT) {
+        await new Promise(r => setTimeout(r, 4000))
+        if (settled) return
+        const { data } = await supabase
+          .from('jury_scripts')
+          .select('slides, updated_at')
+          .eq('analysis_id', analysisId)
+          .eq('language_level', level)
+          .maybeSingle()
+        const row = data as { slides?: unknown; updated_at?: string } | null
+        const s = row?.slides
+        if (Array.isArray(s) && s.length && row?.updated_at !== baseline) {
+          finish(s as JuryScriptSlide[])
+          return
+        }
+      }
+      if (!settled) fail(t('jury.scriptTimeout'))
+    }
+    poll()
+
+    // Fire the request. If it returns cleanly, use it; if it drops, the poller covers us.
     try {
       const res = await fetch('/api/jury-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisId, languageLevel: level, regenerate }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setScriptErr(data?.message || t('jury.scriptError'))
-        return
-      }
-      setSlides(Array.isArray(data.slides) ? data.slides : [])
+      const data = await res.json().catch(() => null)
+      if (settled) return
+      if (!res.ok) { fail(data?.message || t('jury.scriptError')); return }
+      if (Array.isArray(data?.slides) && data.slides.length) finish(data.slides as JuryScriptSlide[])
     } catch {
-      setScriptErr(t('jury.scriptError'))
-    } finally {
-      setScriptBusy(false)
+      // HTTP dropped — leave it to the poller.
     }
   }
 
@@ -171,7 +225,12 @@ export function JuryPage() {
         </div>
 
         {/* ── Q&A list ── */}
-        <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', margin: '0 0 12px' }}>{t('jury.questionsHeading')}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.1em', margin: '0 0 8px' }}>{t('jury.questionsHeading')}</div>
+        <button onClick={() => navigate({ to: '/assistant' })}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 10, background: c.isDark ? 'oklch(0.72 0.18 45/0.08)' : '#fff7ed', border: `1px solid ${c.isDark ? 'oklch(0.72 0.18 45/0.25)' : '#fed7aa'}`, cursor: 'pointer', marginBottom: 14 }}>
+          <MessageSquare size={14} color="#F97316" />
+          <span style={{ fontSize: 12.5, color: c.textPrimary, fontWeight: 500, textAlign: 'left' }}>{t('jury.chatHint')}</span>
+        </button>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
           {qa.map((pair, i) => (
             <div key={i} style={{ background: c.cardBg, borderRadius: 14, border: `1px solid ${c.border}`, padding: '16px 18px' }}>

@@ -109,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/',          activePath: '/',          icon: LayoutGrid,  label: 'nav.dashboard' },
     { to: '/projects',  activePath: '/projects',  icon: Folder,      label: 'nav.projects'  },
     { to: analysisTo,   activePath: '/analysis/', icon: CircleDot,   label: 'nav.analysis'  },
-    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury', disabled: true },
+    { to: '/jury',      activePath: '/jury',      icon: Mic,         label: 'nav.jury' },
     { to: '/feed',      activePath: '/feed',      icon: Users,       label: 'nav.feed' },
     { to: '/competitions', activePath: '/competitions', icon: Trophy, label: 'nav.competitions' },
     ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'nav.admin' }] : []),
