@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle, MessageSquare, Mic, Lightbulb } from 'lucide-react'
+import { Plus, Loader2, Sparkles, RefreshCw, Lock, HelpCircle, MessageSquare, Lightbulb } from 'lucide-react'
 import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -220,21 +220,28 @@ export function JuryPage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fade-up { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes jp-float1 { 0%,100%{ transform:translate(0,0) scale(1) } 50%{ transform:translate(26px,16px) scale(1.12) } }
+        @keyframes jp-float2 { 0%,100%{ transform:translate(0,0) scale(1) } 50%{ transform:translate(-22px,18px) scale(1.1) } }
+        @keyframes jp-float3 { 0%,100%{ transform:translate(0,0) } 50%{ transform:translate(14px,-14px) } }
       `}</style>
 
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 14, background: 'linear-gradient(135deg, #F97316, oklch(0.6 0.21 30))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 18px oklch(0.72 0.18 45/0.35)' }}>
-            <Mic size={22} color="#fff" strokeWidth={2} />
+        {/* Header — ambient glow */}
+        <div style={{ position: 'relative', marginBottom: 26, borderRadius: 22, overflow: 'hidden', border: `1px solid ${c.border}`, background: c.isDark ? 'linear-gradient(180deg, oklch(0.22 0.02 40), oklch(0.2 0.004 270))' : 'linear-gradient(180deg, #fff7ed, ' + c.cardBg + ')' }}>
+          {/* floating glow blobs */}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+            <div style={{ position: 'absolute', top: -70, left: -20, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.72 0.18 45/0.45), transparent 68%)', filter: 'blur(26px)', animation: 'jp-float1 9s ease-in-out infinite' }} />
+            <div style={{ position: 'absolute', top: -90, right: 30, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.6 0.2 30/0.4), transparent 70%)', filter: 'blur(30px)', animation: 'jp-float2 12s ease-in-out infinite' }} />
+            <div style={{ position: 'absolute', bottom: -80, left: '38%', width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, oklch(0.78 0.16 60/0.3), transparent 70%)', filter: 'blur(30px)', animation: 'jp-float3 10s ease-in-out infinite' }} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0 }}>{t('jury.title')}</h1>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '3px 10px', borderRadius: 100 }}>{qa.length} {t('jury.questionCount')}</span>
+          {/* content */}
+          <div style={{ position: 'relative', zIndex: 1, padding: isMobile ? '22px 18px' : '26px 26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap', marginBottom: 6 }}>
+              <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 800, letterSpacing: '-0.035em', margin: 0, background: 'linear-gradient(92deg, #F97316, oklch(0.72 0.2 35))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{t('jury.title')}</h1>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: '#F97316', padding: '3px 11px', borderRadius: 100, boxShadow: '0 3px 12px oklch(0.72 0.18 45/0.5)' }}>{qa.length} {t('jury.questionCount')}</span>
             </div>
-            <p style={{ fontSize: 13, color: c.textMuted, margin: '4px 0 0' }}>{t('jury.subtitle')}</p>
-            {projectName && <p style={{ fontSize: 12, color: '#F97316', fontWeight: 600, margin: '6px 0 0' }}>{t('jury.forProject', { name: projectName })}</p>}
+            <p style={{ fontSize: 13.5, color: c.isDark ? 'oklch(0.78 0.01 60)' : c.textMuted, margin: 0, maxWidth: 520, lineHeight: 1.5 }}>{t('jury.subtitle')}</p>
+            {projectName && <p style={{ fontSize: 12.5, color: '#F97316', fontWeight: 600, margin: '8px 0 0' }}>{t('jury.forProject', { name: projectName })}</p>}
           </div>
         </div>
 
