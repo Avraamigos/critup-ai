@@ -223,10 +223,10 @@ export function JuryPage() {
     if (shorteningIdx !== null || !analysisId) return
     setShorteningIdx(i)
     try {
-      const res = await fetch('/api/jury-script-shorten', {
+      const res = await fetch('/api/jury-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysisId, text: slides[i].script, languageLevel: level }),
+        body: JSON.stringify({ action: 'shorten', analysisId, text: slides[i].script, languageLevel: level }),
       })
       const data = await res.json().catch(() => null)
       if (res.ok && data?.text) setShortened(prev => ({ ...prev, [i]: data.text as string }))

@@ -418,7 +418,9 @@ export default async function handler(
         }
       }
 
-      const rl = isAdmin ? { allowed: true } : await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
+      const rl = isAdmin
+        ? { allowed: true, limit: 0, used: 0, remaining: 0, resetInSeconds: 0, upgradeRequired: false }
+        : await checkAnalyzeLimit(analysis.user_id as string, plan, supabase)
       if (!rl.allowed) {
         // Mark failed so the UI doesn't spin forever
         await supabase.from('analyses').update({ status: 'failed', error_message: 'Rate limit reached' }).eq('id', analysisId)

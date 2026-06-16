@@ -29,6 +29,23 @@ interface ScriptRequest {
   analysisId: string
   languageLevel: Level
   regenerate?: boolean
+  action?: 'shorten'   // when 'shorten', paraphrase `text` instead of generating
+  text?: string
+}
+
+// Resolve the owner's plan + language from an analysis id (shared gate).
+async function ownerPlanLang(analysisId: string, supabase: SupabaseClient<any, any, any>) {
+  const { data: a } = await supabase.from('analyses').select('user_id').eq('id', analysisId).maybeSingle()
+  const userId = (a as { user_id?: string } | null)?.user_id ?? null
+  let plan = 'free', langCode = 'en', isAdmin = false
+  if (userId) {
+    const { data: prof } = await supabase.from('profiles').select('plan, language').eq('id', userId).maybeSingle()
+    plan = (prof as { plan?: string } | null)?.plan ?? 'free'
+    langCode = ((prof as { language?: string | null } | null)?.language ?? 'en').toLowerCase()
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId)
+    isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+  }
+  return { userId, plan, langCode, isAdmin }
 }
 
 async function countRecentRegens(userId: string, supabase: SupabaseClient<any, any, any>) {
@@ -50,7 +67,7 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { analysisId, languageLevel, regenerate } = req.body ?? ({} as ScriptRequest)
+  const { analysisId, languageLevel, regenerate, action, text } = req.body ?? ({} as ScriptRequest)
   if (!analysisId) return res.status(400).json({ error: 'analysisId required' })
   const level: Level = LEVELS.includes(languageLevel) ? languageLevel : 'natural'
 
@@ -63,6 +80,31 @@ export default async function handler(
   }
 
   const supabase = createClient(supabaseUrl, serviceKey)
+
+  // ── action: shorten — cheap Haiku paraphrase of one slide's script ──────────
+  if (action === 'shorten') {
+    if (!text?.trim()) return res.status(400).json({ error: 'text required' })
+    try {
+      const { plan, langCode, isAdmin } = await ownerPlanLang(analysisId, supabase)
+      if (plan === 'free' && !isAdmin) {
+        return res.status(403).json({ error: 'limit_reached', message: 'Jury Prep is a Pro feature.' })
+      }
+      const langNote = langCode !== 'en' && languageNames[langCode] ? ` Write the result in ${languageNames[langCode]}.` : ''
+      const anthropic = new Anthropic({ apiKey: anthropicKey })
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 700,
+        system: `You shorten a presentation-script passage an architecture student will say out loud to a jury. Keep the key point and a ${level} spoken register. Cut filler and repetition; keep it natural to speak. Do not add new claims. Return ONLY the shortened passage — no preamble, no quotes.${langNote}`,
+        messages: [{ role: 'user', content: `Shorten this to roughly half its length, keeping what matters most:\n\n${text}` }],
+      })
+      const out = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
+      if (!out) return res.status(500).json({ error: 'failed', message: 'Could not shorten this slide. Please try again.' })
+      return res.json({ text: out })
+    } catch (err) {
+      console.error('[jury-script:shorten]', err)
+      return res.status(500).json({ error: 'failed', message: 'Could not shorten this slide. Please try again.' })
+    }
+  }
 
   try {
     // 1. Load the analysis + its project + the stored grounding material.
