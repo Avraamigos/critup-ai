@@ -43,6 +43,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Polyfill Map.getOrInsert / getOrInsertComputed for Safari (used by pdf.js) -->
+    <script>
+      if (typeof Map !== 'undefined') {
+        if (!Map.prototype.getOrInsert) {
+          Map.prototype.getOrInsert = function(key, value) {
+            if (!this.has(key)) this.set(key, value);
+            return this.get(key);
+          };
+        }
+        if (!Map.prototype.getOrInsertComputed) {
+          Map.prototype.getOrInsertComputed = function(key, fn) {
+            if (!this.has(key)) this.set(key, fn(key));
+            return this.get(key);
+          };
+        }
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
