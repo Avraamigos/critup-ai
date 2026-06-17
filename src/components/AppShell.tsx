@@ -115,6 +115,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...(isAdmin ? [{ to: '/admin', activePath: '/admin', icon: ShieldCheck, label: 'nav.admin' }] : []),
   ]
 
+  // Mobile bottom bar: drop Projects (reachable from dashboard + account menu) and
+  // Admin (owner-only, accessible by URL) so the 5 core tabs aren't cramped.
+  const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(n => n.activePath !== '/projects' && n.activePath !== '/admin')
+
   // Use activePath (not `to`) for highlight detection
   const isActive = (activePath: string) => {
     if (activePath === '/') return currentPath === '/'
@@ -365,7 +369,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           display: 'flex', alignItems: 'center',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
-          {NAV_ITEMS.map(({ to, activePath, icon: Icon, label, disabled }) => {
+          {MOBILE_NAV_ITEMS.map(({ to, activePath, icon: Icon, label, disabled }) => {
             const active = isActive(activePath)
             if (disabled) {
               return (
@@ -388,8 +392,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 textDecoration: 'none', color: active ? '#F97316' : c.textMuted,
                 transition: 'color 0.15s',
               }}>
-                <Icon size={20} color={active ? '#F97316' : c.textMuted} strokeWidth={active ? 2 : 1.6} />
-                <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, fontFamily: FONT, letterSpacing: '0.01em' }}>
+                <Icon size={21} color={active ? '#F97316' : c.textMuted} strokeWidth={active ? 2 : 1.6} />
+                <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, fontFamily: FONT, letterSpacing: '0.005em', whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {t(label)}
                 </span>
               </Link>

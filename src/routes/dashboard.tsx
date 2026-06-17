@@ -181,27 +181,29 @@ export function DashboardPage() {
             ? (c.isDark ? 'oklch(0.22 0.015 35)' : '#fff7ed')
             : (c.isDark ? 'oklch(0.21 0.004 270)' : '#f8fafc'),
           border: `1px solid ${analysesUsed >= 1 ? 'oklch(0.72 0.18 45/0.4)' : c.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between',
+          gap: isMobile ? 12 : 12,
           position: 'relative', zIndex: 1,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
             {/* Analyses */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0, width: 116 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted, fontFamily: FONT }}>{t('dashboard.analyses')}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: analysesUsed >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{analysesUsed}/1</span>
               </div>
-              <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.30 0.004 270)' : '#e5e7eb', overflow: 'hidden', width: 120 }}>
+              <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.30 0.004 270)' : '#e5e7eb', overflow: 'hidden', width: '100%' }}>
                 <div style={{ height: '100%', width: `${Math.min(100, analysesUsed * 100)}%`, borderRadius: 100, background: analysesUsed >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
               </div>
             </div>
-            <div style={{ fontSize: 12, color: c.textMuted, fontFamily: FONT }}>
+            <div style={{ fontSize: 12, color: c.textMuted, fontFamily: FONT, minWidth: 0 }}>
               {analysesUsed >= 1
                 ? <span>{t('dashboard.freeUsed')}<span style={{ color: '#F97316', fontWeight: 600 }}>{t('dashboard.upgradeForAccess')}</span></span>
                 : t('dashboard.freeRemaining')}
             </div>
           </div>
-          <Link to="/pricing" style={{ flexShrink: 0, padding: '7px 16px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)', fontFamily: FONT }}>
+          <Link to="/pricing" style={{ flexShrink: 0, padding: isMobile ? '10px 16px' : '7px 16px', borderRadius: 100, background: '#F97316', color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 0 12px oklch(0.72 0.18 45/0.3)', fontFamily: FONT, textAlign: 'center' }}>
             {analysesUsed >= 1 ? t('dashboard.upgradeNow') : t('dashboard.upgradeToPro')}
           </Link>
         </div>
