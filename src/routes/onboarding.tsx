@@ -32,19 +32,51 @@ const STEPS = [
   {
     q: 'onboarding.qUniversity', key: 'university', type: 'search' as const,
     suggestions: [
-      'MIT', 'ETH Zurich', 'TU Delft', 'Bartlett UCL', 'AA London', 'Columbia GSAPP',
-      'Harvard GSD', 'Yale School of Architecture', 'SCI-Arc', 'Pratt Institute',
-      'TU Berlin', 'RWTH Aachen', 'KIT Karlsruhe', 'TU Munich', 'Stuttgart University',
+      // North America
+      'MIT', 'Harvard GSD', 'Yale School of Architecture', 'Columbia GSAPP',
+      'Cornell AAP', 'SCI-Arc', 'Pratt Institute', 'Cooper Union', 'RISD',
+      'USC Architecture', 'UCLA Architecture', 'UC Berkeley', 'Georgia Tech',
+      'University of Michigan Taubman', 'University of Toronto', 'McGill School of Architecture',
+      'UBC Architecture', 'Tecnológico de Monterrey', 'UNAM Mexico',
+      // UK & Ireland
+      'Bartlett UCL', 'AA London', 'UCL London', 'Manchester School of Architecture',
+      'Edinburgh School of Architecture', 'University of Sheffield', 'Cardiff University',
+      'Kingston University', 'University College Dublin',
+      // Germany / Austria / Switzerland
+      'ETH Zurich', 'EPFL Lausanne', 'TU Berlin', 'TU Munich', 'RWTH Aachen',
+      'KIT Karlsruhe', 'Stuttgart University', 'TU Darmstadt', 'TU Dresden',
+      'TU Vienna', 'TU Graz', 'BOKU Vienna', 'University of Innsbruck',
+      // Netherlands / Belgium / Nordics
+      'TU Delft', 'TU Eindhoven', 'KU Leuven', 'Ghent University',
+      'KTH Stockholm', 'Chalmers University', 'Aalto University Helsinki',
+      'AHO Oslo', 'Royal Danish Academy', 'Aarhus School of Architecture',
+      // Southern Europe
+      'Politecnico di Milano', 'Politecnico di Torino', 'La Sapienza Roma', 'IUAV Venice',
+      'ETSAM Madrid', 'ETSAB Barcelona', 'UPC Barcelona', 'IE School of Architecture',
+      'University of Porto (FAUP)', 'University of Lisbon',
+      // France
+      'Paris-Belleville', 'Paris-Malaquais', 'ENSA Paris-La Villette', 'ENSA Versailles',
+      // Turkey
       'METU', 'ITU Istanbul', 'Bilkent University', 'Yıldız Technical University',
-      'TU Vienna', 'TU Graz', 'BOKU Vienna',
-      'Politecnico di Milano', 'La Sapienza Roma', 'IUAV Venice',
-      'ETSAM Madrid', 'ETSAB Barcelona', 'UPC Barcelona',
-      'Paris-Belleville', 'Paris-Malaquais', 'École Polytechnique',
-      'UCL London', 'Manchester School of Architecture', 'Edinburgh School of Architecture',
-      'Cornell AAP', 'USC Architecture', 'UCLA Architecture', 'Georgia Tech',
-      'University of Toronto', 'McGill School of Architecture',
-      'UNSW Sydney', 'University of Melbourne', 'Monash University',
-      'NUS Singapore', 'CUHK Hong Kong', 'Tsinghua University',
+      'Mimar Sinan University', 'Istanbul Bilgi University', 'Bahçeşehir University',
+      // Middle East
+      'American University of Beirut', 'Cairo University', 'German University in Cairo',
+      'Tehran University', 'Birzeit University', 'University of Jordan',
+      // Russia / Eastern Europe
+      'MARKHI Moscow', 'Saint Petersburg SUACE', 'Warsaw University of Technology',
+      'Czech Technical University', 'Budapest BME',
+      // Asia
+      'University of Tokyo', 'Kyoto University', 'Tsinghua University', 'Tongji University',
+      'NUS Singapore', 'HKU Hong Kong', 'CUHK Hong Kong', 'Seoul National University',
+      'IIT (India)', 'CEPT University', 'Chulalongkorn University', 'Universitas Indonesia',
+      // Oceania
+      'University of Melbourne', 'University of Sydney', 'UNSW Sydney', 'RMIT University',
+      'University of Auckland',
+      // Latin America
+      'University of São Paulo (FAU-USP)', 'Universidad de Buenos Aires', 'Universidad de Chile',
+      'Pontificia Universidad Católica de Chile',
+      // Africa
+      'University of Cape Town', 'University of Lagos', 'University of Nairobi',
       'Other / Not listed',
     ],
   },
