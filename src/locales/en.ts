@@ -120,6 +120,10 @@ export const en = {
     concept: 'Concept',
     spatial: 'Spatial',
     presentation: 'Presentation',
+    band_strong: 'Strong',
+    band_solid: 'Solid',
+    band_developing: 'Developing',
+    band_weak: 'Needs work',
   },
   disciplines: {
     architecture: 'Architecture',
@@ -604,6 +608,7 @@ export const en = {
     voice: 'Voice',
     voiceProTitle: 'Voice narration is available on Pro',
     newVersion: 'New version',
+    analyzingNewVersion: 'Analyzing your new version — scores and feedback will update automatically when it’s ready.',
     exportPdf: 'Export PDF',
     postedTitle: 'Posted to the Community feed — click to remove',
     removing: 'Removing…',

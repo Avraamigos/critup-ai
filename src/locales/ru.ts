@@ -120,6 +120,10 @@ export const ru: TranslationSchema = {
     concept: 'Концепция',
     spatial: 'Пространство',
     presentation: 'Подача',
+    band_strong: 'Сильно',
+    band_solid: 'Уверенно',
+    band_developing: 'В развитии',
+    band_weak: 'Нужна работа',
   },
   disciplines: {
     architecture: 'Архитектура',
@@ -604,6 +608,7 @@ export const ru: TranslationSchema = {
     voice: 'Озвучка',
     voiceProTitle: 'Озвучка доступна на Pro',
     newVersion: 'Новая версия',
+    analyzingNewVersion: 'Анализируем новую версию — оценки и комментарии обновятся автоматически, когда всё будет готово.',
     exportPdf: 'Экспорт PDF',
     postedTitle: 'Опубликовано в сообществе — нажмите, чтобы убрать',
     removing: 'Удаление…',

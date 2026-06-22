@@ -120,6 +120,10 @@ export const tr: TranslationSchema = {
     concept: 'Konsept',
     spatial: 'Mekânsal',
     presentation: 'Sunum',
+    band_strong: 'Güçlü',
+    band_solid: 'Sağlam',
+    band_developing: 'Gelişiyor',
+    band_weak: 'Geliştirilmeli',
   },
   disciplines: {
     architecture: 'Mimarlık',
@@ -604,6 +608,7 @@ export const tr: TranslationSchema = {
     voice: 'Ses',
     voiceProTitle: 'Seslendirme Pro\'da kullanılabilir',
     newVersion: 'Yeni sürüm',
+    analyzingNewVersion: 'Yeni sürümün analiz ediliyor — hazır olduğunda puanlar ve geri bildirim otomatik olarak güncellenecek.',
     exportPdf: 'PDF dışa aktar',
     postedTitle: 'Topluluk akışında yayında — kaldırmak için tıklayın',
     removing: 'Kaldırılıyor…',

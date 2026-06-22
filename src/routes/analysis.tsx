@@ -244,7 +244,9 @@ export function AnalysisPage() {
     }
     setLoading(true); setError(null); load()
     const sub = supabase.channel(`analysis-${params.projectId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'analyses', filter: `project_id=eq.${params.projectId}` }, load)
+      // '*' (not just UPDATE) so a freshly INSERTed new-version row is picked up too —
+      // otherwise re-uploading a version never triggers a reload and feels dead.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'analyses', filter: `project_id=eq.${params.projectId}` }, load)
       .subscribe()
     return () => { if (pollTimer) clearTimeout(pollTimer); if (timeoutTimer) clearTimeout(timeoutTimer); supabase.removeChannel(sub) }
   }, [params.projectId, retryKey])
@@ -269,6 +271,13 @@ export function AnalysisPage() {
   }, [params.projectId, latestAnalysis?.id, project?.name])
 
   const latestFailed = !latestAnalysis && project?.analyses?.some(a => a.status === 'failed')
+
+  // A new version is mid-analysis when there's a pending/processing row newer than the
+  // latest complete one — used to show an "analyzing new version" banner over old scores.
+  const analyzingNewer = !!project?.analyses?.some(a =>
+    (a.status === 'pending' || a.status === 'processing') &&
+    (!latestAnalysis || new Date(a.created_at).getTime() > new Date(latestAnalysis.created_at).getTime())
+  )
 
   // Keep analysisId ref in sync so speakSlide can read it without re-creating
   useEffect(() => { analysisIdRef.current = latestAnalysis?.id ?? null }, [latestAnalysis?.id])
@@ -311,10 +320,13 @@ export function AnalysisPage() {
       // 5. Update active project context for Crit chat
       localStorage.setItem('critup_last_analysis_id', newId)
 
-      // 5. Close modal — existing realtime subscription picks up status changes automatically
+      // 6. Close modal and force an immediate reload so the new pending row is picked
+      //    up right away (starts the poll + shows the analyzing banner). Don't rely on
+      //    the realtime INSERT alone — bump retryKey to re-run the load effect now.
       setShowReupload(false)
       setReuploadFile(null)
       setSlideIdx(0)
+      setRetryKey(k => k + 1)
     } catch (err) {
       setReuploadError(err instanceof Error ? err.message : t('analysis.uploadFailed'))
     } finally {
@@ -1038,6 +1050,22 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
         </div>
       </div>
 
+      {/* New-version analyzing banner — shown over the old scores while a freshly
+          uploaded version is being analyzed, so the re-upload never feels dead. */}
+      {analyzingNewer && (
+        <div style={{
+          margin: isMobile ? '10px 14px 0' : '12px 22px 0',
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '11px 16px', borderRadius: 12,
+          background: 'oklch(0.72 0.18 45 / 0.1)', border: '1px solid oklch(0.72 0.18 45 / 0.35)',
+        }}>
+          <Loader2 size={15} color="#F97316" style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+          <span style={{ fontSize: 13, fontWeight: 500, color: c.textPrimary, fontFamily: FONT }}>
+            {t('analysis.analyzingNewVersion')}
+          </span>
+        </div>
+      )}
+
       {/* ── Main ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 0 : 18, padding: isMobile ? '10px 14px 0' : '16px 22px 0', overflow: isMobile ? 'auto' : 'hidden', minHeight: 0 }}>
 
@@ -1165,7 +1193,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
               <div style={{ display: 'flex', justifyContent: 'space-around', padding: '8px 0' }}>
                 {scoreRings.map(r => (
                   <div key={r.label} style={{ textAlign: 'center' }}>
-                    <ScoreRing score={r.score} label={r.label} size={72} theme={theme} />
+                    <ScoreRing score={r.score} label={r.label} size={72} theme={theme} showBand />
                   </div>
                 ))}
               </div>
