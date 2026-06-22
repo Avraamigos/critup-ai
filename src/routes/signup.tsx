@@ -21,6 +21,22 @@ const GoogleIcon = () => (
   </svg>
 )
 
+// Advisory strength score 1–3 (Weak/Fair/Strong). Length-led, per NIST guidance —
+// no forced composition rules, just a nudge toward something longer.
+function passwordStrength(pw: string): 1 | 2 | 3 {
+  let s = 0
+  if (pw.length >= 8) s++
+  if (pw.length >= 12) s++
+  if (/\d/.test(pw) && /[a-zA-Z]/.test(pw)) s++
+  if (/[^a-zA-Z0-9]/.test(pw)) s++
+  return Math.min(3, Math.max(1, s)) as 1 | 2 | 3
+}
+const STRENGTH = {
+  1: { key: 'auth.pwWeak',   color: 'oklch(0.65 0.18 25)' },
+  2: { key: 'auth.pwFair',   color: '#F97316' },
+  3: { key: 'auth.pwStrong', color: 'oklch(0.72 0.17 145)' },
+} as const
+
 export function SignupPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
@@ -39,7 +55,7 @@ export function SignupPage() {
     const e: Record<string, string> = {}
     if (!form.name) e.name = t('auth.required')
     if (!form.email || !form.email.includes('@')) e.email = t('auth.validEmail')
-    if (form.password.length < 6) e.password = t('auth.atLeast6')
+    if (form.password.length < 8) e.password = t('auth.atLeast8')
     if (form.password !== form.confirm) e.confirm = t('auth.passwordsNoMatch')
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
@@ -106,6 +122,20 @@ export function SignupPage() {
                 onBlur={e => e.target.style.borderColor = errors[key] ? 'oklch(0.65 0.18 25)' : c.border}
               />
               {errors[key] && <div style={{ fontSize: 12, color: 'oklch(0.65 0.18 25)', marginTop: 4 }}>{errors[key]}</div>}
+              {key === 'password' && form.password && (() => {
+                const score = passwordStrength(form.password)
+                const { color, key: lblKey } = STRENGTH[score]
+                return (
+                  <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                      {[1, 2, 3].map(i => (
+                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 100, background: i <= score ? color : c.border, transition: 'background 0.2s' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color, minWidth: 42, textAlign: 'right' }}>{t(lblKey)}</span>
+                  </div>
+                )
+              })()}
             </div>
           ))}
           <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: 100, background: '#F97316', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 0 18px oklch(0.72 0.18 45 / 0.35)', marginTop: 4 }}>{loading ? t('auth.creatingAccount') : t('auth.createAccountBtn')}</button>
