@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
@@ -13,6 +13,16 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   return <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`, backgroundSize: '24px 24px' }} />
 }
 
+function useIsMobile() {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  useEffect(() => {
+    const h = () => setM(window.innerWidth < 768)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+  return m
+}
+
 export function PricingPage() {
   const { t } = useTranslation()
   const { theme } = useTheme()
@@ -20,6 +30,7 @@ export function PricingPage() {
   const navigate = useNavigate()
   const { user, profile, refreshProfile } = useAuth()
   const [loadingPlan, setLoadingPlan] = useState<'monthly' | 'yearly' | null>(null)
+  const isMobile = useIsMobile()
 
   const openCheckout = async (plan: 'monthly' | 'yearly') => {
     if (!user) { navigate({ to: '/login' }); return }
@@ -71,22 +82,23 @@ export function PricingPage() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: c.bg, fontFamily: "'Inter',sans-serif", color: c.textPrimary, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '72px 24px 48px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: c.bg, fontFamily: "'Inter',sans-serif", color: c.textPrimary, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: isMobile ? '40px 16px 96px' : '72px 24px 48px', position: 'relative', overflow: 'hidden' }}>
       <DotGrid theme={theme} />
       <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '70%', height: '45%', background: 'radial-gradient(ellipse, oklch(0.72 0.18 45 / 0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 900 }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}><CritupLogo size={22} theme={theme} /></div>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.12em', textTransform: 'uppercase', textAlign: 'center', marginBottom: 10 }}>{t('pricing.eyebrow')}</div>
-        <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center', marginBottom: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif", color: c.textPrimary }}>{t('pricing.title')}</h1>
-        <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', marginBottom: 48 }}>{t('pricing.subtitle')}</p>
+        <h1 style={{ fontSize: isMobile ? 30 : 38, fontWeight: 800, letterSpacing: '-0.03em', textAlign: 'center', marginBottom: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Inter', sans-serif", color: c.textPrimary }}>{t('pricing.title')}</h1>
+        <p style={{ fontSize: 14, color: c.textMuted, textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>{t('pricing.subtitle')}</p>
 
-        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: isMobile ? 28 : 20, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
           {plans.map(({ name, price, sub, cancel, crossed, save, features, cta, featured, badge, action }) => (
             <div key={name} style={{
               background: c.cardBg, borderRadius: 22, padding: '32px 28px',
               border: featured ? '1.5px solid #F97316' : `1px solid ${c.border}`,
               boxShadow: featured ? '0 0 50px oklch(0.72 0.18 45 / 0.14)' : 'none',
-              position: 'relative', width: 268, transform: featured ? 'scale(1.02)' : 'scale(1)',
+              position: 'relative', width: isMobile ? '100%' : 268, maxWidth: 320,
+              transform: featured && !isMobile ? 'scale(1.02)' : 'scale(1)',
             }}>
               {badge && <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: featured ? '#F97316' : (c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb'), padding: '4px 16px', borderRadius: 100, fontSize: 11, fontWeight: 700, color: featured ? '#fff' : c.textMuted, whiteSpace: 'nowrap' }}>{badge}</div>}
               <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', marginBottom: 14, letterSpacing: '0.06em' }}>{name.toUpperCase()}</div>

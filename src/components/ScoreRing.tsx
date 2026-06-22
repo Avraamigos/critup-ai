@@ -33,7 +33,8 @@ export function ScoreRing({ score, label, size = 80, animated = true, theme = 'd
     return () => cancelAnimationFrame(id)
   }, [score, animated])
 
-  const color = score >= 8 ? 'oklch(0.72 0.17 145)' : score >= 6 ? '#F97316' : 'oklch(0.65 0.18 25)'
+  // Tiers tuned so a 6 reads as "good" (green), not borderline. 6+ green, 4–6 amber, <4 red.
+  const color = score >= 6 ? 'oklch(0.72 0.17 145)' : score >= 4 ? '#F97316' : 'oklch(0.65 0.18 25)'
   const r = (size - 8) / 2
   const circ = 2 * Math.PI * r
   const dash = circ * progress
