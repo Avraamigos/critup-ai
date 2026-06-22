@@ -304,9 +304,9 @@ export function DashboardPage() {
 
                 {latestAnalysis ? (
                   <div style={{ display: 'flex', gap: isMobile ? 12 : 20 }}>
-                    <ScoreRing score={latestAnalysis.concept_score ?? 0} label={t('scores.concept')} size={isMobile ? 72 : 82} theme={theme} />
-                    <ScoreRing score={latestAnalysis.spatial_score ?? 0} label={t('scores.spatial')} size={isMobile ? 72 : 82} theme={theme} />
-                    <ScoreRing score={latestAnalysis.presentation_score ?? 0} label={t('scores.presentation')} size={isMobile ? 72 : 82} theme={theme} />
+                    <ScoreRing score={latestAnalysis.concept_score ?? 0} label={t('scores.concept')} size={isMobile ? 72 : 82} theme={theme} showBand />
+                    <ScoreRing score={latestAnalysis.spatial_score ?? 0} label={t('scores.spatial')} size={isMobile ? 72 : 82} theme={theme} showBand />
+                    <ScoreRing score={latestAnalysis.presentation_score ?? 0} label={t('scores.presentation')} size={isMobile ? 72 : 82} theme={theme} showBand />
                   </div>
                 ) : (
                   <div style={{ padding: '18px', borderRadius: 12, background: c.isDark ? 'oklch(0.19 0.004 270)' : '#f8fafc', border: `1px solid ${c.border}`, textAlign: 'center' }}>

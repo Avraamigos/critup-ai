@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   score: number
@@ -6,9 +7,18 @@ interface Props {
   size?: number
   animated?: boolean
   theme?: 'dark' | 'light'
+  /** Show a qualitative band word (Strong / Solid / Developing / Needs work) under the label.
+   *  Scores are already stage-calibrated by the analysis, so the band reflects stage context. */
+  showBand?: boolean
 }
 
-export function ScoreRing({ score, label, size = 80, animated = true, theme = 'dark' }: Props) {
+// Exported so callers can reason about the same tiers if needed.
+export function scoreBandKey(score: number): 'strong' | 'solid' | 'developing' | 'weak' {
+  return score >= 8 ? 'strong' : score >= 6 ? 'solid' : score >= 4 ? 'developing' : 'weak'
+}
+
+export function ScoreRing({ score, label, size = 80, animated = true, theme = 'dark', showBand = false }: Props) {
+  const { t } = useTranslation()
   const [displayScore, setDisplayScore] = useState(animated ? 0 : score)
   const [progress, setProgress] = useState(animated ? 0 : score / 10)
   const trackColor = theme === 'light' ? '#e5e7eb' : 'oklch(0.28 0.004 270)'
@@ -64,6 +74,11 @@ export function ScoreRing({ score, label, size = 80, animated = true, theme = 'd
       {label && (
         <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme === 'light' ? '#6b7280' : 'oklch(0.68 0.005 270)' }}>
           {label}
+        </span>
+      )}
+      {showBand && (
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', color, marginTop: -1 }}>
+          {t(`scores.band_${scoreBandKey(score)}`)}
         </span>
       )}
     </div>
