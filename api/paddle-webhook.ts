@@ -10,7 +10,8 @@ function getSupabase() {
 }
 
 // ─── Paddle webhook signature verification ───────────────────────────────────
-function verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
+// Exported for unit tests — the money path deserves a regression net.
+export function verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
   try {
     const parts = Object.fromEntries(signatureHeader.split(';').map(p => p.split('=')))
     const ts = parts['ts']
@@ -90,6 +91,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .update({ plan })
           .eq('id', userId)
         console.log('Paddle: upgraded user', userId, 'to', plan)
+
+        // Reconciliation link back to Paddle (refunds/disputes/support).
+        // SEPARATE update on purpose: if migration 020 hasn't been run yet,
+        // this fails alone and can never block the plan flip above.
+        const subscriptionId = data?.id as string | undefined
+        if (subscriptionId) {
+          const { error: subErr } = await supabase
+            .from('profiles')
+            .update({ paddle_subscription_id: subscriptionId })
+            .eq('id', userId)
+          if (subErr) console.warn('Paddle: could not store subscription id (run migration 020?):', subErr.message)
+        }
       }
       break
     }

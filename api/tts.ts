@@ -10,8 +10,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth'
 
-// Strip markdown/special characters that cause ElevenLabs to glitch
-function cleanForTTS(raw: string): string {
+// Strip markdown/special characters that cause ElevenLabs to glitch.
+// Exported for unit tests (the notation fixes regressed once already).
+export function cleanForTTS(raw: string): string {
   return raw
     .replace(/\*\*(.*?)\*\*/g, '$1')   // **bold** → bold
     .replace(/\*(.*?)\*/g, '$1')       // *italic* → italic
