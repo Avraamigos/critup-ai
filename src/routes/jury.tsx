@@ -5,6 +5,7 @@ import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { authHeader } from '@/lib/authHeader'
 import { useNavigate } from '@tanstack/react-router'
 import type { JuryQA, JuryScriptSlide, ScriptLanguageLevel } from '@/lib/database.types'
 
@@ -197,7 +198,7 @@ export function JuryPage() {
     try {
       const res = await fetch('/api/jury-script', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ analysisId, languageLevel: level, regenerate }),
       })
       const data = await res.json().catch(() => null)
@@ -225,7 +226,7 @@ export function JuryPage() {
     try {
       const res = await fetch('/api/jury-script', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ action: 'shorten', analysisId, text: slides[i].script, languageLevel: level }),
       })
       const data = await res.json().catch(() => null)

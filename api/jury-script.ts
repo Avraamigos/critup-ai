@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { getCaller, isAdminEmail } from './_lib/auth'
 
 // ─── Jury Prep — presentation script generation (Pro-only, heavy) ─────────────
 // This is the ONE expensive jury call. It re-reads the full stored PDF plus the
@@ -59,7 +60,7 @@ async function countRecentRegens(userId: string, supabase: SupabaseClient<any, a
 }
 
 export default async function handler(
-  req: { method: string; body: ScriptRequest },
+  req: { method: string; headers: Record<string, string | undefined>; body: ScriptRequest },
   res: {
     status: (code: number) => { json: (b: unknown) => void; end: () => void }
     json: (b: unknown) => void
@@ -79,13 +80,23 @@ export default async function handler(
     return res.status(500).json({ error: 'Missing environment variables' })
   }
 
+  // Script generation is expensive and rate-limited per OWNER — so the caller
+  // must BE the owner (or admin). Analysis ids are public via post URLs; without
+  // this check a stranger could burn an owner's regen quota and our API bill.
+  const caller = await getCaller(req.headers['authorization'])
+  if (!caller) return res.status(401).json({ error: 'Not authenticated' })
+
   const supabase = createClient(supabaseUrl, serviceKey)
 
   // ── action: shorten — cheap Haiku paraphrase of one slide's script ──────────
   if (action === 'shorten') {
     if (!text?.trim()) return res.status(400).json({ error: 'text required' })
+    if (text.length > 6000) return res.status(400).json({ error: 'text too long' })
     try {
-      const { plan, langCode, isAdmin } = await ownerPlanLang(analysisId, supabase)
+      const { userId, plan, langCode, isAdmin } = await ownerPlanLang(analysisId, supabase)
+      if (userId !== caller.id && !isAdminEmail(caller.email)) {
+        return res.status(403).json({ error: 'Forbidden' })
+      }
       if (plan === 'free' && !isAdmin) {
         return res.status(403).json({ error: 'limit_reached', message: 'Jury Prep is a Pro feature.' })
       }
@@ -120,6 +131,9 @@ export default async function handler(
 
     const userId = analysis.user_id as string | null
     if (!userId) return res.status(400).json({ error: 'Analysis has no owner' })
+    if (userId !== caller.id && !isAdminEmail(caller.email)) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
 
     // 2. Plan + language from the profile.
     const { data: prof } = await supabase
