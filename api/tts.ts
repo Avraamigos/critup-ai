@@ -8,6 +8,7 @@
 //      in the background so the NEXT request is served from cache
 
 import { createClient } from '@supabase/supabase-js'
+import { getCaller, isAdminEmail } from './_lib/auth'
 
 // Strip markdown/special characters that cause ElevenLabs to glitch
 function cleanForTTS(raw: string): string {
@@ -34,10 +35,14 @@ function cleanForTTS(raw: string): string {
     .trim()
 }
 
+// Longest legit slide text (title + critique + suggestion) is well under this.
+const MAX_TTS_CHARS = 5000
+
 export default async function handler(
   req: {
     method: string
-    body: { text: string; voiceId?: string; analysisId?: string; slideIdx?: number }
+    headers: Record<string, string | undefined>
+    body: { text: string; analysisId?: string; slideIdx?: number }
   },
   res: {
     status: (code: number) => { json: (b: unknown) => void; end: () => void }
@@ -48,27 +53,40 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { text: rawText, voiceId: reqVoiceId, analysisId, slideIdx } = req.body ?? {}
+  const { text: rawText, analysisId, slideIdx } = req.body ?? {}
   if (!rawText) return res.status(400).json({ error: 'text required' })
+  if (rawText.length > MAX_TTS_CHARS) return res.status(400).json({ error: 'text too long' })
   const text = cleanForTTS(rawText)
 
   const apiKey  = process.env.ELEVENLABS_API_KEY || ''
-  // Voice ID is hardcoded — the ELEVENLABS_VOICE_ID env var is intentionally
-  // NOT used so a stale Vercel env var can't override it.
-  const voiceId = reqVoiceId || 'iEBOK9alpKauGRvBSsFi'
+  // Voice ID is fixed server-side. It is deliberately NOT taken from the
+  // request body (any voice on the account) or the ELEVENLABS_VOICE_ID env
+  // var (a stale Vercel var once overrode it).
+  const voiceId = 'iEBOK9alpKauGRvBSsFi'
   const supabaseUrl   = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
   const serviceKey    = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
   if (!apiKey) return res.status(500).json({ error: 'ELEVENLABS_API_KEY not set' })
 
-  // Build the storage path — only persist when caller supplies both IDs
-  const storagePath = analysisId != null && slideIdx != null
-    ? `${analysisId}/${slideIdx}.mp3`
-    : null
+  // TTS costs real money per character — login required.
+  const caller = await getCaller(req.headers['authorization'])
+  if (!caller) return res.status(401).json({ error: 'Not authenticated' })
 
   const sb = supabaseUrl && serviceKey
     ? createClient(supabaseUrl, serviceKey)
     : null
+
+  // Cache path is only honoured when the caller OWNS the analysis. Analysis ids
+  // are public (community post URLs), and the cache is first-write-wins — an
+  // unchecked id would let a stranger pre-seed the audio the owner later hears.
+  let storagePath: string | null = null
+  if (analysisId != null && slideIdx != null && sb) {
+    const { data: a } = await sb.from('analyses').select('user_id').eq('id', analysisId).maybeSingle()
+    const ownerId = (a as { user_id?: string } | null)?.user_id
+    if (ownerId === caller.id || isAdminEmail(caller.email)) {
+      storagePath = `${analysisId}/${slideIdx}.mp3`
+    }
+  }
 
   // ── 1. Try Storage cache ─────────────────────────────────────────────────
   if (storagePath && sb) {

@@ -8,6 +8,7 @@ import { PDFViewer } from '@/components/PDFViewer'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { authHeader } from '@/lib/authHeader'
 import type { Json } from '@/lib/database.types'
 import { track } from '@/lib/analytics'
 import { renderPdfToJpegBlobs } from '@/lib/pdfSlides'
@@ -366,11 +367,11 @@ export function AnalysisPage() {
     if (!fb) return
     const text = cleanForTTS(`${fb.title}. ${fb.text}. ${fb.suggestion}`)
     const aId = analysisIdRef.current
-    fetch('/api/tts', {
+    authHeader().then(h => fetch('/api/tts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...h },
       body: JSON.stringify({ text, analysisId: aId, slideIdx: idx }),
-    })
+    }))
       .then(r => r.ok ? r.blob() : null)
       .then(blob => {
         if (blob) {
@@ -470,16 +471,16 @@ export function AnalysisPage() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
-    fetch('/api/tts', {
+    authHeader().then(h => fetch('/api/tts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...h },
       body: JSON.stringify({
         text,
         analysisId: analysisIdRef.current,
         slideIdx: idx,
       }),
       signal: ctrl.signal,
-    })
+    }))
       .then(res => {
         if (!res.ok || ctrl.signal.aborted) throw new Error('tts-fail')
         return res.blob()
