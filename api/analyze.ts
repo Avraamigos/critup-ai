@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { isAdminEmail } from './_lib/auth'
 
 // ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
 
@@ -397,7 +398,7 @@ export default async function handler(
       const plan = profileData?.plan ?? 'free'
       // Fetch user email to bypass rate limits for admin/owner
       const { data: authUser } = await supabase.auth.admin.getUserById(analysis.user_id as string)
-      const isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+      const isAdmin = isAdminEmail(authUser?.user?.email)
 
       // ── IP rate limit: 5 requests / hour per IP (blocks competitor scraping) ──
       // Skip for admin so the owner is never locked out while testing. On block we

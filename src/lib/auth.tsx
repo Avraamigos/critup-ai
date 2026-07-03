@@ -27,12 +27,17 @@ interface AuthContext extends AuthState {
   refreshProfile: () => Promise<void>
 }
 
+// Client-side admin check is COSMETIC only (shows the admin nav / pro override
+// in the UI); every admin API verifies the JWT against its own allowlist.
+// Single client source of truth — was previously hardcoded in 3 files.
 const ADMIN_EMAILS = ['ibro12345@icloud.com']
+export const isAdminEmail = (email: string | null | undefined): boolean =>
+  !!email && ADMIN_EMAILS.includes(email.toLowerCase())
 
 // Ensure admin accounts always have full Pro access regardless of DB state
 function applyAdminOverride(user: User | null, profile: Profile | null): Profile | null {
   if (!profile || !user) return profile
-  if (ADMIN_EMAILS.includes(user.email ?? '')) {
+  if (isAdminEmail(user.email)) {
     return { ...profile, plan: 'monthly' as Profile['plan'] }
   }
   return profile

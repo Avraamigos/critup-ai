@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAILS = ['ibro12345@icloud.com']
+import { isAdminEmail } from './_lib/auth'
 
 export default async function handler(
   req: {
@@ -28,7 +28,7 @@ export default async function handler(
   const anonClient = createClient(supabaseUrl, anonKey)
   const { data: { user }, error: authErr } = await anonClient.auth.getUser(jwt)
   if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
-  if (!ADMIN_EMAILS.includes(user.email ?? '')) return res.status(403).json({ error: 'Forbidden' })
+  if (!isAdminEmail(user.email)) return res.status(403).json({ error: 'Forbidden' })
 
   const supabase = createClient(supabaseUrl, serviceKey)
   const { action, userId } = req.body

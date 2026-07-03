@@ -5,12 +5,10 @@ import {
   Users, BarChart2, TrendingUp, Zap, Crown, RefreshCw,
   ShieldCheck, AlertTriangle, DollarSign, ExternalLink, StickyNote, Trash2, Plus,
 } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
+import { useAuth, isAdminEmail } from '@/lib/auth'
 import { useTheme, useColors } from '@/lib/theme'
 import { supabase } from '@/lib/supabase'
 import { AdminCompetitions } from '@/components/AdminCompetitions'
-
-const ADMIN_EMAILS = ['ibro12345@icloud.com']
 
 // ─── Update these whenever your billing changes ───────────────────────────────
 const FIXED_COSTS: { service: string; cost: number; period: 'month' | 'year'; url: string; note: string }[] = [
@@ -250,7 +248,7 @@ export function AdminPage() {
     try { return JSON.parse(localStorage.getItem('critup_dismissed_errors') ?? '[]') } catch { return [] }
   })
 
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email ?? '')
+  const isAdmin = user && isAdminEmail(user.email)
 
   useEffect(() => {
     if (authLoading) return
@@ -540,7 +538,7 @@ export function AdminPage() {
             <tbody>
               {stats.recentSignups.map((u, i) => {
                 const busy = togglingId?.startsWith(u.id)
-                const isMe = u.email === 'ibro12345@icloud.com'
+                const isMe = isAdminEmail(u.email)
                 return (
                   <tr key={u.id} style={rowStyle(i, stats.recentSignups.length)}>
                     <td style={{ padding: '11px 16px', fontSize: 13, color: c.textPrimary, fontWeight: 500 }}>{u.email ?? '—'}</td>

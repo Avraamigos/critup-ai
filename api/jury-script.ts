@@ -44,7 +44,7 @@ async function ownerPlanLang(analysisId: string, supabase: SupabaseClient<any, a
     plan = (prof as { plan?: string } | null)?.plan ?? 'free'
     langCode = ((prof as { language?: string | null } | null)?.language ?? 'en').toLowerCase()
     const { data: authUser } = await supabase.auth.admin.getUserById(userId)
-    isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+    isAdmin = isAdminEmail(authUser?.user?.email)
   }
   return { userId, plan, langCode, isAdmin }
 }
@@ -146,7 +146,7 @@ export default async function handler(
 
     // Owner email — admin bypasses the Pro gate and the rate limit (for testing).
     const { data: authUser } = await supabase.auth.admin.getUserById(userId)
-    const isAdmin = authUser?.user?.email === 'ibro12345@icloud.com'
+    const isAdmin = isAdminEmail(authUser?.user?.email)
 
     if (plan === 'free' && !isAdmin) {
       return res.status(403).json({

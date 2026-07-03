@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAILS = ['ibro12345@icloud.com']
+import { isAdminEmail } from './_lib/auth'
 const PADDLE_API_BASE = 'https://api.paddle.com'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const anonClient = createClient(supabaseUrl, anonKey)
   const { data: { user }, error: authErr } = await anonClient.auth.getUser(jwt)
   if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
-  if (!ADMIN_EMAILS.includes(user.email ?? '')) return res.status(403).json({ error: 'Forbidden' })
+  if (!isAdminEmail(user.email)) return res.status(403).json({ error: 'Forbidden' })
 
   const apiKey = process.env.PADDLE_API_KEY || ''
   if (!apiKey) {

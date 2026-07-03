@@ -10,7 +10,7 @@ import { CritupLogo } from './CritupLogo'
 import { AIOrb } from './AIOrb'
 import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
-import { useAuth } from '@/lib/auth'
+import { useAuth, isAdminEmail } from '@/lib/auth'
 
 // `activePath` is what determines the highlighted state — separate from `to`
 // so the Analysis item can always highlight on /analysis/* regardless of its `to`.
@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const isAdmin = user?.email === 'ibro12345@icloud.com'
+  const isAdmin = isAdminEmail(user?.email)
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'You'
   const displayInitial = displayName[0].toUpperCase()
   const isPro = profile?.plan !== 'free' || isAdmin  // admin always has pro access
