@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { Send, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
+import { authHeader } from '@/lib/authHeader'
 import { AIOrb } from '@/components/AIOrb'
 import { CritAvatar } from '@/components/CritAvatar'
 
@@ -46,7 +47,7 @@ async function callChatAPI(messages: Message[], analysisId: string | null): Prom
 
   const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(payload),
   })
 

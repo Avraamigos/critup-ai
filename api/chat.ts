@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { getCaller, isAdminEmail } from './_lib/auth'
 
 // ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
 
@@ -106,7 +107,7 @@ When students ask "what's my weakest area", refer to ${weakest.name} score speci
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
-  req: { method: string; body: { messages: ChatMessage[]; analysisId?: string } },
+  req: { method: string; headers: Record<string, string | undefined>; body: { messages: ChatMessage[]; analysisId?: string } },
   res: {
     status: (code: number) => { json: (body: unknown) => void; end: () => void }
     json: (body: unknown) => void
@@ -124,6 +125,11 @@ export default async function handler(
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required' })
   }
+  // Guard against oversized prompts: keep the last 20 turns, cap each turn.
+  const boundedMessages = messages.slice(-20).map(m => ({
+    role: m.role,
+    content: String(m.content ?? '').slice(0, 4000),
+  }))
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY || ''
   if (!anthropicKey) {
@@ -132,15 +138,27 @@ export default async function handler(
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (!supabaseUrl || !serviceKey) {
+    return res.status(500).json({ error: 'Server misconfigured' })
+  }
 
-  // ── Optionally load analysis context + run rate limit ──────────────────────
+  // ── Require an authenticated caller. Rate limits are ALWAYS charged to the
+  //    caller (never to the analysis owner), so a public post id can no longer
+  //    be used to chat on someone else's quota — or with no quota at all. ──────
+  const caller = await getCaller(req.headers['authorization'])
+  if (!caller) return res.status(401).json({ error: 'Not authenticated' })
+
   let analysisContext = null
-  let rateLimitUserId: string | null = null
-  let rateLimitPlan = 'free'
   let userLanguage = 'en'
 
-  if (supabaseUrl && serviceKey) {
+  {
     const supabase = createClient(supabaseUrl, serviceKey)
+
+    // Caller's own plan + language drive limits and reply language.
+    const { data: callerProf } = await supabase
+      .from('profiles').select('plan, language').eq('id', caller.id).maybeSingle()
+    const callerPlan = (callerProf as { plan?: string } | null)?.plan ?? 'free'
+    userLanguage = (callerProf as { language?: string | null } | null)?.language ?? 'en'
 
     if (analysisId) {
       try {
@@ -155,11 +173,10 @@ export default async function handler(
           .single()
 
         if (data) {
-          rateLimitUserId = data.user_id as string
-          if (rateLimitUserId) {
-            const { data: prof } = await supabase.from('profiles').select('plan, language').eq('id', rateLimitUserId).maybeSingle()
-            rateLimitPlan = (prof as { plan?: string } | null)?.plan ?? 'free'
-            userLanguage = (prof as { language?: string | null } | null)?.language ?? 'en'
+          // Context is only for the analysis OWNER (or admin). A public post id
+          // must not let strangers chat "about" someone else's project.
+          if (data.user_id !== caller.id && !isAdminEmail(caller.email)) {
+            return res.status(403).json({ error: 'Forbidden' })
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const project = (data as any).projects as { name: string; stage: string; focus_areas: string[]; brief_text?: string | null } | null
@@ -180,32 +197,30 @@ export default async function handler(
       }
     }
 
-    // Rate limit: only enforce when we have a userId
-    if (rateLimitUserId) {
-      try {
-        const rl = await checkChatLimit(rateLimitUserId, rateLimitPlan, supabase)
-        if (!rl.allowed) {
-          return res.status(429).json({
-            error: 'limit_reached',
-            feature: 'chat',
-            plan: rateLimitPlan,
-            message: rl.upgradeRequired
-              ? "You've used your 10 free messages. Upgrade to Pro for unlimited chat."
-              : `You've sent ${rl.used} messages today (limit ${rl.limit}). Try again tomorrow.`,
-            limit: rl.limit,
-            used: rl.used,
-          })
-        }
-
-        // Log this message for rate tracking (fire-and-forget)
-        supabase.from('chat_messages')
-          .insert({ user_id: rateLimitUserId, analysis_id: analysisId ?? null })
-          .then(() => {})
-          .catch(() => {})
-      } catch (e) {
-        console.error('[chat] Rate limit check error:', e)
-        // Fail open — don't block users on rate limit errors
+    // Rate limit: ALWAYS enforced, always against the caller — with or without
+    // an analysisId (the old skip-when-no-id path was a free unlimited proxy).
+    try {
+      const rl = await checkChatLimit(caller.id, callerPlan, supabase)
+      if (!rl.allowed) {
+        return res.status(429).json({
+          error: 'limit_reached',
+          feature: 'chat',
+          plan: callerPlan,
+          message: rl.upgradeRequired
+            ? "You've used your 10 free messages. Upgrade to Pro for unlimited chat."
+            : `You've sent ${rl.used} messages today (limit ${rl.limit}). Try again tomorrow.`,
+          limit: rl.limit,
+          used: rl.used,
+        })
       }
+
+      // Log this message for rate tracking (fire-and-forget)
+      supabase.from('chat_messages')
+        .insert({ user_id: caller.id, analysis_id: analysisId ?? null })
+        .then(() => {}, () => {})
+    } catch (e) {
+      console.error('[chat] Rate limit check error:', e)
+      // Fail open — don't block users on rate limit errors
     }
   }
 
@@ -218,7 +233,7 @@ export default async function handler(
       model: 'claude-haiku-4-5',
       max_tokens: 1024,
       system: buildSystemPrompt(analysisContext, userLanguage),
-      messages: messages.map(m => ({
+      messages: boundedMessages.map(m => ({
         role: m.role,
         content: m.content,
       })),

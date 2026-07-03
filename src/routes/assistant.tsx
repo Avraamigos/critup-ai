@@ -6,6 +6,7 @@ import { AIOrb } from '@/components/AIOrb'
 import { CritAvatar } from '@/components/CritAvatar'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { authHeader } from '@/lib/authHeader'
 
 interface Msg { role: 'user' | 'ai'; text: string; ts: string }
 
@@ -43,7 +44,7 @@ async function loadLatestAnalysis(userId: string): Promise<LatestAnalysis | null
 async function sendToAPI(msgs: Msg[], analysisId: string | null): Promise<string> {
   const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify({
       analysisId: analysisId ?? undefined,
       messages: msgs.map(m => ({
