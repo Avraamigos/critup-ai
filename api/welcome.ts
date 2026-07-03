@@ -1,20 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { getCaller } from './_lib/auth'
 
 // ─── Welcome email ──────────────────────────────────────────────────────────
 // Fired once, fire-and-forget, after a user completes onboarding. Sends a
 // branded Resend email matching the critique-ready email style.
 
 export default async function handler(
-  req: { method: string; body: { userId?: string } },
+  req: { method: string; headers: Record<string, string | undefined> },
   res: {
     status: (code: number) => { json: (b: unknown) => void; end: () => void }
     json: (b: unknown) => void
   }
 ) {
   if (req.method !== 'POST') return res.status(405).end()
-
-  const { userId } = req.body ?? {}
-  if (!userId) return res.status(400).json({ error: 'userId required' })
 
   const resendKey   = process.env.RESEND_API_KEY || ''
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
@@ -23,12 +20,14 @@ export default async function handler(
   if (!resendKey)   return res.status(500).json({ error: 'Missing RESEND_API_KEY' })
   if (!supabaseUrl || !serviceKey) return res.status(500).json({ error: 'Missing Supabase config' })
 
-  try {
-    const supabase = createClient(supabaseUrl, serviceKey)
+  // Identity comes from the caller's JWT, never the body — user ids are
+  // discoverable (public analyses rows expose user_id), so a body param
+  // would let anyone spam welcome emails to real users from our domain.
+  const caller = await getCaller(req.headers['authorization'])
+  if (!caller) return res.status(401).json({ error: 'Not authenticated' })
 
-    // Fetch user email from auth
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
-    const email = authUser?.email
+  try {
+    const email = caller.email
     if (!email) return res.status(404).json({ error: 'User email not found' })
 
     const SF = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif`

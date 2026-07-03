@@ -6,6 +6,7 @@ import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { authHeader } from '@/lib/authHeader'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   const dotColor = theme === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.04)'
@@ -145,12 +146,11 @@ export function OnboardingPage() {
       updated_at:          new Date().toISOString(),
     }).eq('id', user.id)
 
-    // Welcome email (fire-and-forget — never blocks onboarding completion)
-    fetch('/api/welcome', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id }),
-    }).catch(() => {})
+    // Welcome email (fire-and-forget — never blocks onboarding completion).
+    // Identity travels in the JWT; the server no longer accepts a body userId.
+    authHeader().then(h =>
+      fetch('/api/welcome', { method: 'POST', headers: h })
+    ).catch(() => {})
 
     await refreshProfile()
     setSaving(false)
