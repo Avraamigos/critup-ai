@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '@/lib/useIsMobile'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
@@ -13,15 +14,6 @@ function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
   return <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`, backgroundSize: '24px 24px' }} />
 }
 
-function useIsMobile() {
-  const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
-  useEffect(() => {
-    const h = () => setM(window.innerWidth < 768)
-    window.addEventListener('resize', h)
-    return () => window.removeEventListener('resize', h)
-  }, [])
-  return m
-}
 
 export function PricingPage() {
   const { t } = useTranslation()

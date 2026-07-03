@@ -11,6 +11,7 @@ import { AIOrb } from './AIOrb'
 import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth, isAdminEmail } from '@/lib/auth'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 // `activePath` is what determines the highlighted state — separate from `to`
 // so the Analysis item can always highlight on /analysis/* regardless of its `to`.
@@ -23,16 +24,6 @@ const BOTTOM_ITEMS: NavDef[] = [
 ]
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif"
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
-  return isMobile
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme()
