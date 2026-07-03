@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-import { isAdminEmail } from './_lib/auth'
+import { isAdminEmail } from './_lib/auth.js'
 
 export default async function handler(
   req: {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createHmac } from 'crypto'
 import { verifySignature } from '../api/paddle-webhook'
 import { cleanForTTS } from '../api/tts'
-import { isAdminEmail } from '../api/_lib/auth'
+import { isAdminEmail } from '../api/_lib/auth.js'
 
 // ─── Paddle webhook signature (the money path) ───────────────────────────────
 

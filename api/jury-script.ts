@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { getCaller, isAdminEmail } from './_lib/auth'
+import { getCaller, isAdminEmail } from './_lib/auth.js'
 
 // ─── Jury Prep — presentation script generation (Pro-only, heavy) ─────────────
 // This is the ONE expensive jury call. It re-reads the full stored PDF plus the

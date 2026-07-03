@@ -8,7 +8,7 @@
 //      in the background so the NEXT request is served from cache
 
 import { createClient } from '@supabase/supabase-js'
-import { getCaller, isAdminEmail } from './_lib/auth'
+import { getCaller, isAdminEmail } from './_lib/auth.js'
 
 // Strip markdown/special characters that cause ElevenLabs to glitch.
 // Exported for unit tests (the notation fixes regressed once already).

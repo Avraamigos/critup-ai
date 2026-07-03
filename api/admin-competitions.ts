@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-import { isAdminEmail } from './_lib/auth'
+import { isAdminEmail } from './_lib/auth.js'
 
 const DISCIPLINES = ['architecture', 'interior', 'urban', 'landscape', 'multi']
 const LEVELS = ['beginner', 'student', 'professional', 'any']

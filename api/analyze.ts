@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { isAdminEmail } from './_lib/auth'
+import { isAdminEmail } from './_lib/auth.js'
 
 // ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
 

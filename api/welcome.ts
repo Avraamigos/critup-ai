@@ -1,4 +1,4 @@
-import { getCaller } from './_lib/auth'
+import { getCaller } from './_lib/auth.js'
 
 // ─── Welcome email ──────────────────────────────────────────────────────────
 // Fired once, fire-and-forget, after a user completes onboarding. Sends a

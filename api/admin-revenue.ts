@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-import { isAdminEmail } from './_lib/auth'
+import { isAdminEmail } from './_lib/auth.js'
 const PADDLE_API_BASE = 'https://api.paddle.com'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
