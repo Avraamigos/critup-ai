@@ -85,6 +85,10 @@ function cleanForTTS(raw: string): string {
     .trim()
 }
 
+// An in-progress analysis older than this is presumed dead: Vercel hard-kills
+// the function at 300s, so past 8 min nothing can still be writing a result.
+const STUCK_MS = 8 * 60 * 1000
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function AnalysisPage() {
@@ -225,20 +229,33 @@ export function AnalysisPage() {
         return
       }
 
-      const stillPending = proj.analyses?.some(a => a.status === 'pending' || a.status === 'processing')
-      if (stillPending) {
-        pollTimer = setTimeout(load, 4000)
-        // Give up 7 min after the analysis actually STARTED (persisted in localStorage),
-        // not 7 min after this effect mounted — so navigating away/back doesn't reset the clock.
-        if (!timeoutTimer) {
-          const startKey = `critup_analysis_start_${params.projectId}`
-          const startedAt = parseInt(localStorage.getItem(startKey) ?? '', 10) || Date.now()
-          const remaining = Math.max(10_000, 7 * 60 * 1000 - (Date.now() - startedAt))
-          timeoutTimer = setTimeout(() => {
-            if (pollTimer) clearTimeout(pollTimer)
-            setError(t('analysis.analysisTimeout'))
-          }, remaining)
+      const inProgress = (proj.analyses ?? [])
+        .filter(a => a.status === 'pending' || a.status === 'processing')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+      if (inProgress.length > 0) {
+        // Reaper: an attempt older than the hard ceiling almost certainly had its
+        // serverless function killed (Vercel 300s limit) or crash before it could
+        // write a failure — leaving the row stuck 'processing' forever. Mark it
+        // failed HONESTLY so the UI shows a retry instead of an endless spinner,
+        // and so the state survives reloads / other devices (uses the DB
+        // timestamp, not localStorage). Owner updates own row via RLS; the status
+        // guard avoids clobbering a row that just completed in a race.
+        const newest = inProgress[0]
+        const ageMs = Date.now() - new Date(newest.created_at).getTime()
+        if (ageMs > STUCK_MS) {
+          if (pollTimer) clearTimeout(pollTimer)
+          if (timeoutTimer) clearTimeout(timeoutTimer)
+          localStorage.removeItem(`critup_analysis_start_${params.projectId}`)
+          await supabase
+            .from('analyses')
+            .update({ status: 'failed', error_message: t('analysis.analysisTimeout') })
+            .eq('id', newest.id)
+            .in('status', ['pending', 'processing'])
+          setError(t('analysis.analysisTimeout'))
+          return
         }
+        pollTimer = setTimeout(load, 4000)
       } else {
         if (timeoutTimer) clearTimeout(timeoutTimer)
       }
