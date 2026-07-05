@@ -74,6 +74,10 @@ const NOTES_SEEDED_KEY = 'critup_admin_notes_seeded'
 
 const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
   {
+    text: '🏗️ DEFERRED — background job queue for analysis (Proposal B).\nToday /api/analyze runs the whole analysis inside one long request; if it dies the row hangs. A real queue (worker + retries) removes the timeout class entirely. NOT worth it at current volume — Proposal A (honest failure + retry) covers ~90% of the pain. Revisit at hundreds of analyses/day.',
+    createdAt: new Date('2026-07-05').toISOString(),
+  },
+  {
     text: '🔒 Supabase Pro ($25/mo) → enable "Leaked password protection" in Auth → Attack Protection.\nCurrently unavailable on free plan — 1 warning left in Security Advisor.',
     createdAt: new Date('2026-05-29').toISOString(),
   },
