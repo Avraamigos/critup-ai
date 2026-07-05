@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { isAdminEmail } from './_lib/auth.js'
+import { parseClaudeJson } from './_lib/claudeJson.js'
 
-// ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
+// ─── Rate limiting ────────────────────────────────────────────────────────────
 
 async function checkAnalyzeLimit(userId: string, plan: string, supabase: SupabaseClient<any, any, any>) {
   try {
@@ -278,51 +279,6 @@ Rules:
 - Scores: be honest and realistic. Apply the stage-calibrated scoring above. Reserve 8.5+ for work that is genuinely exceptional for its stage. Never inflate.
 - If a course brief was provided, evaluate explicitly against those requirements — note what's missing or unresolved`
 
-// Best-effort recovery of a JSON object from a possibly-truncated model response.
-// If the response was cut off mid-array, this cuts back to the last fully-closed
-// object and re-balances the open brackets — so a long critique is never wasted.
-function salvageJson(raw: string): Record<string, unknown> | null {
-  const start = raw.indexOf('{')
-  if (start === -1) return null
-  const s = raw.slice(start)
-  try { return JSON.parse(s) as Record<string, unknown> } catch { /* fall through to repair */ }
-
-  // Find the index of the last '}' that is NOT inside a string.
-  let inStr = false, esc = false, lastObjClose = -1
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i]
-    if (inStr) {
-      if (esc) esc = false
-      else if (ch === '\\') esc = true
-      else if (ch === '"') inStr = false
-      continue
-    }
-    if (ch === '"') inStr = true
-    else if (ch === '}') lastObjClose = i
-  }
-  if (lastObjClose === -1) return null
-
-  // Keep up to the last complete object, drop a dangling comma, then close open brackets.
-  let cut = s.slice(0, lastObjClose + 1)
-  const open: string[] = []
-  inStr = false; esc = false
-  for (let i = 0; i < cut.length; i++) {
-    const ch = cut[i]
-    if (inStr) {
-      if (esc) esc = false
-      else if (ch === '\\') esc = true
-      else if (ch === '"') inStr = false
-      continue
-    }
-    if (ch === '"') inStr = true
-    else if (ch === '{' || ch === '[') open.push(ch)
-    else if (ch === '}' || ch === ']') open.pop()
-  }
-  cut = cut.replace(/,\s*$/, '')
-  while (open.length) cut += open.pop() === '{' ? '}' : ']'
-  try { return JSON.parse(cut) as Record<string, unknown> } catch { return null }
-}
-
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
@@ -526,20 +482,10 @@ export default async function handler(
     const costUSD = (tokIn / 1_000_000 * 3) + (tokOut / 1_000_000 * 15)
     console.log(`[analyze] tokens — in:${tokIn} out:${tokOut} cost:$${costUSD.toFixed(4)}`)
 
-    // 6. Parse JSON response (with salvage for truncated output — a response that
-    //    hit the token ceiling still has plenty of complete feedback we can recover).
+    // 6. Parse JSON response (shared parser — fences, {...} match, and salvage of
+    //    truncated output so a response that hit the token ceiling is recovered).
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
-    const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    let result: Record<string, unknown> | null = null
-    try {
-      result = JSON.parse(clean) as Record<string, unknown>
-    } catch {
-      // Fallback 1: first {...} block anywhere in the text
-      const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      if (jsonMatch) { try { result = JSON.parse(jsonMatch[0]) as Record<string, unknown> } catch { /* try salvage */ } }
-    }
-    // Fallback 2: rebuild a truncated/cut-off object from its last complete item
-    if (!result) result = salvageJson(raw)
+    const result = parseClaudeJson(raw)
     if (!result) {
       console.error('[analyze] JSON parse failed. stop_reason:', message.stop_reason, 'raw:', raw.slice(0, 800))
       await supabase.from('analyses').update({

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth.js'
+import { parseClaudeJson } from './_lib/claudeJson.js'
 
 // ─── Jury Prep — presentation script generation (Pro-only, heavy) ─────────────
 // This is the ONE expensive jury call. It re-reads the full stored PDF plus the
@@ -280,27 +281,8 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
     console.log(`[jury-script] level:${level} tokens — in:${tokIn} out:${tokOut} cost:$${costUSD.toFixed(4)}`)
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
-    const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    let parsed: { slides?: unknown } | null = null
-    try { parsed = JSON.parse(clean) } catch {
-      const m = raw.match(/\{[\s\S]*\}/)
-      if (m) { try { parsed = JSON.parse(m[0]) } catch { /* fall through */ } }
-    }
-    // Truncation recovery: if the model hit the token ceiling mid-array, cut back
-    // to the last complete slide object and re-close the JSON so we keep what we got.
-    if (!parsed) {
-      const start = raw.indexOf('{')
-      if (start !== -1) {
-        const body = raw.slice(start)
-        const lastClose = body.lastIndexOf('}')
-        if (lastClose !== -1) {
-          const head = body.slice(0, lastClose + 1)
-          for (const attempt of [head + ']}', head + '}]}', head + '}']) {
-            try { parsed = JSON.parse(attempt); break } catch { /* next */ }
-          }
-        }
-      }
-    }
+    // Shared parser: fences, {...} match, string-aware salvage of truncated output.
+    const parsed = parseClaudeJson<{ slides?: unknown }>(raw)
 
     const slidesRaw = parsed && Array.isArray(parsed.slides) ? (parsed.slides as Record<string, unknown>[]) : []
     const slides = slidesRaw
