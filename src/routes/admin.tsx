@@ -39,6 +39,11 @@ const AVG_TTS_CHARS = 2100
 
 interface DayPoint { date: string; count: number }
 interface AdminStats {
+  usage: null | {
+    totalUsd: number
+    byFeature: Record<string, { usd: number; events: number }>
+    topUsers: Array<{ email: string | null; usd: number; events: number }>
+  }
   users: { total: number; pro: number; free: number; new7d: number; new30d: number }
   analyses: { total: number; failed: number; last7d: number; last30d: number }
   planBreakdown: Record<string, number>
@@ -676,6 +681,38 @@ export function AdminPage() {
       {/* ── EXPENSES ── */}
       {!loading && tab === 'expenses' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* ── Real AI spend (usage_events) ── */}
+          {stats?.usage ? (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F97316', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 2px' }}>
+                Real AI spend — last 30 days (measured per call)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                <StatCard label="Total AI spend" value={`$${stats.usage.totalUsd.toFixed(2)}`} sub="all features, measured" icon={Zap} accent c={c} />
+                {Object.entries(stats.usage.byFeature).sort((a, b) => b[1].usd - a[1].usd).map(([f, v]) => (
+                  <StatCard key={f} label={f.replace('_', ' ')} value={`$${v.usd.toFixed(2)}`} sub={`${v.events} calls`} icon={Zap} c={c} />
+                ))}
+              </div>
+              {stats.usage.topUsers.length > 0 && (
+                <div style={{ background: c.cardBg, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', fontSize: 12, fontWeight: 700, color: c.textPrimary, borderBottom: `1px solid ${c.border}` }}>
+                    Top spenders (30d)
+                  </div>
+                  {stats.usage.topUsers.map((u, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 16px', borderBottom: i < stats.usage!.topUsers.length - 1 ? `1px solid ${c.border}` : 'none', fontSize: 12 }}>
+                      <span style={{ color: c.textPrimary }}>{u.email ?? 'unknown'}</span>
+                      <span style={{ color: c.textMuted }}>{u.events} calls · <span style={{ color: '#F97316', fontWeight: 700 }}>${u.usd.toFixed(2)}</span></span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: c.isDark ? 'oklch(0.22 0.015 35)' : '#fff7ed', border: '1px solid oklch(0.72 0.18 45/0.3)', fontSize: 12, color: c.textMuted }}>
+              Real per-call spend tracking needs migration 021 (usage_events) — run it in Supabase SQL Editor. Estimates below.
+            </div>
+          )}
 
           {/* ── This month ── */}
           <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 2px' }}>

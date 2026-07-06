@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { isAdminEmail } from './_lib/auth.js'
 import { parseClaudeJson } from './_lib/claudeJson.js'
+import { logUsage, claudeCostUsd } from './_lib/usage.js'
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 
@@ -476,11 +477,13 @@ export default async function handler(
       ],
     })
 
-    // Log token usage so Vercel logs and Anthropic Console both show per-analysis cost.
+    // Log token usage: console for Vercel logs, usage_events for the admin
+    // Expenses tab (real per-user spend).
     const tokIn  = message.usage?.input_tokens  ?? 0
     const tokOut = message.usage?.output_tokens ?? 0
-    const costUSD = (tokIn / 1_000_000 * 3) + (tokOut / 1_000_000 * 15)
+    const costUSD = claudeCostUsd('claude-sonnet-4-6', tokIn, tokOut)
     console.log(`[analyze] tokens — in:${tokIn} out:${tokOut} cost:$${costUSD.toFixed(4)}`)
+    logUsage(supabase, { userId: (analysis.user_id as string | null) ?? null, feature: 'analysis', model: 'claude-sonnet-4-6', inputTokens: tokIn, outputTokens: tokOut, costUsd: costUSD })
 
     // 6. Parse JSON response (shared parser — fences, {...} match, and salvage of
     //    truncated output so a response that hit the token ceiling is recovered).

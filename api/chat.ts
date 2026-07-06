@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth.js'
+import { logUsage, claudeCostUsd } from './_lib/usage.js'
 
 // ─── Rate limiting (inlined — Vercel does not bundle local TS imports) ────────
 
@@ -240,6 +241,17 @@ export default async function handler(
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    // Real per-user cost into usage_events (admin Expenses tab).
+    logUsage(createClient(supabaseUrl, serviceKey), {
+      userId: caller.id,
+      feature: 'chat',
+      model: 'claude-haiku-4-5',
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+      costUsd: claudeCostUsd('claude-haiku-4-5', response.usage?.input_tokens ?? 0, response.usage?.output_tokens ?? 0),
+    })
+
     return res.json({ reply: text })
   } catch (err) {
     console.error('[chat] Claude error:', err)

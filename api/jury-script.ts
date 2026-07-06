@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth.js'
 import { parseClaudeJson } from './_lib/claudeJson.js'
+import { logUsage, claudeCostUsd } from './_lib/usage.js'
 
 // ─── Jury Prep — presentation script generation (Pro-only, heavy) ─────────────
 // This is the ONE expensive jury call. It re-reads the full stored PDF plus the
@@ -111,6 +112,11 @@ export default async function handler(
       })
       const out = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
       if (!out) return res.status(500).json({ error: 'failed', message: 'Could not shorten this slide. Please try again.' })
+      logUsage(supabase, {
+        userId: caller.id, feature: 'jury_shorten', model: 'claude-haiku-4-5',
+        inputTokens: msg.usage?.input_tokens ?? 0, outputTokens: msg.usage?.output_tokens ?? 0,
+        costUsd: claudeCostUsd('claude-haiku-4-5', msg.usage?.input_tokens ?? 0, msg.usage?.output_tokens ?? 0),
+      })
       return res.json({ text: out })
     } catch (err) {
       console.error('[jury-script:shorten]', err)
@@ -277,8 +283,9 @@ Cover the real sequence of the project's boards. Aim for one entry per meaningfu
 
     const tokIn  = message.usage?.input_tokens  ?? 0
     const tokOut = message.usage?.output_tokens ?? 0
-    const costUSD = (tokIn / 1_000_000 * 3) + (tokOut / 1_000_000 * 15)
+    const costUSD = claudeCostUsd('claude-sonnet-4-6', tokIn, tokOut)
     console.log(`[jury-script] level:${level} tokens — in:${tokIn} out:${tokOut} cost:$${costUSD.toFixed(4)}`)
+    logUsage(supabase, { userId: caller.id, feature: 'jury_script', model: 'claude-sonnet-4-6', inputTokens: tokIn, outputTokens: tokOut, costUsd: costUSD })
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
     // Shared parser: fences, {...} match, string-aware salvage of truncated output.

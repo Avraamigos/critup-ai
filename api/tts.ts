@@ -9,6 +9,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth.js'
+import { logUsage, ttsCostUsd } from './_lib/usage.js'
 
 // Strip markdown/special characters that cause ElevenLabs to glitch.
 // Exported for unit tests (the notation fixes regressed once already).
@@ -134,6 +135,9 @@ export default async function handler(
     }
 
     const audioBuf = Buffer.from(await response.arrayBuffer())
+
+    // Character-billed cost (only real generations — cache hits above are free).
+    if (sb) logUsage(sb, { userId: caller.id, feature: 'tts', model: 'elevenlabs', chars: text.length, costUsd: ttsCostUsd(text.length) })
 
     // ── 3. Persist to Storage (fire-and-forget) ──────────────────────────
     if (storagePath && sb) {

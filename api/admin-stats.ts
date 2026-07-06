@@ -168,7 +168,48 @@ export default async function handler(
   const signupsChart   = dayMap((signups30dRaw   ?? []) as { created_at: string }[])
   const analysesChart  = dayMap((analyses30dRaw  ?? []) as { created_at: string }[])
 
+  // ── Real AI spend (usage_events, migration 021) — last 30 days ─────────────
+  // Aggregated here in JS: volumes are tiny at this scale. If the table doesn't
+  // exist yet the query errors and we return usage:null (tab shows estimates).
+  let usage: null | {
+    totalUsd: number
+    byFeature: Record<string, { usd: number; events: number }>
+    topUsers: Array<{ email: string | null; usd: number; events: number }>
+  } = null
+  try {
+    const { data: usageRows, error: usageErr } = await supabase
+      .from('usage_events')
+      .select('user_id, feature, cost_usd')
+      .gte('created_at', last30)
+    if (!usageErr && usageRows) {
+      const rows = usageRows as { user_id: string | null; feature: string; cost_usd: number }[]
+      const byFeature: Record<string, { usd: number; events: number }> = {}
+      const byUser: Record<string, { usd: number; events: number }> = {}
+      let totalUsd = 0
+      for (const r of rows) {
+        const c = Number(r.cost_usd) || 0
+        totalUsd += c
+        const f = (byFeature[r.feature] ??= { usd: 0, events: 0 })
+        f.usd += c; f.events++
+        if (r.user_id) {
+          const u = (byUser[r.user_id] ??= { usd: 0, events: 0 })
+          u.usd += c; u.events++
+        }
+      }
+      const top = Object.entries(byUser).sort((a, b) => b[1].usd - a[1].usd).slice(0, 10)
+      const topUsers = await Promise.all(top.map(async ([uid, v]) => {
+        let email = emailMap[uid] ?? null
+        if (!email) {
+          try { email = (await supabase.auth.admin.getUserById(uid)).data.user?.email ?? null } catch { /* leave null */ }
+        }
+        return { email, usd: v.usd, events: v.events }
+      }))
+      usage = { totalUsd, byFeature, topUsers }
+    }
+  } catch { /* table missing — usage stays null */ }
+
   return res.json({
+    usage,
     users: {
       total: totalUsers ?? 0,
       pro: proUsers ?? 0,
