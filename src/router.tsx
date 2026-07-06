@@ -1,32 +1,13 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, lazyRouteComponent, Outlet } from '@tanstack/react-router'
 import { AppShell } from '@/components/AppShell'
 import { ThemeProvider } from '@/lib/theme'
 
-// Pages
-import { DashboardPage } from '@/routes/dashboard'
-import { LandingPage } from '@/routes/landing'
-import { LoginPage } from '@/routes/login'
-import { SignupPage } from '@/routes/signup'
-import { OnboardingPage } from '@/routes/onboarding'
-import { PricingPage } from '@/routes/pricing'
-import { ProjectsPage } from '@/routes/projects'
-import { NewProjectPage } from '@/routes/projects.new'
-import { AnalysisPage } from '@/routes/analysis'
-import { AnalysisLoadingPage } from '@/routes/analysis.loading'
-import { JuryPage } from '@/routes/jury'
-import { AssistantPage } from '@/routes/assistant'
-import { SettingsPage } from '@/routes/settings'
-import { HelpPage } from '@/routes/help'
-import { PrivacyPage } from '@/routes/privacy'
-import { TermsPage } from '@/routes/terms'
-import { MeetCritPage } from '@/routes/meet-crit'
-import { NotFoundPage } from '@/routes/not-found'
-import { ResetPasswordPage } from '@/routes/reset-password'
-import { AdminPage } from '@/routes/admin'
-import { PostPage } from '@/routes/post'
-import { FeedPage } from '@/routes/feed'
-import { ShowcasePage } from '@/routes/showcase'
-import { CompetitionsPage } from '@/routes/competitions'
+// Pages are code-split: each route loads its own chunk on first visit, so the
+// initial bundle doesn't ship PDF.js, the admin panel, etc. to every visitor.
+// lazyRouteComponent(importer, exportName) handles the named exports.
+const page = <T extends string>(importer: () => Promise<Record<string, unknown>>, exportName: T) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lazyRouteComponent(importer as any, exportName as any)
 
 // Root route
 const rootRoute = createRootRoute({
@@ -49,32 +30,32 @@ const appRoute = createRoute({
 })
 
 // Fullscreen routes (no AppShell)
-const landingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/landing', component: LandingPage })
-const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login', component: LoginPage })
-const signupRoute = createRoute({ getParentRoute: () => rootRoute, path: '/signup', component: SignupPage })
-const onboardingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/onboarding', component: OnboardingPage })
-const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/pricing', component: PricingPage })
-const newProjectRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projects/new', component: NewProjectPage })
-const analysisLoadingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/analysis/loading', component: AnalysisLoadingPage })
-const privacyRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/privacy',    component: PrivacyPage })
-const termsRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/terms',      component: TermsPage })
-const meetCritRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/meet-crit',  component: MeetCritPage })
-const resetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage })
-const postRoute = createRoute({ getParentRoute: () => rootRoute, path: '/p/$analysisId', component: PostPage })
-const showcaseRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/showcase', component: ShowcasePage })
-const notFoundRoute  = createRoute({ getParentRoute: () => rootRoute, path: '*', component: NotFoundPage })
+const landingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/landing', component: page(() => import('@/routes/landing'), 'LandingPage') })
+const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login', component: page(() => import('@/routes/login'), 'LoginPage') })
+const signupRoute = createRoute({ getParentRoute: () => rootRoute, path: '/signup', component: page(() => import('@/routes/signup'), 'SignupPage') })
+const onboardingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/onboarding', component: page(() => import('@/routes/onboarding'), 'OnboardingPage') })
+const pricingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/pricing', component: page(() => import('@/routes/pricing'), 'PricingPage') })
+const newProjectRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projects/new', component: page(() => import('@/routes/projects.new'), 'NewProjectPage') })
+const analysisLoadingRoute = createRoute({ getParentRoute: () => rootRoute, path: '/analysis/loading', component: page(() => import('@/routes/analysis.loading'), 'AnalysisLoadingPage') })
+const privacyRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/privacy',    component: page(() => import('@/routes/privacy'), 'PrivacyPage') })
+const termsRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/terms',      component: page(() => import('@/routes/terms'), 'TermsPage') })
+const meetCritRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/meet-crit',  component: page(() => import('@/routes/meet-crit'), 'MeetCritPage') })
+const resetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: page(() => import('@/routes/reset-password'), 'ResetPasswordPage') })
+const postRoute = createRoute({ getParentRoute: () => rootRoute, path: '/p/$analysisId', component: page(() => import('@/routes/post'), 'PostPage') })
+const showcaseRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/showcase', component: page(() => import('@/routes/showcase'), 'ShowcasePage') })
+const notFoundRoute  = createRoute({ getParentRoute: () => rootRoute, path: '*', component: page(() => import('@/routes/not-found'), 'NotFoundPage') })
 
 // App shell routes
-const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage })
-const projectsRoute = createRoute({ getParentRoute: () => appRoute, path: '/projects', component: ProjectsPage })
-const analysisRoute = createRoute({ getParentRoute: () => appRoute, path: '/analysis/$projectId', component: AnalysisPage })
-const juryRoute = createRoute({ getParentRoute: () => appRoute, path: '/jury', component: JuryPage })
-const feedRoute = createRoute({ getParentRoute: () => appRoute, path: '/feed', component: FeedPage })
-const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/assistant', component: AssistantPage })
-const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: SettingsPage })
-const helpRoute  = createRoute({ getParentRoute: () => appRoute, path: '/help',  component: HelpPage })
-const adminRoute = createRoute({ getParentRoute: () => appRoute, path: '/admin', component: AdminPage })
-const competitionsRoute = createRoute({ getParentRoute: () => appRoute, path: '/competitions', component: CompetitionsPage })
+const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', component: page(() => import('@/routes/dashboard'), 'DashboardPage') })
+const projectsRoute = createRoute({ getParentRoute: () => appRoute, path: '/projects', component: page(() => import('@/routes/projects'), 'ProjectsPage') })
+const analysisRoute = createRoute({ getParentRoute: () => appRoute, path: '/analysis/$projectId', component: page(() => import('@/routes/analysis'), 'AnalysisPage') })
+const juryRoute = createRoute({ getParentRoute: () => appRoute, path: '/jury', component: page(() => import('@/routes/jury'), 'JuryPage') })
+const feedRoute = createRoute({ getParentRoute: () => appRoute, path: '/feed', component: page(() => import('@/routes/feed'), 'FeedPage') })
+const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/assistant', component: page(() => import('@/routes/assistant'), 'AssistantPage') })
+const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: page(() => import('@/routes/settings'), 'SettingsPage') })
+const helpRoute  = createRoute({ getParentRoute: () => appRoute, path: '/help',  component: page(() => import('@/routes/help'), 'HelpPage') })
+const adminRoute = createRoute({ getParentRoute: () => appRoute, path: '/admin', component: page(() => import('@/routes/admin'), 'AdminPage') })
+const competitionsRoute = createRoute({ getParentRoute: () => appRoute, path: '/competitions', component: page(() => import('@/routes/competitions'), 'CompetitionsPage') })
 
 const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
