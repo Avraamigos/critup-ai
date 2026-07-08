@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { MONO } from '@/lib/fonts'
 
 type Analysis = {
   id: string
@@ -182,7 +183,7 @@ export function DashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0, width: 116 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: c.textMuted, fontFamily: FONT }}>{t('dashboard.analyses')}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: analysesUsed >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{analysesUsed}/1</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: analysesUsed >= 1 ? '#F97316' : c.textMuted, fontFamily: MONO }}>{analysesUsed}/1</span>
               </div>
               <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.30 0.004 270)' : '#e5e7eb', overflow: 'hidden', width: '100%' }}>
                 <div style={{ height: '100%', width: `${Math.min(100, analysesUsed * 100)}%`, borderRadius: 100, background: analysesUsed >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
@@ -441,10 +442,11 @@ export function DashboardPage() {
                         <div style={{ display: 'flex', gap: isMobile ? 10 : 14, flexShrink: 0 }}>
                           {([['C', la.concept_score], ['S', la.spatial_score], ['P', la.presentation_score]] as [string, number | null][]).map(([l, v]) => (
                             <div key={l} style={{ textAlign: 'center' }}>
-                              <div style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: v === null ? '#999' : v >= 8 ? 'oklch(0.72 0.17 145)' : v >= 6 ? '#F97316' : 'oklch(0.65 0.18 25)' }}>
+                              {/* Same tiers as ScoreRing: 6+ green, 4–6 amber, <4 red */}
+                              <div style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: v === null ? '#999' : v >= 6 ? 'oklch(0.72 0.17 145)' : v >= 4 ? '#F97316' : 'oklch(0.65 0.18 25)' }}>
                                 {v !== null ? v.toFixed(1) : '—'}
                               </div>
-                              <div style={{ fontSize: 9, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
+                              <div style={{ fontFamily: MONO, fontSize: 8.5, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{l}</div>
                             </div>
                           ))}
                         </div>

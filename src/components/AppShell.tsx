@@ -12,6 +12,7 @@ import { AIChatPanel } from './AIChatPanel'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth, isAdminEmail } from '@/lib/auth'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { MONO } from '@/lib/fonts'
 
 // `activePath` is what determines the highlighted state — separate from `to`
 // so the Analysis item can always highlight on /analysis/* regardless of its `to`.
@@ -217,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 10, color: c.textMuted, fontFamily: FONT }}>{t('appShell.analyses')}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: used >= 1 ? '#F97316' : c.textMuted, fontFamily: FONT }}>{t('appShell.usedCount', { used })}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: used >= 1 ? '#F97316' : c.textMuted, fontFamily: MONO }}>{t('appShell.usedCount', { used })}</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 100, background: c.isDark ? 'oklch(0.32 0.004 270)' : '#fde8d0', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 100, background: used >= 1 ? '#F97316' : 'oklch(0.72 0.18 45/0.5)', transition: 'width 0.4s ease' }} />
@@ -238,7 +239,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarOpen && (
               <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: c.textPrimary, whiteSpace: 'nowrap', fontFamily: FONT }}>{profile?.full_name || displayName}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>{isPro ? (profile?.plan ?? 'Pro') : 'Free'}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: MONO }}>{isPro ? (profile?.plan ?? 'Pro') : 'Free'}</div>
               </div>
             )}
           </div>

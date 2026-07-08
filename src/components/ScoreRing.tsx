@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MONO } from '@/lib/fonts'
 
 interface Props {
   score: number
@@ -54,18 +55,18 @@ export function ScoreRing({ score, label, size = 80, animated = true, theme = 'd
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div style={{ position: 'relative', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth="5" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth="3.5" />
           <circle
-            cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="5"
+            cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="3.5"
             strokeLinecap="round" strokeDasharray={`${dash} ${circ}`}
-            style={{ filter: `drop-shadow(0 0 4px ${color}80)`, transition: 'stroke 0.3s' }}
+            style={{ filter: `drop-shadow(0 0 3px ${color}66)`, transition: 'stroke 0.3s' }}
           />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",
-            fontWeight: 600, fontSize: size * 0.30, color: textColor, lineHeight: 1,
-            letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums',
+            fontFamily: MONO,
+            fontWeight: 600, fontSize: size * 0.27, color: textColor, lineHeight: 1,
+            letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
           }}>
             {displayScore.toFixed(displayScore % 1 === 0 ? 0 : 1)}
           </span>
@@ -77,7 +78,7 @@ export function ScoreRing({ score, label, size = 80, animated = true, theme = 'd
         </span>
       )}
       {showBand && (
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', color, marginTop: -1 }}>
+        <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color, marginTop: -1 }}>
           {t(`scores.band_${scoreBandKey(score)}`)}
         </span>
       )}
