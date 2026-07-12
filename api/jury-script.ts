@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { getCaller, isAdminEmail } from './_lib/auth.js'
 import { parseClaudeJson } from './_lib/claudeJson.js'
+import { handlePoster } from './_lib/poster.js'
 import { logUsage, claudeCostUsd } from './_lib/usage.js'
 
 // ─── Jury Prep — presentation script generation (Pro-only, heavy) ─────────────
@@ -69,6 +70,15 @@ export default async function handler(
   }
 ) {
   if (req.method !== 'POST') return res.status(405).end()
+
+  // ── Poster tool (Tools §1) is co-hosted here only because Vercel Hobby caps us
+  //    at 12 functions. All its logic lives in _lib/poster.ts; when we move to
+  //    Vercel Pro this branch becomes its own api/poster.ts. (See admin note.) ──
+  const act = (req.body as { action?: string } | undefined)?.action
+  if (act === 'poster' || act === 'poster_credits') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return handlePoster(req as any, res)
+  }
 
   const { analysisId, languageLevel, regenerate, action, text } = req.body ?? ({} as ScriptRequest)
   if (!analysisId) return res.status(400).json({ error: 'analysisId required' })

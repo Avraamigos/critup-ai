@@ -79,6 +79,10 @@ const NOTES_SEEDED_KEY = 'critup_admin_notes_seeded'
 
 const DEFAULT_NOTES: Omit<AdminNote, 'id'>[] = [
   {
+    text: '🧩 TECH DEBT — when you upgrade to Vercel Pro, extract the poster tool into its own api/poster.ts.\nRight now poster generation is co-hosted inside api/jury-script.ts (dispatched via action:"poster") purely because Hobby caps us at 12 functions. All logic already lives in api/_lib/poster.ts, so extraction is a 3-line new endpoint that calls handlePoster(). Also needs OPENAI_API_KEY set in Vercel env for the tool to work at all.',
+    createdAt: new Date('2026-07-06').toISOString(),
+  },
+  {
     text: '🏗️ DEFERRED — background job queue for analysis (Proposal B).\nToday /api/analyze runs the whole analysis inside one long request; if it dies the row hangs. A real queue (worker + retries) removes the timeout class entirely. NOT worth it at current volume — Proposal A (honest failure + retry) covers ~90% of the pain. Revisit at hundreds of analyses/day.',
     createdAt: new Date('2026-07-05').toISOString(),
   },

@@ -26,7 +26,7 @@ export function ttsCostUsd(chars: number): number {
 
 export interface UsageEvent {
   userId: string | null
-  feature: 'analysis' | 'chat' | 'jury_script' | 'jury_shorten' | 'tts'
+  feature: 'analysis' | 'chat' | 'jury_script' | 'jury_shorten' | 'tts' | 'poster'
   model: string
   inputTokens?: number
   outputTokens?: number
