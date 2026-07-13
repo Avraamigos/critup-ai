@@ -40,8 +40,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [chatOpen, setChatOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const router = useRouterState()
   const currentPath = router.location.pathname
+  const toolsActive = currentPath.startsWith('/tools')
+  // Auto-expand the Tools group when navigating into any tool.
+  useEffect(() => { if (currentPath.startsWith('/tools')) setToolsOpen(true) }, [currentPath])
   const dropdownRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
 
@@ -209,15 +213,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {NAV_ITEMS.map(item => (
               item.activePath === '/tools' ? (
                 <div key={item.to}>
-                  <NavItem {...item} />
-                  {/* Nested tool links — a scalable subsection under Tools */}
-                  {sidebarOpen && TOOL_ITEMS.map(child => {
+                  {/* Tools: a disclosure toggle. Click expands/collapses the tool
+                      list; when the sidebar is collapsed to icons it just opens
+                      the tools grid instead. */}
+                  <button
+                    onClick={() => { if (sidebarOpen) setToolsOpen(o => !o); else navigate({ to: '/tools' }) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+                      padding: sidebarOpen ? '9px 14px' : '9px 0', justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                      borderRadius: 9, background: toolsActive ? c.activeBg : 'transparent',
+                      color: toolsActive ? c.textPrimary : c.textMuted,
+                      fontSize: 13, fontWeight: toolsActive ? 600 : 400, fontFamily: FONT,
+                      border: 'none', borderLeft: `2.5px solid ${toolsActive ? '#F97316' : 'transparent'}`,
+                      cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!toolsActive) e.currentTarget.style.background = c.isDark ? 'oklch(0.245 0.004 270)' : '#f3f4f6' }}
+                    onMouseLeave={e => { if (!toolsActive) e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <span style={{ flexShrink: 0, display: 'flex', marginLeft: sidebarOpen ? 0 : 'auto', marginRight: sidebarOpen ? 0 : 'auto' }}>
+                      <Wand2 size={17} color={toolsActive ? '#F97316' : c.textMuted} strokeWidth={1.6} />
+                    </span>
+                    {sidebarOpen && <span>{t('nav.tools')}</span>}
+                    {sidebarOpen && (
+                      <ChevronRight size={14} color={c.textMuted} style={{ marginLeft: 'auto', transition: 'transform 0.18s', transform: toolsOpen ? 'rotate(90deg)' : 'none' }} />
+                    )}
+                  </button>
+                  {/* Nested tool links */}
+                  {sidebarOpen && toolsOpen && TOOL_ITEMS.map(child => {
                     const active = isActive(child.activePath)
                     const ChildIcon = child.icon
                     return (
                       <Link key={child.to} to={child.to} style={{
                         display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                        padding: '7px 14px 7px 30px', borderRadius: 9,
+                        padding: '7px 14px 7px 34px', borderRadius: 9,
                         background: active ? c.activeBg : 'transparent',
                         color: active ? c.textPrimary : c.textMuted,
                         fontSize: 12.5, fontWeight: active ? 600 : 400, fontFamily: FONT,
