@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu, Volume2, MapPin, ScrollText, Sparkles, Globe, TrendingUp, Trophy, Users } from 'lucide-react'
+import { Sun, Moon, Check, Plus, X, ArrowRight, Upload, Zap, MessageSquare, Menu, Volume2, MapPin, ScrollText, Sparkles, Globe, TrendingUp, Trophy, Users, Image as ImageIcon } from 'lucide-react'
 import { CritupLogo } from '@/components/CritupLogo'
 import { AIOrb } from '@/components/AIOrb'
 import { useTheme, useColors } from '@/lib/theme'
@@ -307,6 +307,7 @@ export function LandingPage() {
             { Icon: TrendingUp,  title:t('landing.feat6Title'), desc:t('landing.feat6Desc') },
             { Icon: Trophy,      title:t('landing.feat7Title'), desc:t('landing.feat7Desc') },
             { Icon: Users,       title:t('landing.feat8Title'), desc:t('landing.feat8Desc') },
+            { Icon: ImageIcon,   title:t('landing.feat9Title'), desc:t('landing.feat9Desc') },
           ].map(({ Icon, title, desc }) => (
             <div key={title} style={{ background: isDark ? 'oklch(0.225 0.004 270)' : '#fff', borderRadius:16, padding: isMobile ? '18px 16px' : '22px', border:`1px solid ${c.border}`, display:'flex', flexDirection:'column' }}>
               <div style={{ width:40, height:40, borderRadius:11, background:'oklch(0.72 0.18 45 / 0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, flexShrink:0 }}><Icon size={19} color="#F97316" strokeWidth={2} /></div>

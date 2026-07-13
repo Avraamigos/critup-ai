@@ -59,7 +59,7 @@ export function PricingPage() {
     },
     {
       name: t('pricing.planMonthly'), price: '$9', sub: t('pricing.subMonth'), cancel: t('pricing.cancelAnytime'),
-      features: [t('pricing.monthlyFeat1'), t('pricing.monthlyFeat2'), t('pricing.monthlyFeat3'), t('pricing.monthlyFeat4'), t('pricing.monthlyFeat5'), t('pricing.monthlyFeat6')],
+      features: [t('pricing.monthlyFeat1'), t('pricing.monthlyFeat2'), t('pricing.monthlyFeat3'), t('pricing.monthlyFeat4'), t('pricing.monthlyFeat7'), t('pricing.monthlyFeat5'), t('pricing.monthlyFeat6')],
       cta: currentPlan === 'monthly' ? t('pricing.currentPlan') : (loadingPlan === 'monthly' ? t('pricing.opening') : t('pricing.startMonthly')),
       featured: true, badge: t('pricing.mostPopular'),
       action: () => { if (currentPlan === 'monthly') return; track.upgradeClicked('pricing_monthly'); openCheckout('monthly') },

@@ -9,8 +9,8 @@ const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-se
 const TOOLS = [
   {
     id: 'poster', to: '/tools/poster', live: true,
-    icon: Sparkles, name: 'Title Poster',
-    desc: 'Turn your building render into a polished presentation title slide — choose a vibe, upload your render, done.',
+    icon: Sparkles, name: 'Poster',
+    desc: 'Turn your render into a polished presentation cover — title, plans and building in one poster. Pick a vibe, upload, done.',
     tag: 'Pro',
   },
   // Future tools land here (diagram generator, checklist, title-block formatter…)

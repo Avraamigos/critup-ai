@@ -1047,7 +1047,7 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
           >
-            <Sparkles size={13} />{!isMobile && ' Title poster'}
+            <Sparkles size={13} />{!isMobile && ' Make poster'}
             {!isMobile && !isPro && <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span>}
           </button>
           {!isMobile && (

@@ -93,10 +93,10 @@ export function PosterToolPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
             <Sparkles size={18} color={c.orange} />
-            <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0 }}>Title Poster</h1>
+            <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: '-0.03em', color: c.textPrimary, margin: 0 }}>Poster</h1>
           </div>
           <p style={{ fontSize: 13.5, color: c.textMuted, margin: 0, maxWidth: 60 + 'ch', lineHeight: 1.5 }}>
-            Turn your building render into a presentation title slide. Approximate, not final — a strong draft to refine.
+            Turn your building render into a presentation cover — your title slide. Results are AI-generated and approximate: a strong draft to refine, not a final.
           </p>
         </div>
         {credits && (
