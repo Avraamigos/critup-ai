@@ -29,6 +29,7 @@ export const en = {
     competitions: 'Competitions',
     jury: 'Jury',
     tools: 'Tools',
+    toolPoster: 'Poster',
     comingSoon: 'Coming next semester',
     settings: 'Settings',
     help: 'Help',

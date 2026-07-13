@@ -29,6 +29,7 @@ export const tr: TranslationSchema = {
     competitions: 'Yarışmalar',
     jury: 'Jüri',
     tools: 'Araçlar',
+    toolPoster: 'Poster',
     comingSoon: 'Gelecek dönem',
     settings: 'Ayarlar',
     help: 'Yardım',

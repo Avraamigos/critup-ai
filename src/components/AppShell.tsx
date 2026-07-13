@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import {
-  LayoutGrid, Folder, CircleDot, Mic, Users, Trophy, Wand2,
+  LayoutGrid, Folder, CircleDot, Mic, Users, Trophy, Wand2, Sparkles,
   Settings, HelpCircle, ChevronLeft, ChevronRight,
   Sun, Moon, LogOut, Star, TrendingUp, User, ShieldCheck,
 } from 'lucide-react'
@@ -25,6 +25,11 @@ const BOTTOM_ITEMS: NavDef[] = [
 ]
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif"
+
+// Tools that appear nested under the "Tools" sidebar section. Add future tools here.
+const TOOL_ITEMS: { to: string; activePath: string; icon: React.ElementType; label: string }[] = [
+  { to: '/tools/poster', activePath: '/tools/poster', icon: Sparkles, label: 'nav.toolPoster' },
+]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme()
@@ -201,7 +206,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
 
           <nav style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {NAV_ITEMS.map(item => <NavItem key={item.to} {...item} />)}
+            {NAV_ITEMS.map(item => (
+              item.activePath === '/tools' ? (
+                <div key={item.to}>
+                  <NavItem {...item} />
+                  {/* Nested tool links — a scalable subsection under Tools */}
+                  {sidebarOpen && TOOL_ITEMS.map(child => {
+                    const active = isActive(child.activePath)
+                    const ChildIcon = child.icon
+                    return (
+                      <Link key={child.to} to={child.to} style={{
+                        display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                        padding: '7px 14px 7px 30px', borderRadius: 9,
+                        background: active ? c.activeBg : 'transparent',
+                        color: active ? c.textPrimary : c.textMuted,
+                        fontSize: 12.5, fontWeight: active ? 600 : 400, fontFamily: FONT,
+                        textDecoration: 'none', borderLeft: `2.5px solid ${active ? '#F97316' : 'transparent'}`,
+                        whiteSpace: 'nowrap', transition: 'all 0.15s',
+                      }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = c.isDark ? 'oklch(0.245 0.004 270)' : '#f3f4f6' }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <ChildIcon size={14} color={active ? '#F97316' : c.textMuted} strokeWidth={1.7} />
+                        <span>{t(child.label)}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : <NavItem key={item.to} {...item} />
+            ))}
           </nav>
 
           <div style={{ padding: '8px 8px 0' }}>
