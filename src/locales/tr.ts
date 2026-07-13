@@ -28,6 +28,7 @@ export const tr: TranslationSchema = {
     feed: 'Topluluk',
     competitions: 'Yarışmalar',
     jury: 'Jüri',
+    tools: 'Araçlar',
     comingSoon: 'Gelecek dönem',
     settings: 'Ayarlar',
     help: 'Yardım',

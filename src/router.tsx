@@ -50,6 +50,8 @@ const dashboardRoute = createRoute({ getParentRoute: () => appRoute, path: '/', 
 const projectsRoute = createRoute({ getParentRoute: () => appRoute, path: '/projects', component: page(() => import('@/routes/projects'), 'ProjectsPage') })
 const analysisRoute = createRoute({ getParentRoute: () => appRoute, path: '/analysis/$projectId', component: page(() => import('@/routes/analysis'), 'AnalysisPage') })
 const juryRoute = createRoute({ getParentRoute: () => appRoute, path: '/jury', component: page(() => import('@/routes/jury'), 'JuryPage') })
+const toolsRoute = createRoute({ getParentRoute: () => appRoute, path: '/tools', component: page(() => import('@/routes/tools'), 'ToolsPage') })
+const posterToolRoute = createRoute({ getParentRoute: () => appRoute, path: '/tools/poster', component: page(() => import('@/routes/tools.poster'), 'PosterToolPage') })
 const feedRoute = createRoute({ getParentRoute: () => appRoute, path: '/feed', component: page(() => import('@/routes/feed'), 'FeedPage') })
 const assistantRoute = createRoute({ getParentRoute: () => appRoute, path: '/assistant', component: page(() => import('@/routes/assistant'), 'AssistantPage') })
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: page(() => import('@/routes/settings'), 'SettingsPage') })
@@ -63,6 +65,8 @@ const routeTree = rootRoute.addChildren([
     projectsRoute,
     analysisRoute,
     juryRoute,
+    toolsRoute,
+    posterToolRoute,
     feedRoute,
     competitionsRoute,
     assistantRoute,

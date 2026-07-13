@@ -28,6 +28,7 @@ export const ru: TranslationSchema = {
     feed: 'Сообщество',
     competitions: 'Конкурсы',
     jury: 'Жюри',
+    tools: 'Инструменты',
     comingSoon: 'Скоро, в следующем семестре',
     settings: 'Настройки',
     help: 'Помощь',

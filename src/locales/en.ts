@@ -28,6 +28,7 @@ export const en = {
     feed: 'Community',
     competitions: 'Competitions',
     jury: 'Jury',
+    tools: 'Tools',
     comingSoon: 'Coming next semester',
     settings: 'Settings',
     help: 'Help',
