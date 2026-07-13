@@ -119,7 +119,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Mobile bottom bar: drop Projects (reachable from dashboard + account menu) and
   // Admin (owner-only, accessible by URL) so the 5 core tabs aren't cramped.
-  const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(n => n.activePath !== '/projects' && n.activePath !== '/admin')
+  // Keep the mobile bottom bar at 5 tabs. Tools (a nested section) doesn't fit
+  // the flat bar — mobile reaches it via the analysis "Make poster" button and
+  // the /tools URL. Projects + Admin are likewise reachable elsewhere.
+  const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(n => !['/projects', '/admin', '/tools'].includes(n.activePath))
 
   // Use activePath (not `to`) for highlight detection
   const isActive = (activePath: string) => {
