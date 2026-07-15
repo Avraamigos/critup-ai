@@ -15,7 +15,12 @@ export interface PosterResult {
 
 /** Upload one input image into the caller's own posters/{uid}/inputs folder.
  *  Returns the storage path to hand to the server. */
+const MAX_INPUT_BYTES = 12 * 1024 * 1024   // OpenAI images/edits caps input size
+
 export async function uploadPosterInput(userId: string, file: File): Promise<string> {
+  // Validate before it reaches storage or the image model.
+  if (!file.type.startsWith('image/')) throw new Error('Please upload an image file (PNG, JPG or WEBP).')
+  if (file.size > MAX_INPUT_BYTES) throw new Error('That image is too large (max 12 MB). Please compress it and try again.')
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-40)
   const path = `${userId}/inputs/${crypto.randomUUID()}-${safe}`
   const { error } = await supabase.storage.from('posters').upload(path, file, {

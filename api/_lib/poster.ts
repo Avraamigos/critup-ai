@@ -49,13 +49,16 @@ interface PosterReq {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Res = { status: (c: number) => { json: (b: unknown) => void; end: () => void }; json: (b: unknown) => void }
 
+// Count only COMPLETED posters toward the monthly limit. Counting 'processing'
+// rows would permanently burn a credit whenever a generation is killed mid-flight
+// (there is no reaper for this table), so a stuck attempt never costs the user.
 async function countRecent(userId: string, supabase: SupabaseClient<any, any, any>) {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
   const { count } = await supabase
     .from('poster_generations')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .neq('status', 'failed')
+    .eq('status', 'complete')
     .gte('created_at', since)
   return count ?? 0
 }
@@ -120,11 +123,19 @@ export async function handlePoster(
 
   const format: Format = req.body?.format === 'horizontal' ? 'horizontal' : 'vertical'
   const template = req.body?.template && TEMPLATES[req.body.template] ? req.body.template : 'bluehour'
-  const heroBucket = req.body?.heroBucket || 'posters'
-  const planBucket = req.body?.planBucket || 'posters'
-  if (!req.body?.heroPath) return res.status(400).json({ error: 'heroPath required' })
 
-  // Record the attempt up-front so a crash leaves an honest 'processing'→reaper trail.
+  // SECURITY: downloads below use the service-role key (bypasses RLS). Only ever
+  // read from the caller's OWN folder in the 'posters' bucket — never a bucket or
+  // path chosen by the client — so a Pro user can't exfiltrate another user's
+  // private storage (e.g. project-pdfs) by naming it in the request body.
+  const heroBucket = 'posters'
+  const planBucket = 'posters'
+  const ownsPath = (p?: string): p is string => !!p && p.startsWith(`${caller.id}/`)
+  if (!ownsPath(req.body?.heroPath)) return res.status(400).json({ error: 'invalid heroPath' })
+  const planPaths = (req.body?.planPaths ?? []).filter(ownsPath).slice(0, 3)
+
+  // Record the attempt up-front (history + debugging). Only 'complete' rows count
+  // toward the limit, so a failed/stuck attempt never consumes one of the 15.
   const { data: rowIns } = await supabase
     .from('poster_generations')
     .insert({ user_id: caller.id, analysis_id: req.body.analysisId ?? null, format, template, status: 'processing' })
@@ -142,7 +153,7 @@ export async function handlePoster(
     const hero = await download(supabase, heroBucket, req.body.heroPath)
     if (!hero) return fail('Could not read your building image. Please re-upload.')
     const planBlobs: Blob[] = []
-    for (const p of (req.body.planPaths ?? []).slice(0, 3)) {
+    for (const p of planPaths) {
       const b = await download(supabase, planBucket, p)
       if (b) planBlobs.push(b)
     }
