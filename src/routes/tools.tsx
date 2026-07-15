@@ -8,10 +8,10 @@ const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-se
 
 const TOOLS = [
   {
-    id: 'poster', to: '/tools/poster', live: true,
+    id: 'poster', to: '/tools/poster', live: false,   // flip to true to launch
     icon: Sparkles, name: 'Poster',
     desc: 'Turn your render into a polished presentation cover — title, plans and building in one poster. Pick a vibe, upload, done.',
-    tag: 'Pro',
+    tag: 'Soon',
   },
   // Future tools land here (diagram generator, checklist, title-block formatter…)
 ]
@@ -34,23 +34,25 @@ export function ToolsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
         {TOOLS.map(tool => (
-          <button key={tool.id} onClick={() => navigate({ to: tool.to })} style={{
-            textAlign: 'left', background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 16,
-            padding: 22, cursor: 'pointer', transition: 'border-color 0.15s, transform 0.15s', position: 'relative',
+          <button key={tool.id} onClick={() => { if (tool.live) navigate({ to: tool.to }) }} style={{
+            textAlign: 'left', background: c.cardBg, borderRadius: 16,
+            border: tool.live ? `1px solid ${c.border}` : `1.5px dashed ${c.border}`,
+            padding: 22, cursor: tool.live ? 'pointer' : 'default', position: 'relative',
+            opacity: tool.live ? 1 : 0.75, transition: 'border-color 0.15s, transform 0.15s',
           }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = c.orange; e.currentTarget.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.transform = 'translateY(0)' }}
+            onMouseEnter={e => { if (tool.live) { e.currentTarget.style.borderColor = c.orange; e.currentTarget.style.transform = 'translateY(-2px)' } }}
+            onMouseLeave={e => { if (tool.live) { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.transform = 'translateY(0)' } }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 11, background: 'oklch(0.72 0.18 45/0.1)', border: '1px solid oklch(0.72 0.18 45/0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <tool.icon size={19} color={c.orange} />
               </div>
-              <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: c.orange, background: 'oklch(0.72 0.18 45/0.12)', padding: '3px 8px', borderRadius: 100 }}>{tool.tag}</span>
+              <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: tool.live ? c.orange : c.textMuted, background: tool.live ? 'oklch(0.72 0.18 45/0.12)' : (c.isDark ? 'oklch(0.32 0.004 270)' : '#e5e7eb'), padding: '3px 8px', borderRadius: 100 }}>{tool.tag}</span>
             </div>
             <div style={{ fontSize: 16.5, fontWeight: 700, letterSpacing: '-0.02em', color: c.textPrimary, marginBottom: 5 }}>{tool.name}</div>
             <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.55, margin: '0 0 14px' }}>{tool.desc}</p>
-            <span style={{ fontSize: 13, fontWeight: 600, color: c.orange, display: 'flex', alignItems: 'center', gap: 5 }}>
-              Open <ArrowRight size={14} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: tool.live ? c.orange : c.textMuted, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {tool.live ? <>Open <ArrowRight size={14} /></> : 'Coming soon'}
             </span>
           </button>
         ))}

@@ -20,6 +20,10 @@ const TEMPLATES = [
 
 const FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif"
 
+// Gated for launch — the tool is built but not released. Flip to true together
+// with TOOLS[].live in tools.tsx and the sidebar/analysis entry points.
+const POSTER_LIVE = false
+
 export function PosterToolPage() {
   const { theme } = useTheme()
   const c = useColors(theme)
@@ -43,6 +47,22 @@ export function PosterToolPage() {
   const [credits, setCredits] = useState<{ used: number; limit: number; remaining: number } | null>(null)
 
   useEffect(() => { if (isPro) getPosterCredits().then(setCredits).catch(() => {}) }, [isPro])
+
+  // ── Coming-soon gate (direct-URL access while the tool is unreleased) ───────
+  if (!POSTER_LIVE) {
+    return (
+      <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: FONT }}>
+        <div style={{ maxWidth: 420, textAlign: 'center' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'oklch(0.72 0.18 45/0.12)', border: '1px solid oklch(0.72 0.18 45/0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+            <Sparkles size={22} color={c.orange} />
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: c.textPrimary, margin: '0 0 8px', letterSpacing: '-0.03em' }}>Poster is coming soon</h1>
+          <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.6, margin: '0 0 22px' }}>Turn your building render into a polished presentation cover. We're finishing it up — it'll appear here when it's ready.</p>
+          <button onClick={() => navigate({ to: '/tools' })} style={{ padding: '11px 24px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textPrimary, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Back to Tools</button>
+        </div>
+      </div>
+    )
+  }
 
   // ── Pro gate ────────────────────────────────────────────────────────────────
   if (!isPro) {

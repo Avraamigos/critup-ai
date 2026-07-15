@@ -43,7 +43,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [toolsOpen, setToolsOpen] = useState(false)
   const router = useRouterState()
   const currentPath = router.location.pathname
-  const toolsActive = currentPath.startsWith('/tools')
+  // Parent highlights only on the tools GRID page — when a child tool is active,
+  // the child alone carries the highlight (standard disclosure-group behaviour).
+  const toolsActive = currentPath === '/tools'
   // Auto-expand the Tools group when navigating into any tool.
   useEffect(() => { if (currentPath.startsWith('/tools')) setToolsOpen(true) }, [currentPath])
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -241,26 +243,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <ChevronRight size={14} color={c.textMuted} style={{ marginLeft: 'auto', transition: 'transform 0.18s', transform: toolsOpen ? 'rotate(90deg)' : 'none' }} />
                     )}
                   </button>
-                  {/* Nested tool links */}
+                  {/* Nested tool links — Poster is gated off for launch ("Soon").
+                      Flip disabled to false when the tool is ready to ship. */}
                   {sidebarOpen && toolsOpen && TOOL_ITEMS.map(child => {
-                    const active = isActive(child.activePath)
                     const ChildIcon = child.icon
                     return (
-                      <Link key={child.to} to={child.to} style={{
+                      <div key={child.to} style={{
                         display: 'flex', alignItems: 'center', gap: 9, width: '100%',
                         padding: '7px 14px 7px 34px', borderRadius: 9,
-                        background: active ? c.activeBg : 'transparent',
-                        color: active ? c.textPrimary : c.textMuted,
-                        fontSize: 12.5, fontWeight: active ? 600 : 400, fontFamily: FONT,
-                        textDecoration: 'none', borderLeft: `2.5px solid ${active ? '#F97316' : 'transparent'}`,
-                        whiteSpace: 'nowrap', transition: 'all 0.15s',
-                      }}
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = c.isDark ? 'oklch(0.245 0.004 270)' : '#f3f4f6' }}
-                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-                      >
-                        <ChildIcon size={14} color={active ? '#F97316' : c.textMuted} strokeWidth={1.7} />
+                        color: c.textMuted, opacity: 0.55, cursor: 'default',
+                        fontSize: 12.5, fontWeight: 400, fontFamily: FONT,
+                        borderLeft: '2.5px solid transparent', whiteSpace: 'nowrap',
+                      }}>
+                        <ChildIcon size={14} color={c.textMuted} strokeWidth={1.7} />
                         <span>{t(child.label)}</span>
-                      </Link>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 100,
+                          background: c.isDark ? 'oklch(0.32 0.004 270)' : '#e5e7eb',
+                          color: c.textMuted, letterSpacing: '0.02em',
+                        }}>{t('settings.comingSoonShort')}</span>
+                      </div>
                     )
                   })}
                 </div>

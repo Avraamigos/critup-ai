@@ -1035,21 +1035,9 @@ ${juryQuestions.map(q => `<div class="jury-q">"${q}"</div>`).join('')}` : ''}
             <Upload size={13} />{!isMobile && ` ${t('analysis.newVersion')}`}
             {!isMobile && !isPro && <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span>}
           </button>
-          {/* Jump to the poster tool with this project pre-associated. Pro-gated
-              like other AI actions; the tool tags the generation to this analysis. */}
-          <button
-            onClick={() => {
-              if (!isPro) { navigate({ to: '/pricing' }); return }
-              navigate({ to: '/tools/poster', search: { analysisId: latestAnalysis.id } })
-            }}
-            title={!isPro ? t('analysis.voiceProTitle') : undefined}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '7px 10px' : '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted }}
-          >
-            <Sparkles size={13} />{!isMobile && ' Make poster'}
-            {!isMobile && !isPro && <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: 'oklch(0.72 0.18 45/0.12)', padding: '1px 5px', borderRadius: 4, marginLeft: 2 }}>PRO</span>}
-          </button>
+          {/* "Make poster" button removed while the Poster tool is gated as
+              coming-soon (see tools.tsx TOOLS[].live). Restore when it launches:
+              navigate({ to: '/tools/poster', search: { analysisId: latestAnalysis.id } }) */}
           {!isMobile && (
             <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 100, background: c.cardBg, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#F97316'; e.currentTarget.style.color = '#F97316' }}
