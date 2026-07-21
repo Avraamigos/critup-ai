@@ -25,11 +25,11 @@ const LANGUAGES = [
   { v: 'en', l: 'English',    native: 'English',   flag: '🇬🇧' },
   { v: 'ru', l: 'Russian',    native: 'Русский',   flag: '🇷🇺' },
   { v: 'tr', l: 'Turkish',    native: 'Türkçe',    flag: '🇹🇷' },
-  { v: 'es', l: 'Spanish',    native: 'Español',   flag: '🇪🇸', aiOnly: true },
-  { v: 'fr', l: 'French',     native: 'Français',  flag: '🇫🇷', aiOnly: true },
-  { v: 'de', l: 'German',     native: 'Deutsch',   flag: '🇩🇪', aiOnly: true },
-  { v: 'ar', l: 'Arabic',     native: 'العربية',   flag: '🇸🇦', aiOnly: true },
-  { v: 'pt', l: 'Portuguese', native: 'Português', flag: '🇵🇹', aiOnly: true },
+  { v: 'es', l: 'Spanish',    native: 'Español',   flag: '🇪🇸' },
+  { v: 'fr', l: 'French',     native: 'Français',  flag: '🇫🇷' },
+  { v: 'de', l: 'German',     native: 'Deutsch',   flag: '🇩🇪' },
+  { v: 'ar', l: 'Arabic',     native: 'العربية',   flag: '🇸🇦' },
+  { v: 'pt', l: 'Portuguese', native: 'Português', flag: '🇵🇹' },
   { v: 'zh', l: 'Chinese',    native: '中文',       flag: '🇨🇳', aiOnly: true },
 ] as { v: string; l: string; native: string; flag: string; aiOnly?: boolean }[]
 

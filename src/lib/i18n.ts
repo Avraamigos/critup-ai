@@ -7,6 +7,7 @@ import { es } from '@/locales/es'
 import { fr } from '@/locales/fr'
 import { de } from '@/locales/de'
 import { pt } from '@/locales/pt'
+import { ar } from '@/locales/ar'
 
 // Single flat namespace ('translation'). Keys are dotted strings like
 // 'nav.dashboard'. The app language is driven by profiles.language (en/ru/tr) —
@@ -28,11 +29,25 @@ i18n.use(initReactI18next).init({
     fr: { translation: fr },
     de: { translation: de },
     pt: { translation: pt },
+    ar: { translation: ar },
   },
   lng: 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
   returnEmptyString: false,
 })
+
+// Keep the document direction/lang in sync with the active language so Arabic
+// (and any future RTL locale) renders right-to-left. Runs on init and on every
+// changeLanguage() call, so both the auth-profile sync and the Settings picker
+// are covered without duplicating this logic.
+function applyDirection(lng: string) {
+  if (typeof document === 'undefined') return
+  const isRtl = (RTL_LANGUAGES as readonly string[]).includes(lng)
+  document.documentElement.dir = isRtl ? 'rtl' : 'ltr'
+  document.documentElement.lang = lng
+}
+applyDirection(i18n.language)
+i18n.on('languageChanged', applyDirection)
 
 export default i18n

@@ -162,7 +162,7 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
       `}</style>
 
       <div style={{
-        position: 'fixed', right: 0, top: 0, bottom: 0, width: 360, zIndex: 8000,
+        position: 'fixed', insetInlineEnd: 0, top: 0, bottom: 0, width: 360, zIndex: 8000,
         background: isDark ? 'oklch(0.155 0.006 270)' : '#ffffff',
         borderLeft: `1px solid ${isDark ? 'oklch(0.24 0.006 270)' : '#e5e7eb'}`,
         display: 'flex', flexDirection: 'column',

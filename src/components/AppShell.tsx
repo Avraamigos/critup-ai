@@ -145,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           borderRadius: 9, background: 'transparent',
           color: c.textMuted, opacity: 0.5,
           fontSize: 13, fontWeight: 400, fontFamily: FONT,
-          borderLeft: '2.5px solid transparent',
+          borderInlineStart: '2.5px solid transparent',
           overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'default',
         }}>
           <span style={{ flexShrink: 0, display: 'flex', marginLeft: sidebarOpen ? 0 : 'auto', marginRight: sidebarOpen ? 0 : 'auto' }}>
@@ -172,7 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         color: active ? c.textPrimary : c.textMuted,
         fontSize: 13, fontWeight: active ? 600 : 400, fontFamily: FONT,
         textDecoration: 'none',
-        borderLeft: `2.5px solid ${active ? '#F97316' : 'transparent'}`,
+        borderInlineStart: `2.5px solid ${active ? '#F97316' : 'transparent'}`,
         overflow: 'hidden', whiteSpace: 'nowrap', transition: 'all 0.15s',
       }}
         onMouseEnter={e => { if (!active) e.currentTarget.style.background = c.isDark ? 'oklch(0.245 0.004 270)' : '#f3f4f6' }}
@@ -192,7 +192,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Desktop Sidebar ── */}
       {!isMobile && (
         <div style={{
-          width: sidebarW, flexShrink: 0, background: c.sidebarBg, borderRight: `1px solid ${c.border}`,
+          width: sidebarW, flexShrink: 0, background: c.sidebarBg, borderInlineEnd: `1px solid ${c.border}`,
           display: 'flex', flexDirection: 'column', transition: 'width 0.25s ease',
           overflow: 'hidden', position: 'relative', zIndex: 20,
         }}>
@@ -229,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       borderRadius: 9, background: toolsActive ? c.activeBg : 'transparent',
                       color: toolsActive ? c.textPrimary : c.textMuted,
                       fontSize: 13, fontWeight: toolsActive ? 600 : 400, fontFamily: FONT,
-                      border: 'none', borderLeft: `2.5px solid ${toolsActive ? '#F97316' : 'transparent'}`,
+                      border: 'none', borderInlineStart: `2.5px solid ${toolsActive ? '#F97316' : 'transparent'}`,
                       cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', transition: 'all 0.15s',
                     }}
                     onMouseEnter={e => { if (!toolsActive) e.currentTarget.style.background = c.isDark ? 'oklch(0.245 0.004 270)' : '#f3f4f6' }}
@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </span>
                     {sidebarOpen && <span>{t('nav.tools')}</span>}
                     {sidebarOpen && (
-                      <ChevronRight size={14} color={c.textMuted} style={{ marginLeft: 'auto', transition: 'transform 0.18s', transform: toolsOpen ? 'rotate(90deg)' : 'none' }} />
+                      <ChevronRight size={14} color={c.textMuted} style={{ marginInlineStart: 'auto', transition: 'transform 0.18s', transform: toolsOpen ? 'rotate(90deg)' : 'none' }} />
                     )}
                   </button>
                   {/* Nested tool links — Poster is gated off for launch ("Soon").
@@ -250,10 +250,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     return (
                       <div key={child.to} style={{
                         display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                        padding: '7px 14px 7px 34px', borderRadius: 9,
+                        padding: '7px 14px', paddingInlineStart: 34, borderRadius: 9,
                         color: c.textMuted, opacity: 0.55, cursor: 'default',
                         fontSize: 12.5, fontWeight: 400, fontFamily: FONT,
-                        borderLeft: '2.5px solid transparent', whiteSpace: 'nowrap',
+                        borderInlineStart: '2.5px solid transparent', whiteSpace: 'nowrap',
                       }}>
                         <ChildIcon size={14} color={c.textMuted} strokeWidth={1.7} />
                         <span>{t(child.label)}</span>
@@ -318,8 +318,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Main area ── */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
-        transition: 'margin-right 0.25s ease',
-        marginRight: (!isMobile && chatOpen) ? 360 : 0,
+        transition: 'margin-inline-end 0.25s ease',
+        marginInlineEnd: (!isMobile && chatOpen) ? 360 : 0,
       }}>
         {/* Header */}
         <div style={{
@@ -366,7 +366,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {accountOpen && (
                 <div style={{
-                  position: 'fixed', top: isMobile ? 60 : 62, right: isMobile ? 12 : 20,
+                  position: 'fixed', top: isMobile ? 60 : 62, insetInlineEnd: isMobile ? 12 : 20,
                   background: c.cardBg, borderRadius: 14, border: `1px solid ${c.border}`,
                   padding: '6px', minWidth: 190,
                   boxShadow: c.isDark ? '0 12px 40px rgba(0,0,0,0.5)' : '0 8px 30px rgba(0,0,0,0.12)',
@@ -396,7 +396,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <button onClick={signOut} style={{
                     display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                     padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none',
-                    cursor: 'pointer', textAlign: 'left', fontSize: 13, fontWeight: 500,
+                    cursor: 'pointer', textAlign: 'start', fontSize: 13, fontWeight: 500,
                     fontFamily: FONT, color: 'oklch(0.65 0.18 25)', transition: 'background 0.1s',
                   }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'oklch(0.65 0.18 25 / 0.08)'}
