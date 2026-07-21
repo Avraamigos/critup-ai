@@ -41,6 +41,9 @@ export async function renderPdfToJpegBlobs(
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) { doc.destroy(); return [] }
+  // Force LTR: in an RTL document (Arabic UI) the canvas inherits dir=rtl, which
+  // makes pdf.js mis-space/reorder Latin glyphs and bakes that into the JPEGs.
+  ctx.direction = 'ltr'
 
   try {
     for (let i = 1; i <= total; i++) {

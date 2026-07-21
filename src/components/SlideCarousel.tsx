@@ -82,6 +82,9 @@ export function SlideCarousel({
     canvas.style.height = `${viewport.height / renderScale}px`
 
     const ctx = canvas.getContext('2d')!
+    // Force LTR: in an RTL document (Arabic UI) the canvas inherits dir=rtl,
+    // which makes pdf.js mis-space/reorder Latin glyphs on the drawing.
+    ctx.direction = 'ltr'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     renderTaskRef.current = pg.render({ canvasContext: ctx, viewport } as any)
     try {

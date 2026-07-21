@@ -70,6 +70,9 @@ export function PDFViewer({
     canvas.style.height = `${viewport.height / 2}px`
 
     const ctx = canvas.getContext('2d')!
+    // Force LTR: in an RTL document (Arabic UI) the canvas inherits dir=rtl,
+    // which makes pdf.js mis-space/reorder Latin glyphs on the drawing.
+    ctx.direction = 'ltr'
     // pdfjs-dist v5 changed RenderParameters to require `canvas` (the element);
     // cast to any so this compiles regardless of which minor type version Vercel installs
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
