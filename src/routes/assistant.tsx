@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send } from 'lucide-react'
+import { ChatText } from '@/lib/chatMarkdown'
 import { useTheme, useColors } from '@/lib/theme'
 import { AIOrb } from '@/components/AIOrb'
 import { CritAvatar } from '@/components/CritAvatar'
@@ -151,9 +152,9 @@ export function AssistantPage() {
                 background: m.role === 'user' ? '#F97316' : c.cardBg,
                 border: m.role === 'user' ? 'none' : `1px solid ${c.border}`,
                 color: m.role === 'user' ? '#fff' : c.textPrimary,
-                fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap',
+                fontSize: 14, lineHeight: 1.6, wordBreak: 'break-word',
               }}>
-                {m.text}
+                {m.role === 'ai' ? <ChatText text={m.text} /> : m.text}
               </div>
               <div style={{ fontSize: 11, color: c.textMuted, marginTop: 4, textAlign: m.role === 'user' ? 'right' : 'left' }}>{m.ts}</div>
             </div>

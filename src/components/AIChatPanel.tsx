@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next'
 import { Send, ChevronDown } from 'lucide-react'
 import { useColors } from '@/lib/theme'
 import { authHeader } from '@/lib/authHeader'
+import { ChatText } from '@/lib/chatMarkdown'
 import { AIOrb } from '@/components/AIOrb'
 import { CritAvatar } from '@/components/CritAvatar'
 
@@ -248,9 +249,9 @@ export function AIChatPanel({ open, onClose, theme }: Props) {
                   : (isDark ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.06)'),
                 fontSize: 13, lineHeight: 1.55,
                 color: m.role === 'user' ? '#fff' : (isDark ? '#e2e8f0' : '#1e293b'),
-                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
               }}>
-                {m.text}
+                {m.role === 'ai' ? <ChatText text={m.text} /> : m.text}
               </div>
             </div>
           ))}
