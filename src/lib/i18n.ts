@@ -4,6 +4,9 @@ import { en } from '@/locales/en'
 import { ru } from '@/locales/ru'
 import { tr } from '@/locales/tr'
 import { es } from '@/locales/es'
+import { fr } from '@/locales/fr'
+import { de } from '@/locales/de'
+import { pt } from '@/locales/pt'
 
 // Single flat namespace ('translation'). Keys are dotted strings like
 // 'nav.dashboard'. The app language is driven by profiles.language (en/ru/tr) —
@@ -22,6 +25,9 @@ i18n.use(initReactI18next).init({
     ru: { translation: ru },
     tr: { translation: tr },
     es: { translation: es },
+    fr: { translation: fr },
+    de: { translation: de },
+    pt: { translation: pt },
   },
   lng: 'en',
   fallbackLng: 'en',
