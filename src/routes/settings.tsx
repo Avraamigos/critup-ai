@@ -168,7 +168,8 @@ export function SettingsPage() {
     if (!file || !user) return
     setPhotoUploading(true)
     try {
-      const ext = file.name.split('.').pop()
+      const rawExt = file.name.split('.').pop() ?? ''
+      const ext = /^[a-zA-Z0-9]{1,5}$/.test(rawExt) ? rawExt.toLowerCase() : 'png'
       const path = `${user.id}/avatar.${ext}`
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
       if (uploadErr) throw uploadErr

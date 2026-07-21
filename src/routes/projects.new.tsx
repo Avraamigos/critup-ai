@@ -7,6 +7,7 @@ import { CritupLogo } from '@/components/CritupLogo'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { safeStorageName } from '@/lib/services'
 import { track } from '@/lib/analytics'
 
 function DotGrid({ theme }: { theme: 'dark' | 'light' }) {
@@ -336,7 +337,7 @@ export function NewProjectPage() {
 
       // 2. Upload PDF to Storage (large file — 60 s)
       setUploadStatus(t('newProject.statusUploading', { name: form.file.name }))
-      const pdfPath = `${user.id}/${project.id}/${Date.now()}_${form.file!.name}`
+      const pdfPath = `${user.id}/${project.id}/${Date.now()}_${safeStorageName(form.file!.name)}`
       const { error: uploadErr } = await withTimeout(
         supabase.storage.from('project-pdfs').upload(pdfPath, form.file!, { cacheControl: '3600', upsert: false }),
         60_000, 'Uploading PDF'

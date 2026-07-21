@@ -9,6 +9,7 @@ import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { authHeader } from '@/lib/authHeader'
+import { safeStorageName } from '@/lib/services'
 import type { Json } from '@/lib/database.types'
 import { track } from '@/lib/analytics'
 import { renderPdfToJpegBlobs } from '@/lib/pdfSlides'
@@ -312,7 +313,7 @@ export function AnalysisPage() {
     setReuploadError(null)
     try {
       // 1. Upload new PDF to storage
-      const pdfPath = `${user.id}/${params.projectId}/${Date.now()}_${reuploadFile.name}`
+      const pdfPath = `${user.id}/${params.projectId}/${Date.now()}_${safeStorageName(reuploadFile.name)}`
       const { error: uploadErr } = await supabase.storage
         .from('project-pdfs')
         .upload(pdfPath, reuploadFile, { cacheControl: '3600', upsert: false })

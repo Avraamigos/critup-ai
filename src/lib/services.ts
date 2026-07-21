@@ -100,8 +100,22 @@ export async function createAnalysis(projectId: string, userId: string) {
 
 // ─── PDF Storage ──────────────────────────────────────────────────────────────
 
+// Supabase Storage keys only allow a narrow ASCII set — filenames with Arabic,
+// Cyrillic, Turkish characters, spaces etc. fail the whole upload with
+// "Invalid key". Uniqueness comes from the Date.now() prefix, so the basename
+// only needs to be readable, not preserved.
+export function safeStorageName(fileName: string) {
+  const ext = fileName.toLowerCase().endsWith('.pdf') ? '.pdf' : ''
+  const base = fileName
+    .replace(/\.pdf$/i, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80)
+  return (base || 'file') + ext
+}
+
 export async function uploadPDF(userId: string, projectId: string, file: File) {
-  const path = `${userId}/${projectId}/${Date.now()}_${file.name}`
+  const path = `${userId}/${projectId}/${Date.now()}_${safeStorageName(file.name)}`
 
   const { error } = await supabase.storage
     .from('project-pdfs')
