@@ -49,13 +49,18 @@ function cleanForTTS(raw: string): string {
     .replace(/_{2,}/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     // Spoken-form fixes for architecture notation ElevenLabs otherwise garbles:
-    .replace(/(\d)\s*[/:]\s*(\d)/g, '$1 to $2')   // scales/ratios "1/20", "1:100"
-    .replace(/(\d)\s*m²/g, '$1 square meters')
-    .replace(/(\d)\s*m2\b/g, '$1 square meters')
+    // Order matters: units → thousands commas → ranges → scales → dimensions.
+    .replace(/(\d)\s*(?:m²|m2\b|sqm\b|sq\.?\s*m\b)/gi, '$1 square meters')
+    .replace(/\bsqm\b/gi, 'square meters')
     .replace(/(\d)\s*m³/g, '$1 cubic meters')
     .replace(/km²/g, ' square kilometers')
     .replace(/²/g, ' squared').replace(/³/g, ' cubed')
+    .replace(/(\d),(\d{3})\b/g, '$1$2')
+    .replace(/(\d)\s*[–—]\s*(\d)/g, '$1 to $2')
+    .replace(/(\d)\s*[/:]\s*(\d)/g, '$1 to $2')
+    .replace(/(\d)\s*m\s*[x×]\s*(\d+)\s*m\b/gi, '$1 by $2 meters')
     .replace(/(\d)\s*[x×]\s*(\d)/g, '$1 by $2')
+    .replace(/\+\s*(\d)/g, 'plus $1')
     .replace(/(\d)\s*°/g, '$1 degrees')
     .replace(/%/g, ' percent').replace(/&/g, ' and ')
     .replace(/\s*\/\s*/g, ' ')
@@ -446,7 +451,7 @@ export default async function handler(
     // critique. The JSON structure (keys) stays English so the frontend keeps
     // working; only the human-readable VALUES are translated. ElevenLabs uses a
     // multilingual model, so the audio follows the text language automatically.
-    const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+    const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish', es: 'Spanish', fr: 'French', de: 'German', ar: 'Arabic', pt: 'Portuguese', zh: 'Chinese (Simplified)' }
     const langCode = (profileData?.language ?? 'en').toLowerCase()
     const languageNote =
       langCode !== 'en' && languageNames[langCode]

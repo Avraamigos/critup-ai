@@ -23,13 +23,18 @@ export function cleanForTTS(raw: string): string {
     .replace(/_{2,}/g, '')             // __underline__
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // [link](url) → link text
     // Spoken-form fixes for architecture notation ElevenLabs otherwise garbles:
-    .replace(/(\d)\s*[/:]\s*(\d)/g, '$1 to $2')   // scales/ratios "1/20", "1:100" → "1 to 20"
-    .replace(/(\d)\s*m²/g, '$1 square meters')
-    .replace(/(\d)\s*m2\b/g, '$1 square meters')
+    // Order matters: units → thousands commas → ranges → scales → dimensions.
+    .replace(/(\d)\s*(?:m²|m2\b|sqm\b|sq\.?\s*m\b)/gi, '$1 square meters')
+    .replace(/\bsqm\b/gi, 'square meters')
     .replace(/(\d)\s*m³/g, '$1 cubic meters')
     .replace(/km²/g, ' square kilometers')
     .replace(/²/g, ' squared').replace(/³/g, ' cubed')
-    .replace(/(\d)\s*[x×]\s*(\d)/g, '$1 by $2')   // "6x6 grid" → "6 by 6"
+    .replace(/(\d),(\d{3})\b/g, '$1$2')                              // 4,500 → 4500
+    .replace(/(\d)\s*[–—]\s*(\d)/g, '$1 to $2')                      // ranges 4500–5000
+    .replace(/(\d)\s*[/:]\s*(\d)/g, '$1 to $2')                      // scales 1/100, 1:200
+    .replace(/(\d)\s*m\s*[x×]\s*(\d+)\s*m\b/gi, '$1 by $2 meters')   // 25m x 6m
+    .replace(/(\d)\s*[x×]\s*(\d)/g, '$1 by $2')                      // 6x6 grid
+    .replace(/\+\s*(\d)/g, 'plus $1')                                // +4.00 level
     .replace(/(\d)\s*°/g, '$1 degrees')
     .replace(/%/g, ' percent').replace(/&/g, ' and ')
     .replace(/\s*\/\s*/g, ' ')          // any remaining slash → pause, not "slash"

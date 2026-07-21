@@ -50,6 +50,15 @@ describe('cleanForTTS', () => {
     expect(cleanForTTS('rotated 45°')).toContain('45 degrees')
   })
 
+  it('speaks sqm, ranges, metre dimensions and signed levels', () => {
+    expect(cleanForTTS('area of 4,500–5,000 sqm.')).toContain('4500 to 5000 square meters')
+    expect(cleanForTTS('total of 4,800 sqm across four buildings')).toContain('4800 square meters')
+    expect(cleanForTTS('the 300 sqm Swimming Pool (25m x 6m lap pool)')).toContain('300 square meters')
+    expect(cleanForTTS('(25m x 6m lap pool)')).toContain('25 by 6 meters')
+    expect(cleanForTTS('at the 0.00 and +4.00 levels')).toContain('plus 4.00')
+    expect(cleanForTTS('1/100 plans and 1/200-equivalent drawings')).toContain('1 to 100')
+  })
+
   it('strips markdown without losing the words', () => {
     const out = cleanForTTS('**Strong concept** with `code` and [a link](https://x.com)')
     expect(out).toContain('Strong concept')
