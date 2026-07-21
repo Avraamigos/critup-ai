@@ -93,6 +93,7 @@ export const ru: TranslationSchema = {
     saveLanguage: 'Сохранить язык',
     moreLanguages: 'БОЛЬШЕ ЯЗЫКОВ — СКОРО',
     comingSoonShort: 'Скоро',
+    aiLangNote: 'Языки с пометкой AI: критика, чат, сценарий защиты и озвучка отвечают на вашем языке — интерфейс пока остаётся на английском.',
     accountHeading: 'Аккаунт и план',
     currentPlan: 'ТЕКУЩИЙ ПЛАН',
     analysesUsed: 'использовано анализов: {{count}}',

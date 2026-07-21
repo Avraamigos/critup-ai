@@ -43,7 +43,7 @@ function buildSystemPrompt(context: {
 } | null, language = 'en'): string {
   // Multi-language: respond in the student's profile language. Same voice/model
   // downstream — only the language of the text changes.
-  const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+  const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish', es: 'Spanish', fr: 'French', de: 'German', ar: 'Arabic', pt: 'Portuguese', zh: 'Chinese (Simplified)' }
   const langCode = (language || 'en').toLowerCase()
   const languageNote =
     langCode !== 'en' && languageNames[langCode]

@@ -93,6 +93,7 @@ export const en = {
     saveLanguage: 'Save language',
     moreLanguages: 'MORE LANGUAGES — COMING SOON',
     comingSoonShort: 'Soon',
+    aiLangNote: 'Languages marked AI: Crit\u2019s critique, chat, jury script and voiceover respond in your language — the interface stays in English for now.',
     accountHeading: 'Account & Plan',
     currentPlan: 'CURRENT PLAN',
     analysesUsed: '{{count}} analyses used',

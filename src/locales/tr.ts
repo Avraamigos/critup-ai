@@ -93,6 +93,7 @@ export const tr: TranslationSchema = {
     saveLanguage: 'Dili kaydet',
     moreLanguages: 'DAHA FAZLA DİL — YAKINDA',
     comingSoonShort: 'Yakında',
+    aiLangNote: 'AI işaretli diller: Crit\u2019in eleştirisi, sohbeti, jüri metni ve seslendirmesi dilinizde yanıt verir — arayüz şimdilik İngilizce kalır.',
     accountHeading: 'Hesap ve Plan',
     currentPlan: 'MEVCUT PLAN',
     analysesUsed: '{{count}} analiz kullanıldı',

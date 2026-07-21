@@ -27,7 +27,7 @@ const levelGuidance: Record<Level, string> = {
     'ACADEMIC register: formal architectural language, theory-aware where the project supports it. Precise terminology (parti, datum, threshold, poché, etc.) used correctly — never as decoration.',
 }
 
-const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish' }
+const languageNames: Record<string, string> = { en: 'English', ru: 'Russian', tr: 'Turkish', es: 'Spanish', fr: 'French', de: 'German', ar: 'Arabic', pt: 'Portuguese', zh: 'Chinese (Simplified)' }
 
 interface ScriptRequest {
   analysisId: string

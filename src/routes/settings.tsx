@@ -17,21 +17,21 @@ const TABS: { id: Tab; labelKey: string; icon: typeof User }[] = [
   { id: 'account',       labelKey: 'settings.tabAccount',       icon: Shield },
 ]
 
+// aiOnly: Crit's critique, chat, jury script and voiceover respond in the
+// language, but the interface stays English until it's translated (Arabic UI
+// additionally needs RTL). The i18n fallback (fallbackLng: 'en') handles these
+// codes safely — t() simply returns English strings.
 const LANGUAGES = [
-  { v: 'en', l: 'English',  native: 'English',  flag: '🇬🇧' },
-  { v: 'ru', l: 'Russian',  native: 'Русский',  flag: '🇷🇺' },
-  { v: 'tr', l: 'Turkish',  native: 'Türkçe',   flag: '🇹🇷' },
-]
-
-// Not yet available — shown as disabled so users know more is coming.
-const COMING_SOON_LANGS = [
-  { l: 'Spanish',    native: 'Español',    flag: '🇪🇸' },
-  { l: 'French',     native: 'Français',   flag: '🇫🇷' },
-  { l: 'German',     native: 'Deutsch',    flag: '🇩🇪' },
-  { l: 'Arabic',     native: 'العربية',    flag: '🇸🇦' },
-  { l: 'Portuguese', native: 'Português',  flag: '🇵🇹' },
-  { l: 'Chinese',    native: '中文',        flag: '🇨🇳' },
-]
+  { v: 'en', l: 'English',    native: 'English',   flag: '🇬🇧' },
+  { v: 'ru', l: 'Russian',    native: 'Русский',   flag: '🇷🇺' },
+  { v: 'tr', l: 'Turkish',    native: 'Türkçe',    flag: '🇹🇷' },
+  { v: 'es', l: 'Spanish',    native: 'Español',   flag: '🇪🇸', aiOnly: true },
+  { v: 'fr', l: 'French',     native: 'Français',  flag: '🇫🇷', aiOnly: true },
+  { v: 'de', l: 'German',     native: 'Deutsch',   flag: '🇩🇪', aiOnly: true },
+  { v: 'ar', l: 'Arabic',     native: 'العربية',   flag: '🇸🇦', aiOnly: true },
+  { v: 'pt', l: 'Portuguese', native: 'Português', flag: '🇵🇹', aiOnly: true },
+  { v: 'zh', l: 'Chinese',    native: '中文',       flag: '🇨🇳', aiOnly: true },
+] as { v: string; l: string; native: string; flag: string; aiOnly?: boolean }[]
 
 export function SettingsPage() {
   const { theme, toggle } = useTheme()
@@ -483,6 +483,9 @@ export function SettingsPage() {
                         <div style={{ fontSize: 13.5, fontWeight: 600, color: sel ? '#F97316' : c.textPrimary, lineHeight: 1.2 }}>{l.native}</div>
                         <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{l.l}</div>
                       </div>
+                      {l.aiOnly && (
+                        <span style={{ fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 100, background: 'oklch(0.72 0.18 45/0.12)', color: '#F97316', letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>AI</span>
+                      )}
                       <span style={{ width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: sel ? 'none' : `1.5px solid ${c.border}`, background: sel ? '#F97316' : 'transparent' }}>
                         {sel && <Check size={11} color="#fff" strokeWidth={3} />}
                       </span>
@@ -490,24 +493,9 @@ export function SettingsPage() {
                   )
                 })}
               </div>
-
-              {/* Coming soon */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em', margin: '24px 0 10px' }}>{t('settings.moreLanguages')}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-                {COMING_SOON_LANGS.map(l => (
-                  <div key={l.native} title={t('settings.comingSoonShort')} style={{
-                    display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px', borderRadius: 12,
-                    border: `1px dashed ${c.border}`, opacity: 0.6, cursor: 'not-allowed',
-                  }}>
-                    <span style={{ fontSize: 20, lineHeight: 1, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 7, background: c.isDark ? 'oklch(0.20 0.004 270)' : '#f3f4f6', flexShrink: 0, filter: 'grayscale(0.4)' }}>{l.flag}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: c.textMuted, lineHeight: 1.2 }}>{l.native}</div>
-                      <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{l.l}</div>
-                    </div>
-                    <span style={{ fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 100, background: c.isDark ? 'oklch(0.28 0.004 270)' : '#e5e7eb', color: c.textMuted, letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>{t('settings.comingSoonShort')}</span>
-                  </div>
-                ))}
-              </div>
+              <p style={{ fontSize: 12, color: c.textMuted, marginTop: 14, lineHeight: 1.55, maxWidth: '60ch' }}>
+                {t('settings.aiLangNote')}
+              </p>
               <button onClick={save} disabled={saving || (!isDirty && !saved)} style={{
                 marginTop: 20, padding: '11px 24px', borderRadius: 100,
                 background: saved ? 'oklch(0.72 0.17 145)' : (isDirty ? '#F97316' : (c.isDark ? 'oklch(0.26 0.004 270)' : '#e5e7eb')),
