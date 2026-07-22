@@ -19,6 +19,11 @@ export function initSentry() {
     ignoreErrors: [
       'ResizeObserver loop limit exceeded',
       'Non-Error promise rejection captured',
+      // Instagram/Facebook in-app browsers inject their own tracking scripts
+      // (sendDataToNative etc.) that crash against window.webkit — not our
+      // code, fires whenever someone opens a promo link inside those apps.
+      'window.webkit.messageHandlers',
+      '_AutofillCallbackHandler',
     ],
     beforeSend(event) {
       // Strip PII from breadcrumbs before sending
