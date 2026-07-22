@@ -5,6 +5,7 @@ import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import i18n from '@/lib/i18n'
+import { analysisNotifEnabled, setAnalysisNotifEnabled } from '@/lib/notifications'
 import { useNavigate } from '@tanstack/react-router'
 import { useIsMobile } from '@/lib/useIsMobile'
 
@@ -49,9 +50,7 @@ export function SettingsPage() {
   const [language, setLanguage]       = useState('en')
   // Snapshot of last-saved values, so the Save button only enables when something changed.
   const [snapshot, setSnapshot]       = useState({ name: '', university: '', bio: '', instagram: '', linkedin: '', language: 'en' })
-  const [notifications, setNotifications] = useState({
-    analysis: true, jury: true, updates: true,
-  })
+  const [analysisNotif, setAnalysisNotif] = useState(analysisNotifEnabled())
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default')
 
   // Change photo
@@ -447,19 +446,13 @@ export function SettingsPage() {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([
-                  { key: 'analysis' as const, label: t('settings.notifAnalysis'), desc: t('settings.notifAnalysisDesc') },
-                  { key: 'jury'     as const, label: t('settings.notifJury'),     desc: t('settings.notifJuryDesc')     },
-                  { key: 'updates'  as const, label: t('settings.notifUpdates'),  desc: t('settings.notifUpdatesDesc')  },
-                ]).map(({ key, label, desc }, i, arr) => (
-                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: i < arr.length - 1 ? `1px solid ${c.border}` : 'none' }}>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 2px' }}>{label}</p>
-                      <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{desc}</p>
-                    </div>
-                    <Toggle val={notifications[key]} onChange={() => setNotifications(n => ({ ...n, [key]: !n[key] }))} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0' }}>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: c.textPrimary, margin: '0 0 2px' }}>{t('settings.notifAnalysis')}</p>
+                    <p style={{ fontSize: 12, color: c.textMuted, margin: 0 }}>{t('settings.notifAnalysisDesc')}</p>
                   </div>
-                ))}
+                  <Toggle val={analysisNotif} onChange={() => { const next = !analysisNotif; setAnalysisNotif(next); setAnalysisNotifEnabled(next) }} />
+                </div>
               </div>
             </div>
           )}

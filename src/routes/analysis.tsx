@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { authHeader } from '@/lib/authHeader'
 import { safeStorageName } from '@/lib/services'
+import { notifyAnalysisComplete } from '@/lib/notifications'
 import type { Json } from '@/lib/database.types'
 import { track } from '@/lib/analytics'
 import { renderPdfToJpegBlobs } from '@/lib/pdfSlides'
@@ -155,6 +156,11 @@ export function AnalysisPage() {
   const isPlayingRef  = useRef(false)
   const voiceOnRef    = useRef(true)
   const feedbackRef   = useRef<FeedbackItem[]>([])
+  // Fire the "analysis complete" desktop notification once per pending→complete
+  // transition. sawPending tracks whether we observed processing in this session
+  // (so an already-complete project on first load stays silent).
+  const sawPendingRef = useRef(false)
+  const notifiedRef   = useRef(false)
   const totalRef      = useRef(1)
   // Tracks whether audio is mid-playback but paused (not stopped)
   const pausedRef     = useRef(false)
@@ -261,9 +267,17 @@ export function AnalysisPage() {
           setError(t('analysis.analysisTimeout'))
           return
         }
+        // Still processing — arm the notification for the eventual completion.
+        sawPendingRef.current = true
+        notifiedRef.current = false
         pollTimer = setTimeout(load, 4000)
       } else {
         if (timeoutTimer) clearTimeout(timeoutTimer)
+        // Just transitioned from processing → complete: ping the user once.
+        if (sawPendingRef.current && hasComplete && !notifiedRef.current) {
+          notifiedRef.current = true
+          notifyAnalysisComplete(proj.name)
+        }
       }
     }
     setLoading(true); setError(null); load()
