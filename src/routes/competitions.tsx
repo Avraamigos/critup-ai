@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trophy, Clock, ExternalLink, Bookmark, X, Tag, ChevronDown, Check, SlidersHorizontal } from 'lucide-react'
+import { Trophy, Clock, ExternalLink, Bookmark, X, Tag, ChevronDown, Check, SlidersHorizontal, Building2, Armchair, Trees, Building, Shapes } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useIsMobile } from '@/lib/useIsMobile'
 import { useTheme, useColors } from '@/lib/theme'
 import { useAuth } from '@/lib/auth'
@@ -43,6 +44,30 @@ const DISCIPLINE_TABS: { v: DisciplineFilter; labelKey: string }[] = [
 const isFreeEntry = (fee: string | null) => {
   const f = (fee ?? '').trim().toLowerCase()
   return f === 'free' || f === '0' || f === '$0' || f === '€0'
+}
+
+// Designed fallback artwork for competitions without an image_url. Same
+// lightness/chroma across disciplines (only the hue shifts) so the grid reads as
+// one coordinated palette rather than random colours; architecture uses the
+// brand-orange hue. Keeps image-less cards looking intentional, not empty.
+const DISCIPLINE_ART: Record<string, { hue: number; Icon: LucideIcon }> = {
+  architecture: { hue: 45,  Icon: Building2 },
+  interior:     { hue: 25,  Icon: Armchair },
+  urban:        { hue: 230, Icon: Building },
+  landscape:    { hue: 150, Icon: Trees },
+  multi:        { hue: 300, Icon: Shapes },
+}
+function CompArtwork({ discipline, size = 40 }: { discipline: string; size?: number }) {
+  const art = DISCIPLINE_ART[discipline] ?? { hue: 45, Icon: Trophy }
+  const Icon = art.Icon
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: `linear-gradient(135deg, oklch(0.66 0.15 ${art.hue}), oklch(0.47 0.13 ${art.hue}))`,
+    }}>
+      <Icon size={size} color="rgba(255,255,255,0.9)" strokeWidth={1.4} />
+    </div>
+  )
 }
 
 // Whole days from now until the given date (end of that day).
@@ -328,7 +353,7 @@ function CompetitionCard({ comp, c, saved, canSave, onSave, onOpen, t }: {
       <div style={{ position: 'relative', aspectRatio: '16 / 9', background: c.isDark ? 'oklch(0.16 0.004 270)' : '#f3f4f6', overflow: 'hidden' }}>
         {comp.image_url
           ? <img src={comp.image_url} alt={comp.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trophy size={32} color={c.textMuted} strokeWidth={1.4} /></div>
+          : <CompArtwork discipline={comp.discipline} size={34} />
         }
         {/* Discipline tag */}
         <span style={{
@@ -426,7 +451,7 @@ function CompetitionDetail({ comp, c, isMobile, saved, canSave, onSave, onClose,
         <div style={{ aspectRatio: '16 / 9', background: c.isDark ? 'oklch(0.16 0.004 270)' : '#f3f4f6', overflow: 'hidden', borderRadius: isMobile ? '18px 18px 0 0' : '18px 18px 0 0' }}>
           {comp.image_url
             ? <img src={comp.image_url} alt={comp.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trophy size={40} color={c.textMuted} strokeWidth={1.4} /></div>
+            : <CompArtwork discipline={comp.discipline} size={52} />
           }
         </div>
 
